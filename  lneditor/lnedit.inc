@@ -151,6 +151,7 @@ _SetLineInListbox		proto :dword
 
 ;UI menu
 _SetFont				proto
+_WndFontProc		proto :dword,:dword,:dword,:dword
 _SetBackground		proto
 _CustomUI			proto
 _RecoverUI			proto
