@@ -72,6 +72,15 @@ _SimpFunc struct
 	Release		dd		?	;可选，释放自行分配的内存（只允许此功能）
 _SimpFunc ends
 
+_Handles struct
+	hWinMain	dd		?
+	hList1		dd		?
+	hList2		dd		?
+	hEdit1		dd		?
+	hEdit2		dd		?
+	hStatus		dd		?
+_Handles ends
+
 ;向插件中的预处理函数传递的结构
 _PreData struct
 	hGlobalHeap		dd		?	;全局堆，不推荐用来分配大内存

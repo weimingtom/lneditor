@@ -77,8 +77,8 @@ _LoadConfig proc
 		invoke GetPrivateProfileStringW,offset szcfUI,offset szcfHCM,NULL,addr @s,32,lpszConfigFile
 		invoke StrToIntExW,addr @s,1,offset dbConf+_Configs.HiColorMarked
 		
-		invoke GetPrivateProfileStructW,offset szcfUI,offset szcfLF,offset dbConf+_Configs.listFont,sizeof LOGFONT,lpszConfigFile
-		invoke GetPrivateProfileStructW,offset szcfUI,offset szcfEF,offset dbConf+_Configs.editFont,sizeof LOGFONT,lpszConfigFile
+		invoke GetPrivateProfileStructW,offset szcfUI,offset szcfLF,offset dbConf+_Configs.listFont,sizeof LOGFONT+32,lpszConfigFile
+		invoke GetPrivateProfileStructW,offset szcfUI,offset szcfEF,offset dbConf+_Configs.editFont,sizeof LOGFONT+32,lpszConfigFile
 		invoke GetPrivateProfileStructW,offset szcfUI,offset szcfWL,offset dbConf+_Configs.windowRect,(sizeof RECT)*6,lpszConfigFile
 	.endif
 	ret
@@ -137,8 +137,8 @@ _SaveConfig proc uses esi edi ebx
 	invoke _Int2Str,dbConf+_Configs.HiColorMarked,addr @s,TRUE
 	invoke _WriteUI,offset szcfHCM,addr @s
 	
-	invoke WritePrivateProfileStructW,offset szcfUI,offset szcfLF,offset dbConf+_Configs.listFont,sizeof LOGFONT,lpszConfigFile
-	invoke WritePrivateProfileStructW,offset szcfUI,offset szcfEF,offset dbConf+_Configs.editFont,sizeof LOGFONT,lpszConfigFile
+	invoke WritePrivateProfileStructW,offset szcfUI,offset szcfLF,offset dbConf+_Configs.listFont,sizeof LOGFONT+32,lpszConfigFile
+	invoke WritePrivateProfileStructW,offset szcfUI,offset szcfEF,offset dbConf+_Configs.editFont,sizeof LOGFONT+32,lpszConfigFile
 	invoke WritePrivateProfileStructW,offset szcfUI,offset szcfWL,offset dbConf+_Configs.windowRect,(sizeof RECT)*6,lpszConfigFile
 	ret
 _SaveConfig endp

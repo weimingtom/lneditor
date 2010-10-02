@@ -268,8 +268,8 @@ BEGIN
 END
 
 IDR_VERSION1 VERSIONINFO
-FILEVERSION 0,2,241,0
-PRODUCTVERSION 0,2,241,0
+FILEVERSION 0,2,268,0
+PRODUCTVERSION 0,2,268,0
 FILEOS 0x00000004
 FILETYPE 0x00000001
 BEGIN
@@ -277,8 +277,8 @@ BEGIN
   BEGIN
     BLOCK "080404B0"
     BEGIN
-      VALUE "FileVersion", "0.1.241.0\0"
-      VALUE "ProductVersion", "0.1.241.0\0"
+      VALUE "FileVersion", "0.1.268.0\0"
+      VALUE "ProductVersion", "0.1.268.0\0"
       VALUE "FileDescription", "A General Script Editor for Galgame.\0"
       VALUE "InternalName", "lnedit\0"
       VALUE "OriginalFilename", "lnedit.exe\0"

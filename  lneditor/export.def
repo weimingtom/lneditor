@@ -3,4 +3,10 @@ _GetConstString
 _Int2Str
 _DisplayStatus
 _GetStringInList
+
+_SelfMatch
+
+_GetText
+_SaveText
+_ModifyLine
 _SetLine

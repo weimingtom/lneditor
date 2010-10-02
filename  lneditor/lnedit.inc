@@ -239,8 +239,8 @@ _FileRec ends
 	lpOriFuncTable	dd		?	;Ô­Ê¼µÄ²Ëµ¥º¯ÊýµØÖ·±í
 	lpMarkTable		dd		?
 	
-	nCurMel			dd		?
-	nCurIdx			dd		?
+	nCurMel			dd		?	;µ±Ç°²å¼þ±àºÅ£¨ÔÚlpMelsÖÐµÄÎ»ÖÃ£©
+	nCurIdx			dd		?	;
 	
 	bModified		dd		?
 	bOpen			dd		?
@@ -382,7 +382,9 @@ _FileRec ends
 					dd			00ffcc99h
 					dd			0000ff12h
 					LOGFONT	<-14,0,0,0,190h,0,0,0,86h,3,2,1,22h,'®_oÅ–Ñž'>
+					db	32	dup(0)
 					LOGFONT	<-14,0,0,0,190h,0,0,0,86h,3,2,1,22h,'®_oÅ–Ñž'>
+					db	32	dup(0)
 ;					LOGFONT	<-12,0,0,0,190h,0,0,0,86h,3,2,1,22h,'‹[SO'>
 ;					LOGFONT	<-12,0,0,0,190h,0,0,0,86h,3,2,1,22h,'‹[SO'>
 					

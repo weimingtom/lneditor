@@ -58,10 +58,7 @@ _Modify proc
 		invoke MessageBoxW,hWinMain,eax,NULL,MB_OK OR MB_ICONERROR
 		jmp _ExML
 	.endif
-	inc ebx
-	.if ebx<FileInfo2.nLine
-		invoke _SetLineInListbox,ebx
-	.endif
+	invoke SendMessageW,hWinMain,WM_COMMAND,IDM_NEXTTEXT,0
 	invoke _SetModified,1
 _ExML:
 	xor eax,eax
