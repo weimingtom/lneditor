@@ -362,6 +362,8 @@ _PaintMain:
 		.endif
 	
 	.elseif eax==WM_CREATE
+		mov eax,hwnd
+		mov hWinMain,eax
 		invoke _InitWindow,hwnd
 		invoke VirtualAlloc,0,BF_UNDO_SIZE,MEM_COMMIT,PAGE_READWRITE
 		.if !eax
@@ -388,6 +390,7 @@ _PaintMain:
 		mov [eax].lpFileInfo2,offset FileInfo2
 		mov [eax].lpMenuFuncs,offset dbFunc
 		mov [eax].lpSimpFuncs,offset dbSimpFunc
+		mov [eax].lpHandles,offset hWinMain
 		assume eax:nothing
 		
 		invoke HeapAlloc,hGlobalHeap,0,sizeof _Functions+sizeof _SimpFunc
@@ -728,7 +731,9 @@ _GetSimpFunc proc uses edi ebx _hModule,_pSF
 	invoke GetProcAddress,_hModule,offset szFSaveText
 	mov [edi].SaveText,eax
 	invoke GetProcAddress,_hModule,offset szFSetLine
-	mov [edi].SetLine,eax
+	.if eax
+		mov [edi].SetLine,eax
+	.endif
 	invoke GetProcAddress,_hModule,offset szFRetLine
 	mov [edi].RetLine,eax
 	invoke GetProcAddress,_hModule,offset szFRelease

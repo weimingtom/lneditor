@@ -45,8 +45,10 @@ _Configs struct
 	HiColorDefault		dd			?
 	HiColorMarked		dd			?	
 	listFont				LOGFONT	<?>
+	db	32	dup(?)
 	editFont				LOGFONT	<?>
-	
+	db	32	dup(?)
+		
 	windowRect			RECT		6					dup(<?>)
 _Configs ends
 
