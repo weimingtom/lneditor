@@ -1,8 +1,8 @@
 .code
 
 ;
-_GetText proc uses edi esi ebx _pFI,_lpRI
-	LOCAL @pEndO,@pEndN,@nTextSize
+_GetText2 proc uses edi esi ebx _pFI,_lpRI
+	LOCAL @pEndO,@pEndN,@nTextSize;,@lpLineBuff
 	mov ebx,_pFI
 	assume ebx:ptr _FileInfo
 	mov edi,[ebx].lpStream
@@ -103,9 +103,27 @@ _NomemGT:
 	.if word ptr [edi]==0feffh
 		add edi,2
 	.endif
-	mov eax,edi
+;	
+;	mov eax,[ebx].nLine
+;	shl eax,2
+;	invoke HeapAlloc,hGlobalHeap,0,eax
+;	or eax,eax
+;	je _NomemGT
+;	mov @lpLineBuff,eax
+;	push edi
+;	push esi
+;	mov esi,eax
+;	mov edi,esi
+;	.if dbTxtFunc+_TxtFunc.IsLineAdding
+;		mov eax,[ebx].lpStream
+;	.else
+;		
+;	.endif
+;	pop esi
+;	pop edi
 	
 	;字符串数组处理
+	mov eax,edi
 	.repeat
 		.if word ptr [edi]==0dh
 			mov word ptr [edi],0
@@ -159,6 +177,115 @@ _NomemGT:
 _ErrGT:
 	xor eax,eax
 	ret
+_GetText2 endp
+
+;
+_GetText proc uses esi edi ebx _pFI,_lpRI
+	LOCAL @pEndO,@pEndN,@nTextSize,@lpCur,@IsUnicode
+	mov ebx,_pFI
+	assume ebx:ptr _FileInfo
+	mov edi,[ebx].lpStream
+	mov @lpCur,edi
+	mov eax,edi
+	add eax,[ebx].nStreamSize
+	mov @pEndO,eax
+	
+	;计算行数
+	.if word ptr [edi]==0feffh
+		mov @IsUnicode,1
+		add edi,2
+		xor ecx,ecx
+		.repeat
+			.if word ptr [edi]==0dh
+				inc ecx
+			.endif
+			add edi,2
+		.until edi>=@pEndO || !word ptr [edi]
+		.if word ptr [edi-4]!=0dh
+			inc ecx
+		.endif
+	.else
+		mov @IsUnicode,0
+		xor ecx,ecx
+		.repeat
+			.if word ptr [edi]==0a0dh
+				inc ecx
+			.endif
+			inc edi
+		.until edi>=@pEndO || !byte ptr [edi]
+		.if byte ptr [edi-2]!=0dh
+			inc ecx
+		.endif
+	.endif
+	mov [ebx].nLine,ecx
+	inc ecx
+	shl ecx,2
+	mov edi,ecx
+	
+	invoke VirtualAlloc,0,edi,MEM_COMMIT,PAGE_READWRITE
+	or eax,eax
+	je _NomemGT2
+	mov [ebx].lpStreamIndex,eax
+	mov esi,eax
+	invoke VirtualAlloc,0,edi,MEM_COMMIT,PAGE_READWRITE
+	or eax,eax
+	je _NomemGT2
+	mov [ebx].lpTextIndex,eax
+	mov edi,eax
+	mov [ebx].lpTextIndex,eax
+	mov [ebx].lpText,0
+	
+	.if @IsUnicode
+		add @lpCur,2
+	.endif
+	mov eax,@lpCur
+	.while eax<@pEndO
+		mov eax,@lpCur
+		mov [esi],eax
+		add esi,4
+		invoke HeapAlloc,hGlobalHeap,0,MAX_STRINGLEN
+		or eax,eax
+		je _NomemGT2
+		stosd
+		.if @IsUnicode
+			mov ecx,STC_UNICODE
+		.else
+			mov ecx,STC_UNKNOWN
+		.endif
+		invoke _GetStringInTxt,[edi-4],MAX_STRINGLEN,addr @lpCur,ecx
+		.if eax
+			xor eax,eax
+			ret
+		.endif
+		.if dbTxtFunc+_TxtFunc.IsLineAdding
+			push [edi-4]
+			call dbTxtFunc+_TxtFunc.IsLineAdding
+			.if !eax
+				sub edi,4
+				sub esi,4
+				jmp @F
+			.endif
+		.endif
+		.if dbTxtFunc+_TxtFunc.TrimLineHead
+			push [edi-4]
+			call dbTxtFunc+_TxtFunc.TrimLineHead
+			add [esi-4],eax
+		.endif
+		@@:
+		mov eax,@lpCur
+	.endw
+	sub edi,[ebx].lpTextIndex
+	shr edi,2
+	mov [ebx].nLine,edi
+	mov ecx,_lpRI
+	mov dword ptr [ecx],RI_SUC_LINEONLY
+	MOV EAX,1
+	ret
+_NomemGT2:
+	mov ecx,_lpRI
+	mov dword ptr [ecx],RI_FAIL_MEM
+	xor eax,eax
+	ret
 _GetText endp
 
 ;
@@ -195,7 +322,7 @@ _ModifyLine proc uses esi edi ebx _pFI,_nLine
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
 	or eax,eax
 	je _ErrML
-	mov @pNewStr,eax	
+	mov @pNewStr,eax
 	mov esi,[edi].lpStreamIndex
 	mov eax,_nLine
 	mov esi,[esi+eax*4]
@@ -276,6 +403,139 @@ _ErrML:
 _ModifyLine endp
 
 ;
+_GetStringInTxt proc uses esi edi _lpString,_nMaxLen,_lppBuff,_nStringType
+	LOCAL @lpTmpBuff
+	mov eax,_lppBuff
+	mov eax,[eax]
+	mov ecx,_nStringType
+	.if cx==STC_UNICODE
+		cmp word ptr [eax],0dh
+		jne @F
+		mov ecx,_lppBuff
+		add dword ptr [ecx],4
+	.else
+		.if word ptr [eax]==0a0dh
+			mov ecx,_lppBuff
+			add dword ptr [ecx],2
+			jmp _NullStrGSFM
+		.endif
+		cmp byte ptr [eax],0
+		jne @F
+	.endif
+	_NullStrGSFM:
+	mov ecx,_lpString
+	mov word ptr [ecx],0
+	xor eax,eax
+	jmp _ExGSFM
+	@@:
+	push offset _HandlerGSFM	;防止lpbuff内存越界访问
+	push fs:[0]
+	mov fs:[0],esp
+	mov edx,_nStringType
+	mov eax,_lppBuff
+	mov edi,[eax]
+	.if dx==STC_UNICODE
+;		or ecx,-1
+;		mov ax,0dh
+;		repne scasw
+;		not ecx
+		xor ecx,ecx
+		.while word ptr [edi]!=0dh
+			add edi,2
+			add ecx,2
+			.break .if !word ptr [edi]
+		.endw
+		add ecx,2
+		.if ecx>_nMaxLen
+			pop fs:[0]
+			add esp,4
+			mov eax,E_NOTENOUGHBUFF
+			jmp _ExGSFM
+		.endif
+		shr ecx,1
+		mov eax,_lppBuff
+		mov esi,[eax]
+		mov edi,_lpString
+		rep movsw
+		mov word ptr [edi-2],0
+		add esi,2
+		mov ecx,_lppBuff
+		mov [ecx],esi
+		pop fs:[0]
+		add esp,4
+	.else
+		.while word ptr [edi]!=0a0dh
+			inc edi
+			.break .if !byte ptr [edi]
+		.endw
+		mov byte ptr [edi],0
+		lea eax,[edi+2]
+		mov @lpTmpBuff,eax
+		pop fs:[0]
+		add esp,4
+		mov eax,_nStringType
+		mov esi,_nMaxLen
+		shr esi,1
+;		.if ax==STC_GBK
+;			invoke MultiByteToWideChar,936,0,_lpBuff,-1,_lpString,esi
+;		.elseif ax==STC_SJIS
+;			invoke MultiByteToWideChar,932,0,_lpBuff,-1,_lpString,esi
+;		.elseif ax==STC_UNKNOWN
+;			invoke GetACP
+;			invoke MultiByteToWideChar,eax,0,_lpBuff,-1,_lpString,esi
+;		.else
+;			mov eax,E_INVALIDPARAMETER
+;			mov byte ptr [edi],0dh
+;			jmp _ExGSFM
+;		.endif
+		push esi
+		push _lpString
+		push -1
+		mov eax,_lppBuff
+		push [eax]
+		push 0
+		mov eax,_nStringType
+		.if ax==STC_GBK
+			push 936
+		.elseif ax==STC_SJIS
+			push 932
+		.elseif ax==STC_UNKNOWN
+			invoke GetACP
+			push eax
+		.else
+			add esp,14h
+			mov eax,E_INVALIDPARAMETER
+			mov byte ptr [edi],0dh
+			jmp _ExGSFM
+		.endif
+		call MultiByteToWideChar
+		mov byte ptr [edi],0dh
+		.if !eax
+			mov eax,E_NOTENOUGHBUFF
+			jmp _ExGSFM
+		.endif
+		mov eax,_lppBuff
+		mov ecx,@lpTmpBuff
+		mov [eax],ecx
+	.endif
+	
+	xor eax,eax
+_ExGSFM:
+	ret
+
+_ErrOverMemGSFM:
+	pop fs:[0]
+	pop ecx
+	mov eax,E_OVERMEM
+	jmp _ExGSFM
+_HandlerGSFM:
+	mov eax,[esp+0ch]
+	mov [eax+0b8h],offset _ErrOverMemGSFM
+	xor eax,eax
+	ret
+_GetStringInTxt endp
+
+;
 _SetLine proc uses edi ebx _lpsz,_lpRange
 	cmp _lpRange,0
 	je _ExSL
@@ -340,4 +600,5 @@ _SetLine proc uses edi ebx _lpsz,_lpRange
 _ExSL:
 	ret
 _SetLine endp
+
 
