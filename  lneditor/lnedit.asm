@@ -285,6 +285,9 @@ _LoadMain:
 		assume edi:nothing
 		jmp _Ex2Main
 		
+	.elseif eax==WM_SETFOCUS
+		invoke SetFocus,hEdit2
+		
 	.elseif eax==WM_ERASEBKGND
 		.if !hBackDC
 			invoke CreateCompatibleDC,wParam
@@ -390,10 +393,11 @@ _PaintMain:
 		mov [eax].lpFileInfo2,offset FileInfo2
 		mov [eax].lpMenuFuncs,offset dbFunc
 		mov [eax].lpSimpFuncs,offset dbSimpFunc
+		mov [eax].lpTxtFuncs,offset dbTxtFunc
 		mov [eax].lpHandles,offset hWinMain
 		assume eax:nothing
 		
-		invoke HeapAlloc,hGlobalHeap,0,sizeof _Functions+sizeof _SimpFunc
+		invoke HeapAlloc,hGlobalHeap,0,sizeof _Functions+sizeof _SimpFunc+sizeof _TxtFunc
 		or eax,eax
 		je @B
 		mov lpOriFuncTable,eax
@@ -403,6 +407,9 @@ _PaintMain:
 		invoke _memcpy
 		lea esi,dbSimpFunc
 		mov ecx,sizeof _SimpFunc
+		invoke _memcpy
+		lea esi,dbTxtFunc
+		mov ecx,sizeof _TxtFunc
 		invoke _memcpy
 		
 		mov nCurMel,-1
@@ -711,6 +718,9 @@ _RestoreFunc proc uses esi edi
 		invoke _memcpy
 		lea edi,dbSimpFunc
 		mov ecx,sizeof _SimpFunc
+		invoke _memcpy
+		lea edi,dbTxtFunc
+		mov ecx,sizeof _TxtFunc
 		invoke _memcpy
 	.endif
 	ret

@@ -533,6 +533,12 @@ _NewEditProc proc uses ebx esi edi,hwnd,uMsg,wParam,lParam
 			.if !ZERO?
 				invoke _NextMark
 			.endif
+		.elseif eax==46h;F key
+			invoke GetKeyState,VK_CONTROL
+			and eax,8000h
+			.if !ZERO?
+				invoke SendMessageW,hWinMain,WM_COMMAND,IDM_FIND,0
+			.endif
 		.endif
 	.elseif eax==WM_MOUSEWHEEL
 		invoke SendMessageW,hList2,WM_MOUSEWHEEL,wParam,lParam

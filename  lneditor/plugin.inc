@@ -15,10 +15,7 @@ MR_MAYBE				EQU		3
 MR_NO					EQU		0
 MR_ERR					EQU		-1
 
-MAX_STRINGLEN		EQU		512
-SHORT_STRINGLEN	EQU		64
-
-;菜单项的处理函数，其中OpenScript之前经过了一些处理，其余均为直接调用。
+;菜单项的处理函数，其中OpenScript之前经过了一些处理，其余均为直接调用。均可被插件重载。
 _Functions struct
 	OpenScript			dd		?	;10001
 	LoadScript			dd		?
@@ -62,7 +59,7 @@ _Functions struct
 	Reserved				dd		10		dup(?)
 _Functions ends
 
-;由插件实现的函数
+;由插件实现简易功能的函数
 _SimpFunc struct
 	GetText		dd		?	;将脚本中的纯文本按FileInfo结构要求写入
 	SaveText		dd		?	;可选，保存文件，如果不实现则通过lpStream和nStreamSize默认保存
@@ -71,6 +68,12 @@ _SimpFunc struct
 	RetLine		dd		?	;可选，编辑框中的一行文本被该函数处理之后再写回内存中
 	Release		dd		?	;可选，释放自行分配的内存（只允许此功能）
 _SimpFunc ends
+
+;纯文本脚本的专用处理函数，可由插件重载
+_TxtFunc	struct
+	IsLineAdding	dd		?	;在默认GetText函数中调用
+	TrimLineHead	dd		?	;在默认GetText函数中调用
+_TxtFunc ends
 
 _Handles struct
 	hWinMain	dd		?
@@ -93,6 +96,7 @@ _PreData struct
 	
 	lpMenuFuncs		dd		?	;菜单函数表指针，指向_Functions结构
 	lpSimpFuncs		dd		?	;简易处理函数表指针，指向_SimpFunc结构
+	lpTxtFuncs		dd		?	;纯文本处理函数表指针，指向_TxtFunc结构
 	
 	lpHandles		dd		?	;窗口句柄列表指针，指向_Handles结构
 _PreData ends

@@ -665,6 +665,7 @@ _ShowPic proc uses ebx _hdc,_lpszName
 		jmp _Ex1SJ
 	.endif
 	mov ebx,@pPic
+	assume ebx:nothing
 	mov ebx,[ebx]
 	invoke (IPicture ptr [ebx]).get_Width,@pPic,addr @hmWidth
 	invoke (IPicture ptr [ebx]).get_Height,@pPic,addr @hmHeight

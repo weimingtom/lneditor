@@ -4,14 +4,14 @@
 EM_SINGLE			EQU 	1
 EM_DOUBLE			EQU 	2
 
+;New Script Save Location
+NL_CURRENT			EQU		1
+NL_EXE				EQU		2
+
 ;Auto Convert
 AC_NOT				EQU		0
 AC_FULLANGLE		EQU		1
 AC_HALFANGLE		EQU		2
-
-;New Script Save Location
-NL_CURRENT			EQU		1
-NL_EXE				EQU		2
 
 ;windowRect Index
 WRI_MAIN			EQU		0
