@@ -79,7 +79,7 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 	invoke lstrlenW,_lpStr
 	shl eax,1
 	mov @nLen,eax
-	.if [ebx].lpTextIndex
+	.if [ebx].nMemoryType==MT_VARIABLESTRING
 		mov esi,FileInfo2.lpTextIndex
 		mov eax,_nLine
 		mov esi,[esi+eax*4]
@@ -126,6 +126,29 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 					inc ecx
 				.endw
 			.endif
+		.endif
+	.elseif [ebx].nMemoryType==MT_EVERYSTRING
+		mov esi,FileInfo2.lpTextIndex
+		mov eax,_nLine
+		lea edi,[esi+eax*4]
+		mov esi,[edi]
+		invoke lstrlenW,esi
+		shl eax,1
+		.if eax>=@nLen
+			invoke lstrcpyW,esi,_lpStr
+		.else
+			mov ecx,@nLen
+			.if [ebx].nLineLen && ecx<[ebx].nLineLen
+				invoke lstrcpyW,esi,_lpStr
+				jmp _ExMSIL
+			.endif
+			add ecx,2
+			invoke HeapAlloc,hGlobalHeap,0,ecx
+			or eax,eax
+			je _ErrMSIL
+			mov [edi],eax
+			invoke lstrcpyW,eax,_lpStr
+			invoke HeapFree,hGlobalHeap,0,esi
 		.endif
 	.else
 		mov eax,@nLen

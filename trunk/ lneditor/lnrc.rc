@@ -278,7 +278,7 @@ BEGIN
   IDS_RPCCOMPLETE "共完成%d处替换，错误%d处！"
   IDS_INNERNAME "纯文本处理"
   IDS_INNERFORMAT ".txt"
-  IDS_INNERVER "1.0.0"
+  IDS_INNERVER "1.1.0"
   IDS_INNERDESC "内置文本处理插件，支持GBK、Unicode格式的纯文本。"
   IDS_SUCCONVERT "转换成功！"
   IDS_FAILCONVERT "转换过程中发生错误！"
@@ -286,8 +286,8 @@ BEGIN
 END
 
 IDR_VERSION1 VERSIONINFO
-FILEVERSION 0,2,268,0
-PRODUCTVERSION 0,2,268,0
+FILEVERSION 0,3,285,0
+PRODUCTVERSION 0,3,285,0
 FILEOS 0x00000004
 FILETYPE 0x00000001
 BEGIN
@@ -295,8 +295,8 @@ BEGIN
   BEGIN
     BLOCK "080404B0"
     BEGIN
-      VALUE "FileVersion", "0.1.268.0\0"
-      VALUE "ProductVersion", "0.1.268.0\0"
+      VALUE "FileVersion", "0.3.285.0\0"
+      VALUE "ProductVersion", "0.3.285.0\0"
       VALUE "FileDescription", "A General Script Editor for Galgame.\0"
       VALUE "InternalName", "lnedit\0"
       VALUE "OriginalFilename", "lnedit.exe\0"

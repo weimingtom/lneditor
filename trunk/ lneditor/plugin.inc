@@ -109,13 +109,14 @@ _FileInfo struct
 	hFile				dd		?						;文件句柄
 	lpStream				dd		?						;文件直接读入内存后的指针
 	
-	;从脚本中提取出的文本有两种存储方式，一种是使用定长字符串数组存放，另一种是使用变长字符串数组存放。后者需要对每个字符串进行索引。
-	lpText				dd		?						;从文件中提取出的纯文本的内存指针。若lpTextIndex不为0，此项可选。
-	lpTextIndex			dd		?						;纯文本字符串索引表指针。为0时代表定长字符串存储，否则为变长。
+	nMemoryType			dd		?						
+	;从脚本中提取出的文本有三种存储方式，一种是使用定长字符串数组存放，一种是使用连续内存空间变长字符串数组，最后是独立内存空间字符串。
+	lpText				dd		?						;从文件中提取出的纯文本的内存指针。若采用MT_EVERYSTRING存储，此项可选。
+	lpTextIndex			dd		?						;纯文本字符串索引表指针。
 	lpStreamIndex		dd		?						;可选，原始脚本字符串索引表指针。
 	nStreamSize			dd		?						;文件长度。须跟随脚本编辑随时更新。
 	nLine				dd		?						;文本行数。
-	nLineLen				dd		?						;可选，若使用定长字符串存储，本项指示字符串长度。
+	nLineLen				dd		?						;可选，若使用定长字符串存储，本项须指示字符串长度。独立内存字符串亦可使用。
 	
 	bReadOnly			dw		?						;指定该文件是否为只读（是否在列表框左侧）
 	bFirstCreate			dw		?						;指示该文件是否为第一次创建

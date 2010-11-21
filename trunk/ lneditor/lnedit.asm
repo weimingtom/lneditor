@@ -286,7 +286,9 @@ _LoadMain:
 		jmp _Ex2Main
 		
 	.elseif eax==WM_SETFOCUS
-		invoke SetFocus,hEdit2
+		.if bOpen
+			invoke SetFocus,hEdit2
+		.endif
 		
 	.elseif eax==WM_ERASEBKGND
 		.if !hBackDC
