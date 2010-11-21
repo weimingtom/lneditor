@@ -213,9 +213,13 @@ _AddLines proc uses esi edi ebx _pdb
 	mov edi,[eax]
 	mov ecx,[eax+4]
 	mov @hList,ecx
+;	.if nCurIdx==-1
+;		invoke _ReadRec
+;		mov nCurIdx,eax
+;	.endif
 	assume edi:ptr _FileInfo
 	xor ebx,ebx
-	.if [edi].lpTextIndex
+	.if [edi].nMemoryType!=MT_FIXEDSTRING
 		mov esi,[edi].lpTextIndex
 		.while ebx<[edi].nLine
 			invoke SendMessageW,@hList,LB_ADDSTRING,0,[esi]
@@ -386,6 +390,19 @@ _ClearAll proc uses edi _pFI
 		push edi
 		call eax
 	.endif
+	.if [edi].nMemoryType==MT_EVERYSTRING
+		push esi
+		push ebx
+		mov esi,[edi].lpTextIndex
+		mov ebx,[edi].nLine
+		.while ebx
+			lodsd
+			invoke HeapFree,hGlobalHeap,0,eax
+			dec ebx
+		.endw
+		pop ebx
+		pop esi
+	.endif
 	invoke CloseHandle,[edi].hFile
 	invoke VirtualFree,[edi].lpStream,0,MEM_RELEASE
 	invoke VirtualFree,[edi].lpText,0,MEM_RELEASE
@@ -495,10 +512,17 @@ _SetModified endp
 
 ;
 _SetOpen proc uses esi edi _bFlag
+	LOCAL @bCanImport
+	mov @bCanImport,MF_ENABLED
 	.if _bFlag
 		mov bOpen,1
 		mov esi,MF_ENABLED
 		mov edi,MF_GRAYED
+		mov eax,lpOriFuncTable
+		mov eax,[eax+sizeof _Functions+_SimpFunc.GetText]
+		.if eax==dbSimpFunc+_SimpFunc.GetText
+			mov @bCanImport,MF_GRAYED
+		.endif
 	.else
 		mov bOpen,0
 		mov edi,MF_ENABLED
@@ -506,8 +530,8 @@ _SetOpen proc uses esi edi _bFlag
 	.endif
 	invoke EnableMenuItem,hMenu,IDM_SAVEAS,esi
 	invoke EnableMenuItem,hMenu,IDM_CLOSE,esi
-	invoke EnableMenuItem,hMenu,IDM_EXPORT,esi
-	invoke EnableMenuItem,hMenu,IDM_IMPORT,esi
+	invoke EnableMenuItem,hMenu,IDM_EXPORT,@bCanImport
+	invoke EnableMenuItem,hMenu,IDM_IMPORT,@bCanImport
 	invoke EnableMenuItem,hMenu,IDM_MODIFY,esi
 	invoke EnableMenuItem,hMenu,IDM_PREVTEXT,esi
 	invoke EnableMenuItem,hMenu,IDM_NEXTTEXT,esi
@@ -523,7 +547,7 @@ _GetStringInList proc uses edi _pFI,_nLine
 		xor eax,eax
 		ret
 	.endif
-	.if [edi].lpTextIndex
+	.if [edi].nMemoryType!=MT_FIXEDSTRING
 		mov edi,[edi].lpTextIndex
 		mov eax,dword ptr [edi+eax*4]
 	.else

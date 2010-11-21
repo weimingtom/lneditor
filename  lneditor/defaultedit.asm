@@ -253,10 +253,9 @@ _GetText proc uses esi edi ebx _pFI,_lpRI
 			mov ecx,STC_UNKNOWN
 		.endif
 		invoke _GetStringInTxt,[edi-4],MAX_STRINGLEN,addr @lpCur,ecx
-		.if eax
-			xor eax,eax
-			ret
-		.endif
+		;
+		or eax,eax
+		jne _NomemGT2
 		.if dbTxtFunc+_TxtFunc.IsLineAdding
 			push [edi-4]
 			call dbTxtFunc+_TxtFunc.IsLineAdding
@@ -277,6 +276,8 @@ _GetText proc uses esi edi ebx _pFI,_lpRI
 	sub edi,[ebx].lpTextIndex
 	shr edi,2
 	mov [ebx].nLine,edi
+	mov [ebx].nLineLen,MAX_STRINGLEN
+	mov [ebx].nMemoryType,MT_EVERYSTRING
 	mov ecx,_lpRI
 	mov dword ptr [ecx],RI_SUC_LINEONLY
 	MOV EAX,1
