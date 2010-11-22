@@ -228,6 +228,7 @@ _GetStringGT:
 		.endw
 		invoke SaveText,edi
 	.endif
+	mov [edi].nMemoryType,MT_VARIABLESTRING
 	assume edi:nothing
 	mov eax,_lpRI
 	mov dword ptr [eax],RI_SUC_LINEONLY

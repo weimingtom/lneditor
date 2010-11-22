@@ -656,7 +656,7 @@ _FindNWRP:
 			invoke wsprintfW,ebx,eax,@nTotal,@nErrTotal
 			mov eax,IDS_WINDOWTITLE
 			invoke _GetConstString
-			invoke MessageBoxW,hWinMain,ebx,eax,MB_OK or MB_ICONINFORMATION
+			invoke MessageBoxW,hwnd,ebx,eax,MB_OK or MB_ICONINFORMATION
 		.elseif EAX==IDC_RPC_CANCEL
 			invoke DestroyWindow,hwnd
 			invoke PostQuitMessage,0
