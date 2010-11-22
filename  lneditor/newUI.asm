@@ -547,9 +547,12 @@ _NewEditProc proc uses ebx esi edi,hwnd,uMsg,wParam,lParam
 		je _ExNEP
 		mov eax,hwnd
 		cmp eax,hEdit1
-		je _ExNEP
+		jne @F
+		cmp wParam,3
+		jne _ExNEP
 	.endif
 	.endif
+	@@:
 	invoke CallWindowProcW,lpOldEditProc,hwnd,uMsg,wParam,lParam
 	ret
 _ExNEP:
