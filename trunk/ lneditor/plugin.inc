@@ -104,11 +104,14 @@ _PreData ends
 ifndef FILEINFOSTRUCT
 FILEINFOSTRUCT EQU 1
 ;被打开的脚本的所有信息
+;必须由插件填写的域为nMemoryType,nLine
 _FileInfo struct
+	;以下域由主程序传入插件
 	szName				db		MAX_STRINGLEN	dup(?)	;文件名(含路径)
 	hFile				dd		?						;文件句柄
 	lpStream				dd		?						;文件直接读入内存后的指针
 	
+	;以下域由插件负责填写
 	nMemoryType			dd		?						
 	;从脚本中提取出的文本有三种存储方式，一种是使用定长字符串数组存放，一种是使用连续内存空间变长字符串数组，最后是独立内存空间字符串。
 	lpText				dd		?						;从文件中提取出的纯文本的内存指针。若采用MT_EVERYSTRING存储，此项可选。
@@ -118,8 +121,11 @@ _FileInfo struct
 	nLine				dd		?						;文本行数。
 	nLineLen				dd		?						;可选，若使用定长字符串存储，本项须指示字符串长度。独立内存字符串亦可使用。
 	
+	;以下3个域由主程序填写
 	bReadOnly			dw		?						;指定该文件是否为只读（是否在列表框左侧）
 	bFirstCreate			dw		?						;指示该文件是否为第一次创建
+	nCharSet				dd		?						;指示其内部使用的何种字符集，-1为由插件决定，但是插件不负责填写
+	
 	Reserved				dd		2		dup(?)
 _FileInfo ends
 ENDIF

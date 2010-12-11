@@ -66,6 +66,21 @@ _WndFontProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 				mov eax,@cc.rgbResult
 				mov [esi],eax
 _RefreshWFP:
+				invoke SendMessageW,hList1,WM_SETREDRAW,FALSE,0
+				invoke SendMessageW,hList2,WM_SETREDRAW,FALSE,0
+				mov ebx,FileInfo1.nLine
+				.while ebx
+					invoke _CalHeight,ebx
+					push eax
+					invoke SendMessageW,hList1,LB_SETITEMHEIGHT,ebx,eax
+					push ebx
+					push LB_SETITEMHEIGHT
+					push hList2
+					call SendMessageW
+					dec ebx
+				.endw
+				invoke SendMessageW,hList1,WM_SETREDRAW,TRUE,0
+				invoke SendMessageW,hList2,WM_SETREDRAW,TRUE,0
 				invoke InvalidateRect,hList1,0,TRUE
 				invoke InvalidateRect,hList2,0,TRUE
 				invoke InvalidateRect,hEdit1,0,TRUE
@@ -77,7 +92,7 @@ _RefreshWFP:
 		.elseif eax==IDC_FONT_EDITC
 			lea esi,dbConf+_Configs.TextColorEdit
 			jmp @B
-		.elseif eax==IDC_FONT_CLOSE
+		.elseif eax==IDCANCEL
 			invoke EndDialog,hwnd,0
 		.endif
 	.elseif eax==WM_CLOSE

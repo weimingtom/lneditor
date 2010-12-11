@@ -95,6 +95,7 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 			invoke lstrlenW,edi
 			shl eax,1
 			lea edi,[edi+eax+2]
+			or eax,eax
 			mov ecx,[ebx].lpTextIndex
 			mov eax,_nLine
 			mov ecx,[ecx+eax*4+4]
@@ -106,7 +107,7 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 			mov @nTmp,ecx
 			sub edi,ecx
 			invoke VirtualAlloc,0,edi,MEM_COMMIT,PAGE_READWRITE
-			or eax,eax
+
 			je _ErrMSIL
 			mov @lpTemp,eax
 			invoke RtlMoveMemory,@lpTemp,@nTmp,edi
@@ -349,11 +350,11 @@ _WndFindProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			.else
 				mov esi,TRUE
 			.endif
-			invoke GetDlgItem,hwnd,IDC_FIND_FINDN
+			invoke GetDlgItem,hwnd,IDOK
 			invoke EnableWindow,eax,esi
 			invoke GetDlgItem,hwnd,IDC_FIND_FINDP
 			invoke EnableWindow,eax,esi
-		.elseif eax==IDC_FIND_FINDN
+		.elseif eax==IDOK
 			mov ebx,1
 _FindNFN:
 			invoke IsDlgButtonChecked,hwnd,IDC_FIND_ORI
@@ -420,7 +421,7 @@ _FindNFN:
 		.elseif eax==IDC_FIND_FINDP
 			mov ebx,-1
 			jmp _FindNFN
-		.elseif EAX==IDC_FIND_CANCEL
+		.elseif EAX==IDCANCEL
 			invoke DestroyWindow,hwnd
 			invoke PostQuitMessage,0
 		.endif
@@ -657,7 +658,7 @@ _FindNWRP:
 			mov eax,IDS_WINDOWTITLE
 			invoke _GetConstString
 			invoke MessageBoxW,hwnd,ebx,eax,MB_OK or MB_ICONINFORMATION
-		.elseif EAX==IDC_RPC_CANCEL
+		.elseif EAX==IDCANCEL
 			invoke DestroyWindow,hwnd
 			invoke PostQuitMessage,0
 		.endif
@@ -728,6 +729,8 @@ _WndSSProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			invoke InvalidateRect,hList2,NULL,TRUE
 _FreeWSSP:
 			invoke HeapFree,hGlobalHeap,0,@pPath
+		.elseif ax==IDCANCEL
+			invoke EndDialog,hwnd,0
 		.endif
 	.elseif eax==WM_INITDIALOG
 		.if !lpMarkTable

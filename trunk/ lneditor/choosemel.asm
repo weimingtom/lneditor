@@ -61,7 +61,7 @@ _WndCMProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 				mov dbConf+_Configs.lpDefaultMel,eax
 			.endif
 			invoke EndDialog,hwnd,ebx
-		.elseif ax==IDC_CM_CANCEL
+		.elseif ax==IDCANCEL
 			invoke EndDialog,hwnd,-2
 		.endif
 	.elseif eax==WM_INITDIALOG

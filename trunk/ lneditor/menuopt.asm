@@ -36,7 +36,7 @@ _WndConfigProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 			mov dbConf+_Configs.bAutoSelText,eax
 			invoke _SaveConfig
 			jmp @F
-		.elseif eax==IDC_CF_CANCEL
+		.elseif eax==IDCANCEL
 		@@:
 			invoke EndDialog,hwnd,0
 		.endif
