@@ -619,8 +619,9 @@ _CalHeight proc uses edi _nPos
 	.if edx
 		inc eax
 	.endif
-	add @sz.y,LI_MARGIN_WIDTH*2
+	add @sz.y,LI_MARGIN_WIDTH
 	mul @sz.y
+	add eax,LI_MARGIN_WIDTH
 	push eax
 	
 	invoke _GetStringInList,offset FileInfo2,_nPos
@@ -638,8 +639,9 @@ _CalHeight proc uses edi _nPos
 	.if edx
 		inc eax
 	.endif
-	add @sz.y,LI_MARGIN_WIDTH*2
+	add @sz.y,LI_MARGIN_WIDTH
 	mul @sz.y
+	add eax,LI_MARGIN_WIDTH
 	pop ecx
 	.if ecx>eax
 		mov eax,ecx

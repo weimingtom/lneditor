@@ -28,18 +28,41 @@
 	include \masm32\lneditor\plugin.inc
 	include \masm32\lneditor\config.inc
 	includelib \masm32\lneditor\lnedit.lib
+	
 
-PrevLine proto
-NextLine proto
+DEFAULT_STRINGLEN	equ		1024
+	
+_MjoInfo struct
+	nDefaultEntry		dd		?
+	unk1				dd		?
+	nEntryCount		dd		?
+	lpEntries			dd		?
+	nDataSize			dd		?
+	lpData			dd		?
+	lpJumpTable		dd		?
+_MjoInfo ends
+
+ModifyLine proto :dword,:dword
+SaveText proto :dword
+Release proto :dword
+_memcpy2 proto
 
 .data?
 	hInstance		dd		?
-	lpHandles		dd		?
-	lpFileInfo1		dd		?
-	lpFileInfo2		dd		?
+	hHeap		dd		?
+
+	dwTemp		dd		?
 	
+	lpTable1		dd		?
 .data
-	
+	;-1为普通bf，-2为需要输出的字符串，-3为错误，-4为跳转地址
+	OpTable		db
+;				0,	1,	2,	3,	4,	5,	6,	7,	8,	9,	A,	B,	C,	D,	E,	F
+				4,	-1,	8,	4,	11 dup (-3)									10
+				10,	15 dup(-3)
+				7 dup (-3)								-1,	-3,	0,	-4,	-4,	-4,	0
+				-4,	-4,	-4,	-4,	6,	6,	-1,	8,	-4,	-4,	2,	-4,	-4,	-4,	0,	0
+				-2,	0,	-1,	-4,	0,	-4,	0,	-4,	8 dup (-3)
 	
 	
 	

@@ -83,7 +83,7 @@ _WndExpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			invoke GetDlgItemInt,hwnd,IDC_EA_MELIDX,0,FALSE
 			invoke _ExportAllToTxt,@plstr,@plstr2,eax
 			invoke HeapFree,hGlobalHeap,0,@plstr
-		.elseif ax==IDC_EA_CANCEL
+		.elseif ax==IDCANCEL
 			invoke EndDialog,hwnd,0
 		.endif
 	.elseif eax==WM_INITDIALOG
