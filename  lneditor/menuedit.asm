@@ -427,6 +427,7 @@ _FindNFN:
 		.endif
 	.elseif eax==WM_INITDIALOG
 		invoke CheckDlgButton,hwnd,IDC_FIND_NEW,BST_CHECKED
+		invoke SetForegroundWindow,hwnd
 	.elseif eax==WM_CLOSE
 		invoke DestroyWindow,hwnd
 		invoke PostQuitMessage,0
@@ -662,6 +663,8 @@ _FindNWRP:
 			invoke DestroyWindow,hwnd
 			invoke PostQuitMessage,0
 		.endif
+	.elseif eax==WM_INITDIALOG
+		invoke SetForegroundWindow,hwnd
 	.elseif eax==WM_CLOSE
 		invoke DestroyWindow,hwnd
 		invoke PostQuitMessage,0
@@ -807,9 +810,50 @@ _SummarySearch endp
 
 ;
 _Gotoline proc
-	invoke _Dev
+	invoke DialogBoxParamW,hInstance,IDD_GOTO,hWinMain,offset _WndGTProc,0
 	ret
 _Gotoline endp
+
+_WndGTProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
+	LOCAL @szStr[20]:word
+	LOCAL @bIsTranslated
+	mov eax,uMsg
+	.if eax==WM_COMMAND
+		mov ecx,wParam
+		.if cx==IDC_GT_LINE
+			shr ecx,16
+			.if cx==EN_CHANGE
+				invoke GetDlgItemTextW,hwnd,IDC_GT_LINE,addr @szStr,10
+				invoke GetDlgItem,hwnd,IDC_GT_GOTO
+				.if !word ptr [@szStr]
+					invoke EnableWindow,eax,FALSE
+				.else
+					invoke EnableWindow,eax,TRUE
+				.endif
+			.endif
+		.elseif cx==IDC_GT_GOTO
+			invoke GetDlgItemInt,hwnd,IDC_GT_LINE,addr @bIsTranslated,FALSE
+			.if @bIsTranslated && eax<=FileInfo2.nLine && eax
+				dec eax
+				invoke _SetLineInListbox,eax
+				invoke EndDialog,hwnd,0
+			.else
+				invoke SendDlgItemMessageW,hwnd,IDC_GT_LINE,EM_SETSEL,0,-1
+			.endif
+		.elseif cx==IDC_GT_CANCEL
+			invoke EndDialog,hwnd,0
+		.endif
+	.elseif eax==WM_INITDIALOG
+		invoke SendMessageW,hList1,LB_GETCURSEL,0,0
+		inc eax
+		invoke wsprintfW,addr @szStr,offset szLinesFormat,eax,FileInfo2.nLine
+		invoke SetDlgItemTextW,hwnd,IDC_GT_TOTAL,addr @szStr
+	.elseif eax==WM_CLOSE
+		invoke EndDialog,hwnd,0
+	.endif
+	xor eax,eax
+	ret
+_WndGTProc endp
 
 _SetLineInListbox proc _nLine
 	invoke SendMessageW,hList1,WM_SETREDRAW,FALSE,0

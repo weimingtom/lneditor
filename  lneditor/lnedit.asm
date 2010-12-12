@@ -19,9 +19,11 @@ include menuview.asm
 include menuasm.asm
 include menuopt.asm
 include defaultedit.asm
+include record.asm
 
 
 include misc.asm
+include misc2.asm
 include newUI.asm
 
 
@@ -32,6 +34,7 @@ start:
 ;
 invoke GetModuleHandleW,NULL
 mov hInstance,eax
+invoke InitCommonControls
 invoke LoadIconW,hInstance,500
 mov hIcon,eax
 invoke HeapCreate,0,7ff00h,0
@@ -480,7 +483,23 @@ _InitWindow proc hwnd
 		dbConf+_Configs.windowRect[WRI_STATUS]+RECT.left,dbConf+_Configs.windowRect[WRI_STATUS]+RECT.top,\
 		dbConf+_Configs.windowRect[WRI_STATUS]+RECT.right,dbConf+_Configs.windowRect[WRI_STATUS]+RECT.bottom,hwnd,IDC_STATUS,hInstance,NULL
 	mov hStatus,eax
-	
+;	invoke CreateWindowExW,WS_EX_LEFT,offset szCCombobox,0,CBS_DROPDOWN or WS_CHILD or WS_VISIBLE,\
+;		dbConf+_Configs.windowRect[WRI_CODE1O]+RECT.left,dbConf+_Configs.windowRect[WRI_CODE1O]+RECT.top,\
+;		dbConf+_Configs.windowRect[WRI_CODE1O]+RECT.right,dbConf+_Configs.windowRect[WRI_CODE1O]+RECT.bottom,hwnd,IDC_CODE1O,hInstance,NULL
+;	mov hCode1O,eax
+;	invoke CreateWindowExW,WS_EX_LEFT,offset szCCombobox,0,CBS_DROPDOWN or WS_CHILD,\; | WS_VISIBLE,\
+;		dbConf+_Configs.windowRect[WRI_CODE1N]+RECT.left,dbConf+_Configs.windowRect[WRI_CODE1N]+RECT.top,\
+;		dbConf+_Configs.windowRect[WRI_CODE1N]+RECT.right,dbConf+_Configs.windowRect[WRI_CODE1N]+RECT.bottom,hwnd,IDC_CODE1N,hInstance,NULL
+;	mov hCode1N,eax
+;	invoke CreateWindowExW,WS_EX_LEFT,offset szCCombobox,0,CBS_DROPDOWN or WS_CHILD or WS_VISIBLE,\
+;		dbConf+_Configs.windowRect[WRI_CODE2O]+RECT.left,dbConf+_Configs.windowRect[WRI_CODE2O]+RECT.top,\
+;		dbConf+_Configs.windowRect[WRI_CODE2O]+RECT.right,dbConf+_Configs.windowRect[WRI_CODE2O]+RECT.bottom,hwnd,IDC_CODE2O,hInstance,NULL
+;	mov hCode2O,eax
+;	invoke CreateWindowExW,WS_EX_LEFT,offset szCCombobox,0,CBS_DROPDOWN or WS_CHILD or WS_VISIBLE,\
+;		dbConf+_Configs.windowRect[WRI_CODE2N]+RECT.left,dbConf+_Configs.windowRect[WRI_CODE2N]+RECT.top,\
+;		dbConf+_Configs.windowRect[WRI_CODE2N]+RECT.right,dbConf+_Configs.windowRect[WRI_CODE2N]+RECT.bottom,hwnd,IDC_CODE2N,hInstance,NULL
+;	mov hCode2N,eax
+
 	invoke CreateFontIndirectW,offset dbConf+_Configs.listFont
 	mov hFontList,eax
 	invoke CreateFontIndirectW,offset dbConf+_Configs.editFont
@@ -497,7 +516,6 @@ _LoadMel proc uses edi esi ebx _lParam
 	LOCAL @szStr[MAX_STRINGLEN]:byte
 	LOCAL @stFindData:WIN32_FIND_DATA
 	LOCAL @hFind
-	
 	
 	invoke GetModuleFileNameW,0,addr @szStr,MAX_STRINGLEN/2
 	invoke _DirBackW,addr @szStr
@@ -750,6 +768,10 @@ _GetSimpFunc proc uses edi ebx _hModule,_pSF
 	mov [edi].RetLine,eax
 	invoke GetProcAddress,_hModule,offset szFRelease
 	mov [edi].Release,eax
+	invoke GetProcAddress,_hModule,offset szFGetStr
+	.if eax
+		mov [edi].GetStr,eax
+	.endif
 	assume edi:nothing
 	mov eax,1
 	ret

@@ -13,3 +13,4 @@ _SetLine
 
 _GetStringInTxt
 _WildcharMatchW
+_ReplaceInMem

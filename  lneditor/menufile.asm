@@ -4,11 +4,10 @@ assume fs:nothing
 ;
 _OpenScript proc
 	LOCAL @nReturnInfo
+	LOCAL @szstr[SHORT_STRINGLEN]:byte
 	
 	xor eax,eax
 	mov FileInfo2.bReadOnly,ax
-	mov FileInfo1.bFirstCreate,ax
-	mov FileInfo2.bFirstCreate,ax
 	inc eax
 	mov FileInfo1.bReadOnly,ax
 	.if dbConf+_Configs.nEditMode==EM_SINGLE
@@ -28,7 +27,7 @@ _OpenScript proc
 			invoke GetLastError
 			.if eax==ERROR_FILE_NOT_FOUND
 				invoke CopyFileW,offset FileInfo1.szName,offset FileInfo2.szName,FALSE
-				mov FileInfo2.bFirstCreate,TRUE
+				mov FileInfo2.nCharSet,CS_SJIS
 				invoke _LoadFile,offset FileInfo2,LM_HALF
 				or eax,eax
 				jne @F
@@ -40,6 +39,8 @@ _OpenScript proc
 	.endif
 	
 	@@:
+	invoke _ReadRec
+	
 	push offset _HandlerOS
 	push fs:[0]
 	mov fs:[0],esp
@@ -48,6 +49,17 @@ _OpenScript proc
 	push offset FileInfo1
 	call dword ptr [dbSimpFunc+_SimpFunc.GetText]
 	.if eax
+		.if FileInfo1.nMemoryType==MT_POINTERONLY
+			invoke _MakeStringListFromStream,offset FileInfo1
+			.if eax
+				mov ecx,eax
+				mov eax,IDS_ERRORCODE
+				invoke _GetConstString
+				invoke wsprintfW,addr @szstr,eax,ecx
+				invoke _ClearAll,offset FileInfo1
+				invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
+			.endif
+		.endif
 		.if @nReturnInfo==RI_SUC_LINEONLY
 			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,FileInfo1.nLine
 			mov lpMarkTable,eax
@@ -67,6 +79,27 @@ _OpenScript proc
 		push offset FileInfo2
 		call dword ptr [dbSimpFunc+_SimpFunc.GetText]
 		.if eax
+			mov eax,FileInfo1.nLine
+			.if eax!=FileInfo2.nLine
+				invoke _ClearAll,offset FileInfo1
+				invoke _ClearAll,offset FileInfo2
+				mov eax,IDS_LINENOTMATCH
+				invoke _GetConstString
+				invoke MessageBoxW,hWinMain,eax,0,MB_OK OR MB_ICONERROR
+				jmp _ExOS
+			.endif
+			.if FileInfo2.nMemoryType==MT_POINTERONLY
+				invoke _MakeStringListFromStream,offset FileInfo2
+				.if eax
+					mov ecx,eax
+					mov eax,IDS_ERRORCODE
+					invoke _GetConstString
+					invoke wsprintfW,addr @szstr,eax,ecx
+					invoke _ClearAll,offset FileInfo1
+					invoke _ClearAll,offset FileInfo2
+					invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
+				.endif
+			.endif
 			.if @nReturnInfo==RI_SUC_LINEONLY
 				mov nCurIdx,-1
 				invoke _AddLinesToList,offset FileInfo2,hList2
@@ -125,6 +158,7 @@ _OpenScript endp
 ;
 _LoadScript proc
 	LOCAL @nReturnInfo
+	LOCAL @szstr[20]:word
 	
 	invoke _LoadFile,offset FileInfo2,LM_HALF
 	.if !eax
@@ -140,6 +174,25 @@ _LoadScript proc
 	push offset FileInfo2
 	call dword ptr [dbSimpFunc+_SimpFunc.GetText]
 	.if eax
+		mov eax,FileInfo1.nLine
+		.if eax!=FileInfo2.nLine
+			invoke _ClearAll,offset FileInfo2
+			mov eax,IDS_LINENOTMATCH
+			invoke _GetConstString
+			invoke MessageBoxW,hWinMain,eax,0,MB_OK OR MB_ICONERROR
+			jmp _ExLS
+		.endif
+		.if FileInfo2.nMemoryType==MT_POINTERONLY
+			invoke _MakeStringListFromStream,offset FileInfo2
+			.if eax
+				mov ecx,eax
+				mov eax,IDS_ERRORCODE
+				invoke _GetConstString
+				invoke wsprintfW,addr @szstr,eax,ecx
+				invoke _ClearAll,offset FileInfo2
+				invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
+			.endif
+		.endif
 		.if @nReturnInfo==RI_SUC_LINEONLY
 			mov nCurIdx,-1
 			invoke _AddLinesToList,offset FileInfo2,hList2

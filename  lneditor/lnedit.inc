@@ -39,6 +39,10 @@ IDC_LIST2			EQU		1002
 IDC_EDIT1			EQU		1003
 IDC_EDIT2			EQU		1004
 IDC_STATUS			EQU		1005
+;IDC_CODE1O			EQU		1006
+;IDC_CODE1N			EQU		1007
+;IDC_CODE2O			EQU		1008
+;IDC_CODE2N			EQU		1009
 IDC_TIMER			EQU		1
 
 MAX_STRINGLEN		EQU		512
@@ -50,16 +54,11 @@ BF_UNDO_SIZE		EQU		1000000
 LI_MARGIN_WIDTH	EQU		2
 LI_FRAME_WIDTH		EQU		2
 
-;String Type :Character Set
-STC_UNKNOWN			EQU		0
-STC_SJIS					EQU		80H
-STC_GBK					EQU		86H
-STC_UNICODE				EQU		0FFFFH
-
 ;Memory type for strings
 MT_FIXEDSTRING			EQU		1
 MT_VARIABLESTRING		EQU		2
 MT_EVERYSTRING			EQU		3
+MT_POINTERONLY			EQU		4
 
 E_NOMEM				EQU		1
 E_OVERMEM				EQU		2
@@ -124,11 +123,18 @@ _SetOpen			proto :dword
 _ShowPic				proto :dword,:dword
 _GetStringInList		proto :dword,:dword
 _GenWindowTitle		proto :dword,:dword
-_ReadRec			proto
-_WriteRec			proto
 _ConvertFA			proto :dword,:dword
 _CalHeight			proto :dword
 _Dev	proto
+
+;Misc2
+_MakeStringListFromStream	proto :dword
+_GetStringFromStmPtr	proto :dword,:dword,:dword
+
+;Record
+_ReadRec			proto
+_WriteRec			proto
+
 
 ;Menu Function
 _OpenScript			proto
@@ -164,6 +170,7 @@ _SummarySearch		proto :dword,:dword,:dword,:dword,:dword
 _SummaryFind		proto
 _WndSSProc			proto :dword,:dword,:dword,:dword
 _Gotoline			proto
+_WndGTProc		proto :dword,:dword,:dword,:dword
 _SetLineInListbox		proto :dword
 
 ;UI menu
@@ -188,8 +195,9 @@ _WndConfigProc		proto :dword,:dword,:dword,:dword
 _GetText				proto :dword,:dword
 _SaveText			proto :dword
 _ModifyLine			proto :dword,:dword
-_GetStringInTxt		proto :dword,:dword,:dword,:dword
+_GetStringInTxt		proto :dword,:dword,:dword
 _SetLine				proto :dword,:dword
+_ReplaceInMem		proto :dword,:dword,:dword,:dword,:dword
 
 ;UI Maker
 _ZoomRect			proto :dword,:dword
@@ -206,18 +214,18 @@ _FileInfo struct
 	
 	;以下域由插件负责填写
 	nMemoryType			dd		?						
-	;从脚本中提取出的文本有三种存储方式，一种是使用定长字符串数组存放，一种是使用连续内存空间变长字符串数组，最后是独立内存空间字符串。
+	;存储类型详细含义见文档。
 	lpText				dd		?						;从文件中提取出的纯文本的内存指针。若采用MT_EVERYSTRING存储，此项可选。
 	lpTextIndex			dd		?						;纯文本字符串索引表指针。
-	lpStreamIndex		dd		?						;可选，原始脚本字符串索引表指针。
+	lpStreamIndex		dd		?						;可选，原始脚本字符串索引表指针。若为POINTERONLY存储类型，此项必须。
+	nStringType			dd		?						;字符串存储类型。
 	nStreamSize			dd		?						;文件长度。须跟随脚本编辑随时更新。
 	nLine				dd		?						;文本行数。
 	nLineLen				dd		?						;可选，若使用定长字符串存储，本项须指示字符串长度。独立内存字符串亦可使用。
 	
 	;以下3个域由主程序填写
 	bReadOnly			dw		?						;指定该文件是否为只读（是否在列表框左侧）
-	bFirstCreate			dw		?						;指示该文件是否为第一次创建
-	nCharSet				dd		?						;指示其内部使用的何种字符集，-1为由插件决定，但是插件不负责填写
+	nCharSet				dd		?						;指示将此文件中字符串解释为何种字符集，用户可以设定，插件亦可根据自己的判断填写。
 	
 	Reserved				dd		2		dup(?)
 _FileInfo ends
@@ -240,7 +248,9 @@ _MelInfo ends
 ;每个文件的当前行数等信息
 _FileRec struct
 	nPos			dd		?
-	Reserverd		dd		3	dup(?)
+	nCharSet1		dd		?
+	nCharSet2		dd		?
+	Reserverd		dd		?
 	nOffsetMT		dd		?
 	nLenMT			dd		?
 	nOffsetResv		dd		6	dup(?)
@@ -282,6 +292,10 @@ _FileRec ends
 	hEdit1			dd		?
 	hEdit2			dd		?
 	hStatus			dd		?
+;	hCode1O			dd		?
+;	hCode1N			dd		?
+;	hCode2O			dd		?
+;	hCode2N			dd		?
 
 ;字体句柄
 	hFontList			dd		?
@@ -292,7 +306,7 @@ _FileRec ends
 	
 .data
 	szNULL			dd		0
-	TW0			' v0.3',			szDisplayVer
+	TW0			' v0.4',			szDisplayVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0
@@ -312,6 +326,7 @@ _FileRec ends
 	szCList			dw		'l','i','s','t','b','o','x',0
 	szCEdit			dw		'e','d','i','t',0
 	szCStatic			dw		's','t','a','t','i','c',0
+	TW0			'combobox',		szCCombobox
 	szCNewEdit		dw		'e','d','i','t','A','m','a','f',0
 	szCNewList		dw		'l','i','s','t','A','m','a','f',0
 	
@@ -319,16 +334,18 @@ _FileRec ends
 	szFPreProc		db		'PreProc',0
 	szFGetText		db		'GetText',0
 	szFSaveText		db		'SaveText',0
-	szFModifyLine	db		'ModifyLine',0
+	szFModifyLine		db		'ModifyLine',0
 	szFSetLine		db		'SetLine',0
 	szFRetLine		db		'RetLine',0
 	szFRelease		db		'Release',0
+	szFGetStr			db		'GetStr',0
 
 .data
 	TW0		'%d',		szToStr
 	TW0		'0x%08X',		szToStrH
 	TW0		' - ',			szGang
 	TW0		'* ',			szXing
+	TW0		'%d/%d',		szLinesFormat
 
 
 .data
@@ -380,6 +397,7 @@ _FileRec ends
 				dd	offset _SetLine
 				dd	0
 				dd	0
+				dd	offset _GetStringFromStmPtr
 				
 	dbTxtFunc	dd	0
 				dd	0
@@ -415,11 +433,16 @@ _FileRec ends
 ;					LOGFONT	<-12,0,0,0,190h,0,0,0,86h,3,2,1,22h,'媅SO'>
 					
 					RECT		<CW_USEDEFAULT,CW_USEDEFAULT,800,600>
-					RECT		<10,10,370,400>
-					RECT		<410,10,370,400>
+					RECT		<10,15,370,400>
+					RECT		<410,15,370,400>
 					RECT		<20,440,700,40>
 					RECT		<20,500,700,40>
 					RECT		<20,420,700,15>
+;					;以下是四个编码框
+;					RECT		<30,10,140,12>
+;					RECT		<0,0,0,0>
+;					RECT		<430,10,140,12>
+;					RECT		<620,10,140,12>
 	
 .data
 	TW0		'lnedit.ini',		szcfFileName

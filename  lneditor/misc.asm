@@ -219,6 +219,7 @@ _AddLines proc uses esi edi ebx _pdb
 ;	.endif
 	assume edi:ptr _FileInfo
 	xor ebx,ebx
+	invoke SendMessageW,@hList,WM_SETREDRAW,FALSE,0
 	.if [edi].nMemoryType!=MT_FIXEDSTRING
 		mov esi,[edi].lpTextIndex
 		.while ebx<[edi].nLine
@@ -234,6 +235,7 @@ _AddLines proc uses esi edi ebx _pdb
 			inc ebx
 		.endw
 	.endif
+	invoke SendMessageW,@hList,WM_SETREDRAW,TRUE,0
 	assume edi:nothing
 	invoke HeapFree,hGlobalHeap,0,_pdb
 	.if nCurIdx!=-1
@@ -735,92 +737,6 @@ _GenWindowTitle proc _lpsz,_nType
 	.endif
 	ret
 _GenWindowTitle endp
-
-_ReadRec proc uses ebx
-	LOCAL @str[MAX_STRINGLEN]:byte
-	LOCAL @hFile
-	LOCAL @dbHdr[sizeof _FileRec]:byte
-	lea ebx,@str
-	invoke lstrcpyW,ebx,lpszConfigFile
-	invoke _DirBackW,ebx
-	invoke _DirCatW,ebx,offset szRecDir
-	invoke SetCurrentDirectoryW,ebx
-	or eax,eax
-	je _ErrRR
-	invoke lstrcpyW,ebx,offset FileInfo1.szName
-	invoke lstrcatW,ebx,offset szRecExt
-	invoke _DirFileNameW,ebx
-	or eax,eax
-	je _ErrRR
-	invoke CreateFileW,eax,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
-	cmp eax,-1
-	je _ErrRR
-	mov @hFile,eax
-	lea edi,@dbHdr
-	invoke ReadFile,@hFile,edi,sizeof _FileRec,offset dwTemp,0
-	assume edi:ptr _FileRec
-	mov eax,[edi].nLenMT
-	.if lpMarkTable && eax==FileInfo1.nLine
-		invoke SetFilePointer,@hFile,[edi].nOffsetMT,0,FILE_BEGIN
-		invoke ReadFile,@hFile,lpMarkTable,[edi].nLenMT,offset dwTemp,0
-	.endif
-	invoke CloseHandle,@hFile
-	mov eax,[edi].nPos
-	ret
-	assume edi:ptr _nothing
-_ErrRR:
-	xor eax,eax
-	ret
-_ReadRec endp
-
-_WriteRec proc uses ebx edi
-	LOCAL @str[MAX_STRINGLEN]:byte
-	LOCAL @hFile
-	LOCAL @dbHdr[sizeof _FileRec]:byte
-	lea ebx,@str
-	invoke lstrcpyW,ebx,lpszConfigFile
-	invoke _DirBackW,ebx
-	invoke SetCurrentDirectoryW,ebx
-	or eax,eax
-	je _ErrWR
-	invoke _DirCatW,ebx,offset szRecDir
-	invoke SetCurrentDirectoryW,ebx
-	.if !eax
-		invoke CreateDirectoryW,offset szRecDir,0
-		invoke SetCurrentDirectoryW,ebx
-		or eax,eax
-		je _ErrWR
-	.endif
-	invoke lstrcpyW,ebx,offset FileInfo1.szName
-	invoke lstrcatW,ebx,offset szRecExt
-	invoke _DirFileNameW,ebx
-	or eax,eax
-	je _ErrWR
-	invoke CreateFileW,eax,GENERIC_WRITE,FILE_SHARE_READ,0,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0
-	cmp eax,-1
-	je _ErrWR
-	mov @hFile,eax
-	lea edi,@dbHdr
-	assume edi:ptr _FileRec
-	mov [edi].nPos,0
-	invoke SendMessageW,hList1,LB_GETCURSEL,0,0
-	.if eax!=-1
-		mov [edi].nPos,eax
-	.endif
-	mov [edi].nOffsetMT,sizeof _FileRec
-	mov eax,FileInfo1.nLine
-	mov [edi].nLenMT,eax
-	invoke WriteFile,@hFile,edi,sizeof _FileRec,offset dwTemp,0
-	.if lpMarkTable
-		invoke WriteFile,@hFile,lpMarkTable,FileInfo1.nLine,offset dwTemp,0
-	.endif
-	invoke CloseHandle,@hFile
-	mov eax,1
-	ret
-_ErrWR:
-	xor eax,eax
-	ret
-_WriteRec endp
 
 _Dev proc
 	mov eax,IDS_DEVELOP
