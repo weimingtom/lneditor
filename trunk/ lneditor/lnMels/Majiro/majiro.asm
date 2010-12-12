@@ -130,7 +130,7 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 			mov cx,ax
 ;			sub ecx,800h
 			xor eax,eax
-			mov al,[ecx+(Offset OpTable-800h)]
+			mov al,byte ptr [ecx+(Offset OpTable-800h)]
 			test eax,eax
 			jl _SpecialGT
 				add esi,eax
@@ -176,22 +176,32 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	;分配FileInfo中的内存
 	mov eax,@nLine
 	mov [ebx].nLine,eax
+;	shl eax,2
+;	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
+;	or eax,eax
+;	je _NomemGT
+;	mov [ebx].lpTextIndex,eax
+;	mov ecx,[ebx].nLine
 	shl eax,2
 	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
-	or eax,eax
-	je _NomemGT
-	mov [ebx].lpTextIndex,eax
-	mov ecx,[ebx].nLine
-	shl ecx,2
-	invoke VirtualAlloc,0,ecx,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _NomemGT
 	mov [ebx].lpStreamIndex,eax
 	
 	;开始处理字节码
 	assume edi:ptr _MjoInfo
-	mov [ebx].nMemoryType,MT_EVERYSTRING
-	mov [ebx].nLineLen,DEFAULT_STRINGLEN
+	mov [ebx].nMemoryType,MT_POINTERONLY
+	mov [ebx].nStringType,ST_PASCAL2
+	.if [ebx].bReadOnly && ![ebx].nCharSet
+		mov [ebx].nCharSet,CS_SJIS
+	.endif
+	.if [ebx].nCharSet==CS_UNICODE
+		invoke Release,_lpFI
+		mov ecx,_lpRI
+		xor eax,eax
+		mov dword ptr [ecx],RI_FAIL_ERRORCS
+		ret
+	.endif
 	mov esi,[edi].lpData
 	mov @nLine,0
 	.while esi<@pEnd
@@ -205,12 +215,12 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 			mov cx,ax
 ;			sub ecx,800h
 			xor eax,eax
-			mov al,[ecx+(Offset OpTable-800h)]
+			mov al,byte ptr [ecx+(Offset OpTable-800h)]
 			test eax,eax
-			jl _SpecialGT
+			jl _SpecialGT2
 				add esi,eax
 				.continue
-			_SpecialGT:
+			_SpecialGT2:
 				.if eax==-1
 					lodsw
 					add esi,eax
@@ -218,23 +228,12 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 				.elseif eax==-2
 					lodsw
 					movzx ecx,ax
-					mov eax,DEFAULT_STRINGLEN
-					.if ecx>eax
-						mov eax,ecx
-					.endif
-					mov @nTemp,ecx
-					invoke HeapAlloc,hHeap,0,eax
-					or eax,eax
-					je _NomemGT
-					mov edx,[ebx].lpTextIndex
-					mov ecx,@nLine
-					mov [edx+ecx*4],eax 
+					mov eax,@nLine
 					mov edx,[ebx].lpStreamIndex
-					mov [edx+ecx*4],esi
-					sub dword ptr [edx+ecx*4],2
+					mov [edx+eax*4],esi
+					sub dword ptr [edx+eax*4],2
 					inc @nLine
-					invoke _memcpy2,eax,esi,@nTemp
-					mov esi,eax
+					add esi,ecx
 					.continue
 				.elseif eax==-3
 					jmp _OpErrGT
@@ -328,12 +327,5 @@ _memcpy2 proc _dest,_src,_len
 	pop esi
 	ret
 _memcpy2 endp
-
-_AddAString proc _lpFI,_bf
-	mov esi,_lpFI
-	assume esi:ptr _FileInfo
-	mov [esi].
-	ret
-_AddAString endp
 
 end DllMain

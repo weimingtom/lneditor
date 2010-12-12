@@ -88,6 +88,13 @@ IDC_FONT_CLOSE          equ 2
 IDC_STC12               equ 1611
 IDC_FONT_LISTCS         equ 1612
 IDD_ABOUT               equ 1700
+IDD_GOTO                equ 1800
+IDC_STC14               equ 1801
+IDC_GT_LINE             equ 1802
+IDC_STC15               equ 1803
+IDC_GT_TOTAL            equ 1804
+IDC_GT_GOTO             equ 1
+IDC_GT_CANCEL           equ 2
 IDR_MMENU_CHS           equ 10000
 IDM_OPEN                equ 10001
 IDM_LOAD                equ 10002
@@ -168,6 +175,7 @@ IDS_INNERDESC           equ 43
 IDS_SUCCONVERT          equ 45
 IDS_FAILCONVERT         equ 46
 IDS_SELECTBKGND         equ 47
+IDS_ERRORCODE           equ 48
 IDR_ACCEL1              equ 1
 IDR_VERSION1            equ 1
 IDR_XPMANIFEST1         equ 1

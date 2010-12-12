@@ -20,6 +20,10 @@ WRI_LIST2			EQU		32
 WRI_EDIT1			EQU		48
 WRI_EDIT2			EQU		64
 WRI_STATUS			EQU		80
+;WRI_CODE1O			EQU		96
+;WRI_CODE1N			EQU		(7*16)
+;WRI_CODE2O			EQU		(8*16)
+;WRI_CODE2N			EQU		(9*16)
 
 
 ;Config Struct
@@ -32,20 +36,20 @@ _Configs struct
 	bSaveInChLine		dd			?;
 	bAutoSelText			dd			?
 	lpDefaultMel			dd			?
-	lpInitDir1				dd			?;
-	lpInitDir2				dd			?;
+	lpInitDir1				dd			?
+	lpInitDir2				dd			?
 	lpNewScDir			dd			?
 	lpPrevFile			dd			?
 	
-	lpBackName			dd			?;
+	lpBackName			dd			?
 	TextColorSelected		dd			?
-	TextColorDefault		dd			?;
+	TextColorDefault		dd			?
 	TextColorEdit			dd			?
 	LineColor			dd			?
 	HiColorDefault		dd			?
 	HiColorMarked		dd			?	
 	listFont				LOGFONT	<?>
-	db	32	dup(?)
+	db	32	dup(?);LOGFONT中的Unicode字符串多出来的
 	editFont				LOGFONT	<?>
 	db	32	dup(?)
 		
