@@ -48,7 +48,7 @@ _OpenScript proc
 	push eax
 	push offset FileInfo1
 	call dword ptr [dbSimpFunc+_SimpFunc.GetText]
-	.if eax
+	.if !eax
 		.if FileInfo1.nMemoryType==MT_POINTERONLY
 			invoke _MakeStringListFromStream,offset FileInfo1
 			.if eax
@@ -78,7 +78,7 @@ _OpenScript proc
 		push eax
 		push offset FileInfo2
 		call dword ptr [dbSimpFunc+_SimpFunc.GetText]
-		.if eax
+		.if !eax
 			mov eax,FileInfo1.nLine
 			.if eax!=FileInfo2.nLine
 				invoke _ClearAll,offset FileInfo1
@@ -86,7 +86,7 @@ _OpenScript proc
 				mov eax,IDS_LINENOTMATCH
 				invoke _GetConstString
 				invoke MessageBoxW,hWinMain,eax,0,MB_OK OR MB_ICONERROR
-				jmp _ExOS
+				jmp _Ex2OS
 			.endif
 			.if FileInfo2.nMemoryType==MT_POINTERONLY
 				invoke _MakeStringListFromStream,offset FileInfo2
@@ -98,6 +98,7 @@ _OpenScript proc
 					invoke _ClearAll,offset FileInfo1
 					invoke _ClearAll,offset FileInfo2
 					invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
+					jmp _Ex2OS
 				.endif
 			.endif
 			.if @nReturnInfo==RI_SUC_LINEONLY
@@ -108,6 +109,9 @@ _OpenScript proc
 		.else
 			invoke _ClearAll,offset FileInfo1
 			invoke _ClearAll,offset FileInfo2
+			mov eax,IDS_DLLERR
+			invoke _GetConstString
+			invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
 			jmp _Ex2OS
 		.endif
 		
@@ -173,7 +177,7 @@ _LoadScript proc
 	push eax
 	push offset FileInfo2
 	call dword ptr [dbSimpFunc+_SimpFunc.GetText]
-	.if eax
+	.if !eax
 		mov eax,FileInfo1.nLine
 		.if eax!=FileInfo2.nLine
 			invoke _ClearAll,offset FileInfo2
@@ -243,7 +247,7 @@ _SaveScript proc
 	.if bModified
 		invoke _SaveFile,offset FileInfo2
 		or eax,eax
-		je _ErrSS
+		jne _ErrSS
 		mov eax,IDS_SUCSAVE
 		INVOKE _GetConstString
 		invoke _DisplayStatus,eax,2000
@@ -285,7 +289,7 @@ _SaveAs proc
 		
 		invoke _SaveFile,addr @fi
 		or eax,eax
-		je _ErrSA
+		jne _ErrSA
 		mov eax,IDS_SUCSAVE
 		INVOKE _GetConstString
 		invoke _DisplayStatus,eax,2000
@@ -307,7 +311,7 @@ _CloseScript proc
 		.if eax==IDYES
 			invoke _SaveFile,offset FileInfo2
 			or eax,eax
-			jne @F
+			je @F
 			mov eax,IDS_ERRSAVE
 			invoke _GetConstString
 			invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
@@ -381,7 +385,7 @@ _ErrET:
 		invoke _ExportSingleTxt,offset FileInfo2,@hTxtFile
 		mov ebx,eax
 		invoke CloseHandle,@hTxtFile
-		.if !ebx
+		.if ebx
 			mov eax,IDS_FAILEXPORT
 			invoke _GetConstString
 			invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
@@ -404,8 +408,10 @@ _ExportSingleTxt proc uses esi edi ebx _lpFI,_hTxt
 	mov ecx,_lpFI
 	assume ecx:ptr _FileInfo
 	invoke VirtualAlloc,0,[ecx].nStreamSize,MEM_COMMIT,PAGE_READWRITE
-	or eax,eax
-	je _ErrEST
+	.if !eax
+		mov eax,E_NOMEM
+		jmp _ExEST
+	.endif
 	mov @lpBuff,eax
 	
 	mov edi,@lpBuff
@@ -415,7 +421,7 @@ _ExportSingleTxt proc uses esi edi ebx _lpFI,_hTxt
 	mov ecx,_lpFI
 	mov eax,[ecx].nLine
 	mov @nLine,eax
-	.if [ecx].lpTextIndex
+	.if [ecx].nMemoryType!=MT_FIXEDSTRING
 		mov esi,[ecx].lpTextIndex
 		.while ebx<@nLine
 			invoke lstrcpyW,edi,[esi]
@@ -450,10 +456,11 @@ _ExportSingleTxt proc uses esi edi ebx _lpFI,_hTxt
 	or ebx,ebx
 	je _ErrEST
 	assume ecx:nothing
-	mov eax,1
+	xor eax,eax
+_ExEST:
 	ret
 _ErrEST:
-	xor eax,eax
+	or eax,E_ERROR
 	ret
 _ExportSingleTxt endp
 
@@ -584,7 +591,7 @@ _SucIT:
 					push ebx
 					push offset FileInfo2
 					call dbSimpFunc+_SimpFunc.ModifyLine
-					.if !eax
+					.if eax
 						mov eax,IDS_FAILIMPORT
 						invoke _GetConstString
 						invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR

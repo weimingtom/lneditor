@@ -296,8 +296,8 @@ BEGIN
 END
 
 IDR_VERSION1 VERSIONINFO
-FILEVERSION 0,4,314,0
-PRODUCTVERSION 0,4,314,0
+FILEVERSION 0,4,328,0
+PRODUCTVERSION 0,4,328,0
 FILEOS 0x00000004
 FILETYPE 0x00000001
 BEGIN
@@ -305,8 +305,8 @@ BEGIN
   BEGIN
     BLOCK "080404B0"
     BEGIN
-      VALUE "FileVersion", "0.4.314.0\0"
-      VALUE "ProductVersion", "0.4.314.0\0"
+      VALUE "FileVersion", "0.4.328.0\0"
+      VALUE "ProductVersion", "0.4.328.0\0"
       VALUE "FileDescription", "A General Script Editor for Galgame.\0"
       VALUE "InternalName", "lnedit\0"
       VALUE "OriginalFilename", "lnedit.exe\0"
@@ -353,6 +353,7 @@ IDD_CONFIG DIALOGEX 0,0,252,132
 CAPTION "设置"
 FONT 9,"宋体",400,0,0
 STYLE 0x90C80800
+EXSTYLE 0x00000001
 BEGIN
   CONTROL "编辑模式",IDC_GRP8,"Button",0x50000007,6,6,114,39
   CONTROL "单文件编辑",IDC_CF_MODE_SINGLE,"Button",0x50030009,15,18,54,9

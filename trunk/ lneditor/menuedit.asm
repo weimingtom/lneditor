@@ -40,7 +40,7 @@ _Modify proc
 	invoke _ModifyStringInList,offset FileInfo2,eax,@pStr
 	mov ebx,eax
 	invoke HeapFree,hGlobalHeap,0,@pStr
-	.if !ebx
+	.if ebx
 		mov eax,IDS_STRTOOLONG
 		invoke _GetConstString
 		invoke MessageBoxW,hWinMain,eax,NULL,MB_OK or MB_ICONERROR
@@ -52,7 +52,7 @@ _Modify proc
 	push eax
 	push offset FileInfo2
 	call dbSimpFunc+_SimpFunc.ModifyLine
-	.if !eax
+	.if eax
 		mov eax,IDS_DECLINEMOD
 		invoke _GetConstString
 		invoke MessageBoxW,hWinMain,eax,NULL,MB_OK OR MB_ICONERROR
@@ -79,7 +79,8 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 	invoke lstrlenW,_lpStr
 	shl eax,1
 	mov @nLen,eax
-	.if [ebx].nMemoryType==MT_VARIABLESTRING
+	MOV ECX,[ebx].nMemoryType
+	.if ecx==MT_VARIABLESTRING
 		mov esi,FileInfo2.lpTextIndex
 		mov eax,_nLine
 		mov esi,[esi+eax*4]
@@ -102,13 +103,14 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 			mov esi,[esi+eax*4]
 			.if !ecx
 				invoke lstrcpyW,esi,_lpStr
+				xor eax,eax
 				jmp _ExMSIL
 			.endif
 			mov @nTmp,ecx
 			sub edi,ecx
 			invoke VirtualAlloc,0,edi,MEM_COMMIT,PAGE_READWRITE
-
-			je _ErrMSIL
+			or eax,eax
+			je _NomemMSIL
 			mov @lpTemp,eax
 			invoke RtlMoveMemory,@lpTemp,@nTmp,edi
 			invoke lstrcpyW,esi,_lpStr
@@ -128,7 +130,7 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 				.endw
 			.endif
 		.endif
-	.elseif [ebx].nMemoryType==MT_EVERYSTRING
+	.elseif ecx==MT_EVERYSTRING || ecx==MT_POINTERONLY
 		mov esi,FileInfo2.lpTextIndex
 		mov eax,_nLine
 		lea edi,[esi+eax*4]
@@ -141,20 +143,23 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 			mov ecx,@nLen
 			.if [ebx].nLineLen && ecx<[ebx].nLineLen
 				invoke lstrcpyW,esi,_lpStr
+				xor eax,eax
 				jmp _ExMSIL
 			.endif
 			add ecx,2
 			invoke HeapAlloc,hGlobalHeap,0,ecx
 			or eax,eax
-			je _ErrMSIL
+			je _NomemMSIL
 			mov [edi],eax
 			invoke lstrcpyW,eax,_lpStr
 			invoke HeapFree,hGlobalHeap,0,esi
 		.endif
-	.else
+	.elseif ecx==MT_FIXEDSTRING
 		mov eax,@nLen
-		cmp eax,FileInfo2.nLineLen
-		jae _ErrMSIL
+		.if eax>=FileInfo2.nLineLen
+			mov eax,E_LINETOOLONG
+			jmp _ExMSIL
+		.endif
 		mov edi,[ebx].lpText
 		mov eax,[ebx].nLineLen
 		mov edx,_nLine
@@ -163,13 +168,16 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 		or eax,edx
 		add edi,eax
 		invoke lstrcpyW,edi,_lpStr
+	.else
+		mov eax,E_INVALIDPARAMETER
+		jmp _ExMSIL
 	.endif
 	assume ebx:nothing
-_ExMSIL:
-	mov eax,1
-	ret
-_ErrMSIL:
 	xor eax,eax
+_ExMSIL:
+	ret
+_NomemMSIL:
+	mov eax,E_NOMEM
 	ret
 _ModifyStringInList endp
 
@@ -254,23 +262,23 @@ _StartTF:
 POSTF	EQU		_StartTF-_ToFull
 	.if bOpen
 	xor esi,esi
-	mov edi,1
+	xor edi,edi
 	.while esi<FileInfo2.nLine
 		invoke _GetStringInList,offset FileInfo2,esi
 		invoke _ConvertFA,eax,ebx
 		push esi
 		push offset FileInfo2
 		call dbSimpFunc+_SimpFunc.ModifyLine
-		and edi,eax 
+		or edi,eax
 		inc esi
 	.endw
-	.if edi
+	invoke _SetModified,1
+	invoke InvalidateRect,hList2,0,TRUE
+	.if !edi
 		mov eax,IDS_SUCCONVERT
 	.else
 		mov eax,IDS_FAILCONVERT
 	.endif
-	invoke _SetModified,1
-	invoke InvalidateRect,hList2,0,TRUE
 	invoke _GetConstString
 	invoke _DisplayStatus,eax,2000
 	.endif
@@ -568,7 +576,7 @@ _FindNWRP:
 			push @nCurIdx
 			push offset FileInfo2
 			call dbSimpFunc+_SimpFunc.ModifyLine
-			.if !eax
+			.if eax
 				mov eax,IDS_FAILREPLACE
 				invoke _GetConstString
 				invoke MessageBoxW,hwnd,eax,0,MB_OK or MB_ICONERROR
@@ -630,7 +638,7 @@ _FindNWRP:
 						push @nCurIdx
 						push offset FileInfo2
 						call dbSimpFunc+_SimpFunc.ModifyLine
-						.if eax
+						.if !eax
 							inc @nTotal
 						.else
 							inc @nErrTotal

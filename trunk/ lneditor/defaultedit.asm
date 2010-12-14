@@ -35,7 +35,7 @@ _ForceUniGT:
 			jmp _ForceUniGT
 		.endif
 		mov @bIsUnicode,0
-		mov [ebx].nCharSet,936
+		mov [ebx].nCharSet,CS_GBK
 		xor ecx,ecx
 		.repeat
 			.if word ptr [edi]==0a0dh
@@ -101,16 +101,16 @@ _ForceUniGT:
 	sub edi,[ebx].lpTextIndex
 	shr edi,2
 	mov [ebx].nLine,edi
-	mov [ebx].nLineLen,MAX_STRINGLEN
+	mov [ebx].nLineLen,0
 	mov [ebx].nMemoryType,MT_EVERYSTRING
 	mov ecx,_lpRI
 	mov dword ptr [ecx],RI_SUC_LINEONLY
-	MOV EAX,1
+	xor eax,eax
 	ret
 _NomemGT2:
 	mov ecx,_lpRI
 	mov dword ptr [ecx],RI_FAIL_MEM
-	xor eax,eax
+	or eax,E_ERROR
 	ret
 _GetText endp
 
@@ -126,9 +126,10 @@ _SaveText proc uses edi _pFI
 	or eax,eax
 	je _ErrST
 	assume edi:nothing
+	xor eax,eax
 	ret
 _ErrST:
-	xor eax,eax
+	mov eax,E_FILEACCESSERROR
 	ret
 _SaveText endp
 
@@ -138,14 +139,18 @@ _ModifyLineA proc uses esi edi ebx _pFI,_nLine
 	mov edi,_pFI
 	assume edi:ptr _FileInfo
 	invoke _GetStringInList,_pFI,_nLine
-	or eax,eax
-	je _ErrML
+	.if !eax
+		mov eax,E_LINENOTEXIST
+		jmp _ExMLA
+	.endif
 	mov ebx,eax
 	invoke lstrlenW,ebx
 	shl eax,2
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
-	or eax,eax
-	je _ErrML
+	.if !eax
+		mov eax,E_NOMEM
+		jmp _ExMLA
+	.endif
 	mov @pNewStr,eax
 	mov esi,[edi].lpStreamIndex
 	mov eax,_nLine
@@ -154,7 +159,8 @@ _ModifyLineA proc uses esi edi ebx _pFI,_nLine
 	invoke WideCharToMultiByte,[edi].nCharSet,0,ebx,-1,@pNewStr,100000,0,0
 	.if !eax
 		invoke HeapFree,hGlobalHeap,0,@pNewStr
-		jmp _ErrML
+		mov eax,E_NOTENOUGHBUFF
+		jmp _ExMLA
 	.endif
 	dec eax
 	mov @pNewLen,eax
@@ -171,7 +177,7 @@ _ModifyLineA proc uses esi edi ebx _pFI,_nLine
 	mov @pOldLen,esi
 	invoke _ReplaceInMem,@pNewStr,@pNewLen,edx,esi,ecx
 	or eax,eax
-	jne _ErrML
+	jne _ExMLA
 	invoke HeapFree,hGlobalHeap,0,@pNewStr
 	
 	mov esi,[edi].lpStreamIndex
@@ -184,12 +190,13 @@ _ModifyLineA proc uses esi edi ebx _pFI,_nLine
 		add esi,4
 	.endw
 	add [edi].nStreamSize,eax
+	mov eax,[edi].lpStream
+	add eax,[edi].nStreamSize
+	mov word ptr [eax],0
 	assume edi:nothing
 	
-	mov eax,1
-	ret
-_ErrML:
 	xor eax,eax
+_ExMLA:
 	ret
 _ModifyLineA endp
 
@@ -198,8 +205,10 @@ _ModifyLineW proc uses esi edi ebx _pFI,_nLine
 	mov edi,_pFI
 	assume edi:ptr _FileInfo
 	invoke _GetStringInList,_pFI,_nLine
-	or eax,eax
-	je _ErrML
+	.if !eax
+		mov eax,E_LINENOTEXIST
+		jmp _ExMLW
+	.endif
 	mov ebx,eax
 	invoke lstrlenW,ebx
 	shl eax,1
@@ -220,7 +229,7 @@ _ModifyLineW proc uses esi edi ebx _pFI,_nLine
 	mov @pOldLen,esi
 	invoke _ReplaceInMem,ebx,@pNewLen,edx,esi,ecx
 	or eax,eax
-	jne _ErrML
+	jne _ExMLW
 	
 	mov esi,[edi].lpStreamIndex
 	mov eax,_nLine
@@ -232,12 +241,13 @@ _ModifyLineW proc uses esi edi ebx _pFI,_nLine
 		add esi,4
 	.endw
 	add [edi].nStreamSize,eax
+	mov eax,[edi].lpStream
+	add eax,[edi].nStreamSize
+	mov word ptr [eax],0
 	assume edi:nothing
 	
-	mov eax,1
-	ret
-_ErrML:
 	xor eax,eax
+_ExMLW:
 	ret
 _ModifyLineW endp
 
@@ -273,7 +283,7 @@ _GetStringInTxt proc uses esi edi _lppString,_lppBuff,_nCharSet
 		jne @F
 	.endif
 	_NullStrGSFM:
-	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,4
 	mov ecx,_lppString
 	mov [ecx],eax
 	xor eax,eax
@@ -294,15 +304,15 @@ _GetStringInTxt proc uses esi edi _lppString,_lppBuff,_nCharSet
 		.endw
 		mov @nStrLen,ecx
 		add ecx,2
-		mov eax,MAX_STRINGLEN
-		.if ecx>eax
-			mov eax,ecx
-		.endif
-		invoke HeapAlloc,hGlobalHeap,0,eax
+;		mov eax,MAX_STRINGLEN
+;		.if ecx>eax
+;			mov eax,ecx
+;		.endif
+		invoke HeapAlloc,hGlobalHeap,0,ecx
 		.if !eax
 			pop fs:[0]
 			add esp,4
-			mov eax,E_NOTENOUGHBUFF
+			mov eax,E_NOMEM
 			jmp _ExGSFM
 		.endif
 		mov edx,_lppString
@@ -333,17 +343,18 @@ _GetStringInTxt proc uses esi edi _lppString,_lppBuff,_nCharSet
 		mov @nStrLen,ecx
 		inc ecx
 		shl ecx,1
-		mov eax,MAX_STRINGLEN
-		.if ecx>eax
-			mov eax,ecx
-		.endif
-		mov ecx,eax
+		mov eax,ecx
+;		mov eax,MAX_STRINGLEN
+;		.if ecx>eax
+;			mov eax,ecx
+;		.endif
+;		mov ecx,eax
 		shr ecx,1
 		push ecx
 		invoke HeapAlloc,hGlobalHeap,0,eax
 		.if !eax
 			add esp,4
-			mov eax,E_NOTENOUGHBUFF
+			mov eax,E_NOMEM
 			jmp _ExGSFM
 		.endif
 		mov ecx,_lppString
@@ -395,7 +406,7 @@ _ReplaceInMem proc uses esi edi _lpNew,_nNewLen,_lpOriPos,_nOriLen,_nLeftLen
 	@@:
 		invoke HeapAlloc,hGlobalHeap,0,_nLeftLen
 		.if !eax
-			mov eax,E_NOTENOUGHBUFF
+			mov eax,E_NOMEM
 			jmp _ExRIM
 		.endif
 		push eax

@@ -159,12 +159,19 @@ _ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx
 			lea eax,@stFileInfo
 			push eax
 			call @pGetText
-			.if !eax
+			.if eax
 				mov @err,1
 				jmp _Next3EATT
 			.endif
+			.if @stFileInfo.nMemoryType==MT_POINTERONLY
+				invoke _MakeStringListFromStream,addr @stFileInfo
+				.if eax
+					mov @err,1
+					jmp _Next3EATT
+				.endif
+			.endif
 			invoke _ExportSingleTxt,addr @stFileInfo,@hFileT
-			.if !eax
+			.if eax
 				mov @err,1
 			.endif
 _Next3EATT:
