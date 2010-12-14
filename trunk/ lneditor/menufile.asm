@@ -104,6 +104,16 @@ _OpenScript proc
 			.if @nReturnInfo==RI_SUC_LINEONLY
 				mov nCurIdx,-1
 				invoke _AddLinesToList,offset FileInfo2,hList2
+				.if FileInfo2.nCharSet!=CS_GBK && FileInfo2.nCharSet!=CS_UNICODE
+					mov FileInfo2.nCharSet,CS_GBK
+					xor ebx,ebx
+					.while ebx<FileInfo2.nLine
+						push ebx
+						push offset FileInfo2
+						call dbSimpFunc+_SimpFunc.ModifyLine
+						inc ebx
+					.endw
+				.endif 
 				invoke _SetOpen,1
 			.endif
 		.else

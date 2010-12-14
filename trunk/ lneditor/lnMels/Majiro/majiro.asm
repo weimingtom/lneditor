@@ -141,8 +141,12 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 			.continue
 		.elseif ax==801h
 			cmp byte ptr [esi+2],81h
-			jae _IsStr2GT
-			jmp _IsNotDispStr2GT
+			jb _IsNotDispStr2GT
+			xor ecx,ecx
+			mov cx,[esi]
+			cmp dword ptr [esi+ecx+4],718ef651h
+			je _IsNotDispStr2GT
+			jmp _IsStr2GT
 		.elseif ax>=800h && ax<=847h
 			xor ecx,ecx
 			mov cx,ax
@@ -250,8 +254,12 @@ _IsStr2GT:
 			.continue
 		.elseif ax==801h
 			cmp byte ptr [esi+2],81h
-			jae _IsStrGT
-			jmp _IsNotDispStrGT
+			jb _IsNotDispStrGT
+			xor ecx,ecx
+			mov cx,[esi]
+			cmp dword ptr [esi+ecx+4],718ef651h
+			je _IsNotDispStrGT
+			jmp _IsStrGT
 		.elseif ax>=800h && ax<=847h
 			xor ecx,ecx
 			mov cx,ax
@@ -338,8 +346,9 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	mov edx,[ebx].lpStreamIndex
 	mov ecx,_nLine
 	mov edx,[edx+ecx*4]
-	.if word ptr [edx-4]==83a
-		mov eax,[edx-2]
+	.if word ptr [edx-6]==83ah
+		xor eax,eax
+		mov ax,[edx-4]
 		inc eax
 		mov @nLineNumber,eax
 	.endif
@@ -380,7 +389,7 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		dec eax
 		.break .if !eax
 	.endw
-	.if word ptr [esi]=='@' && word ptr [esi-2]==3011h
+	.if word ptr [esi]=='@'
 		mov word ptr [esi],0
 		add edi,2
 		invoke WideCharToMultiByte,[ebx].nCharSet,0,edx,-1,edi,@nLeftLen,0,0

@@ -46,6 +46,10 @@ IDC_EA_BROWSEN          equ 1212
 IDC_EA_OK               equ 1213
 IDC_EA_CANCEL           equ 2
 IDC_EA_MELIDX           equ 1215
+IDC_GRP12               equ 1214
+IDC_EA_CODE             equ 1216
+IDC_STC16               equ 1217
+IDC_STC17               equ 1218
 IDD_FIND                equ 1300
 IDC_STC5                equ 1301
 IDC_FIND_TEXT           equ 1302
