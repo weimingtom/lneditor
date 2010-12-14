@@ -449,21 +449,22 @@ _SaveFile proc uses edi ebx _pFI
 		push _pFI
 		call [dbSimpFunc+_SimpFunc.SaveText]
 		or eax,eax
-		je _ErrSF
+		jne _ExSF
 	.else
 		invoke SetFilePointer,[edi].hFile,0,0,FILE_BEGIN
 		invoke WriteFile,[edi].hFile,[edi].lpStream,[edi].nStreamSize,offset dwTemp,0
 		or eax,eax
-		je _ErrSF
+		je _ErrFileSF
 		invoke SetEndOfFile,[edi].hFile
 		or eax,eax
-		je _ErrSF
+		je _ErrFileSF
 	.endif
 	invoke _WriteRec
-	mov eax,1
-	ret
-_ErrSF:
 	xor eax,eax
+_ExSF:
+	ret
+_ErrFileSF:
+	mov eax,E_FILEACCESSERROR
 	ret
 _SaveFile endp
 

@@ -15,7 +15,7 @@ _MakeStringListFromStream proc uses edi esi ebx _lpFI
 	shl eax,2
 	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	.if !eax
-		mov eax,E_NOTENOUGHBUFF
+		mov eax,E_NOMEM
 		jmp _ExMSL
 	.endif
 	mov [edi].lpTextIndex,eax
@@ -48,7 +48,7 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 	.if eax==ST_ENDWITHZERO
 		.if edx==CS_UNICODE
 			invoke lstrlenW,_lpBuff
-			lea ecx,[eax+2]
+			lea ecx,[eax+1]
 		.else
 			invoke lstrlenA,_lpBuff
 			lea ecx,[eax+1]
@@ -58,10 +58,16 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 		mov esi,_lpBuff
 		lodsw
 		movzx ecx,ax
+		.if edx==CS_UNICODE
+			SHL ecx,1
+		.endif
 	.elseif eax==ST_PASCAL4
 		mov esi,_lpBuff
 		lodsd
 		mov ecx,eax
+		.if edx==CS_UNICODE
+			SHL ecx,1
+		.endif
 	.elseif eax==ST_TXTENDW
 		xor ecx,ecx
 		mov edi,_lpBuff
@@ -72,13 +78,13 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 		.endw
 		mov @nStrLen,ecx
 		add ecx,2
-		mov eax,MAX_STRINGLEN
-		.if ecx>eax
-			mov eax,ecx
-		.endif
-		invoke HeapAlloc,hGlobalHeap,0,eax
+;		mov eax,MAX_STRINGLEN
+;		.if ecx>eax
+;			mov eax,ecx
+;		.endif
+		invoke HeapAlloc,hGlobalHeap,0,ecx
 		.if !eax
-			mov eax,E_NOTENOUGHBUFF
+			mov eax,E_NOMEM
 			jmp _ExGSFS
 		.endif
 		mov edx,_lppString
@@ -107,17 +113,18 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 		mov @nStrLen,ecx
 		inc ecx
 		shl ecx,1
-		mov eax,MAX_STRINGLEN
-		.if ecx>eax
-			mov eax,ecx
-		.endif
-		mov ecx,eax
+		mov eax,ecx
+;		mov eax,MAX_STRINGLEN
+;		.if ecx>eax
+;			mov eax,ecx
+;		.endif
+;		mov ecx,eax
 		shr ecx,1
 		push ecx
 		invoke HeapAlloc,hGlobalHeap,0,eax
 		.if !eax
 			add esp,4
-			mov eax,E_NOTENOUGHBUFF
+			mov eax,E_NOMEM
 			jmp _ExGSFS
 		.endif
 		mov edx,_lppString
@@ -146,37 +153,33 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 	assume edi:ptr _FileInfo
 	mov @nStrLen,ecx
 	.if edx==CS_UNICODE
-		mov eax,MAX_STRINGLEN
-		.if ecx>eax
-			mov eax,ecx
-		.endif
-		invoke HeapAlloc,hGlobalHeap,0,eax
+;		mov eax,MAX_STRINGLEN
+;		.if ecx>eax
+;			mov eax,ecx
+;		.endif
+		shl ecx,1
+		invoke HeapAlloc,hGlobalHeap,0,ecx
 		.if !eax
-			mov eax,E_NOTENOUGHBUFF
+			mov eax,E_NOMEM
 			jmp _ExGSFS
 		.endif
 		mov ecx,_lppString
 		mov [ecx],eax
 		mov ecx,@nStrLen
 		mov edi,eax
-		invoke _memcpy
+		rep movsw
 	.else
-		mov eax,MAX_STRINGLEN
 		shl ecx,1
-		.if ecx>eax
-			mov eax,ecx
-		.endif
 		push ebx
-		mov ebx,eax
-		invoke HeapAlloc,hGlobalHeap,0,eax
+		mov ebx,ecx
+		invoke HeapAlloc,hGlobalHeap,0,ecx
 		.if !eax
 			add esp,4
-			mov eax,E_NOTENOUGHBUFF
+			mov eax,E_NOMEM
 			jmp _ExGSFS
 		.endif
 		mov ecx,_lppString
 		mov [ecx],eax
-		shr ebx,1
 		invoke MultiByteToWideChar,[edi].nCharSet,0,esi,@nStrLen,eax,ebx
 		pop ebx
 		.if !eax

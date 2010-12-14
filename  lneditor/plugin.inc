@@ -140,7 +140,7 @@ _FileInfo struct
 	lpTextIndex			dd		?						;纯文本字符串索引表指针。
 	lpStreamIndex		dd		?						;可选，原始脚本字符串索引表指针。若为POINTERONLY存储类型，此项必须。
 	nStringType			dd		?						;字符串存储类型。
-	nStreamSize			dd		?						;文件长度。须跟随脚本编辑随时更新。
+	nStreamSize			dd		?						;文件长度。跟随脚本编辑随时更新。
 	nLine				dd		?						;文本行数。
 	nLineLen				dd		?						;可选，若使用定长字符串存储，本项须指示字符串长度。独立内存字符串亦可使用。
 	

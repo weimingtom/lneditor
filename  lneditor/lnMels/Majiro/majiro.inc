@@ -29,6 +29,7 @@
 	include \masm32\lneditor\config.inc
 	includelib \masm32\lneditor\lnedit.lib
 	
+DEFAULT_STRLEN		equ		1024
 
 _MjoInfo struct
 	nDefaultEntry		dd		?
@@ -38,6 +39,7 @@ _MjoInfo struct
 	nDataSize			dd		?
 	lpData			dd		?
 	lpJumpTable		dd		?
+	lpJumpTable2		dd		?
 _MjoInfo ends
 
 ModifyLine proto :dword,:dword
