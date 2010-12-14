@@ -61,6 +61,22 @@ _WndExpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 		.elseif ax==IDC_EA_BROWSEN
 			mov esi,IDC_EA_DIRN
 			jmp @B
+;		.elseif ax==IDC_EA_CODE
+;			shr eax,16
+;			.if ax==CBN_SELENDOK
+;				invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_GETCURSEL,0,0
+;				.if eax==0
+;					mov ecx,0
+;				.elseif eax==1
+;					mov ecx,936
+;				.elseif eax==2
+;					mov ecx,932
+;				.elseif eax==3
+;					mov ecx,-1
+;				.endif
+;				invoke wsprintfW,addr @str,offset szToStr,ecx
+;				invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,WM_SETTEXT,0,addr @str
+;			.endif
 		.elseif ax==IDC_EA_OK
 			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN*2
 			or eax,eax
@@ -80,8 +96,11 @@ _WndExpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 				invoke MessageBoxW,hwnd,eax,0,MB_OK or MB_ICONERROR
 				jmp _ExWEAP
 			.endif
+			invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_GETCURSEL,0,0
+			mov ebx,eax
 			invoke GetDlgItemInt,hwnd,IDC_EA_MELIDX,0,FALSE
-			invoke _ExportAllToTxt,@plstr,@plstr2,eax
+			mov ecx,dword ptr [ebx*4+dbCodeTable]
+			invoke _ExportAllToTxt,@plstr,@plstr2,eax,ecx
 			invoke HeapFree,hGlobalHeap,0,@plstr
 		.elseif ax==IDCANCEL
 			invoke EndDialog,hwnd,0
@@ -106,6 +125,11 @@ _WndExpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			invoke GetDlgItem,hwnd,IDC_EA_OK
 			invoke EnableWindow,eax,FALSE
 		.endif
+		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_ADDSTRING,0,offset szcdDefault
+		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_ADDSTRING,0,offset szcdGBK
+		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_ADDSTRING,0,offset szcdSJIS
+		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_ADDSTRING,0,offset szcdUnicode
+		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_SETCURSEL,0,0
 	.elseif eax==WM_CLOSE
 		invoke EndDialog,hwnd,0
 	.endif
@@ -115,7 +139,7 @@ _ExWEAP:
 _WndExpAllProc endp
 
 ;
-_ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx
+_ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet
 	LOCAL @stFindData:WIN32_FIND_DATA
 	LOCAL @hFindFile,@hFileT
 	LOCAL @stFileInfo:_FileInfo
@@ -149,6 +173,8 @@ _ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx
 			
 			invoke _DirModifyExtendName,edi,offset szTxt
 			invoke SetCurrentDirectoryW,_lpszTxt
+			mov ecx,_nCharSet
+			mov @stFileInfo.nCharSet,ecx
 			lea edi,@stFindData.cFileName
 			invoke CreateFileW,edi,GENERIC_READ or GENERIC_WRITE,FILE_SHARE_READ,0,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0
 			cmp eax,-1

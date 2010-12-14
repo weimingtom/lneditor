@@ -187,7 +187,7 @@ _RecoverUI			proto
 
 ;assemble menu
 _ExportAll			proto
-_ExportAllToTxt		proto :dword,:dword,:dword
+_ExportAllToTxt		proto :dword,:dword,:dword,:dword
 
 _WndExpAllProc		proto :dword,:dword,:dword,:dword
 _ImportAll			proto
@@ -478,3 +478,11 @@ _FileRec ends
 	TW0		'EditFont',		szcfEF
 	TW0		'BackPicture',		szcfBP
 	TW0		'WindowsLoc',	szcfWL
+
+.data
+	TW0		'DEFAULT(0)',		szcdDefault
+	TW0		'GBK(936)',		szcdGBK
+	TW0		'Shift-JIS(932)',		szcdSJIS
+	TW0		'UNICODE(-1)',		szcdUnicode
+	
+	dbCodeTable		dd		0,936,932,-1
