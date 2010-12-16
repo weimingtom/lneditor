@@ -25,10 +25,14 @@ Match proc _lpszName
 	je _ErrMatch
 	mov @hFile,eax
 	invoke ReadFile,@hFile,addr @buff,8,offset dwTemp,0
+	invoke CloseHandle,@hFile
 	cmp dword ptr [@buff+4],24h
+	je @F
+	cmp dword ptr [@buff+4],1ch
 	jne _NotMatch
+	@@:
 	
-	mov eax,MR_YES
+	mov eax,MR_MAYBE
 	ret
 _NotMatch:
 	mov eax,MR_NO
@@ -49,6 +53,7 @@ PreProc endp
 ;
 GetText proc uses edi ebx esi _lpFI,_lpRI
 	LOCAL @pStream,@pTIdx,@pSIdx,@dwTemp
+	LOCAL @nCharSet
 	invoke HeapAlloc,hHeap,HEAP_ZERO_MEMORY,sizeof(_GscInfo)
 	or eax,eax
 	je _NomemGT
@@ -58,13 +63,14 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	mov esi,[ebx].lpStream
 	mov @pStream,esi
 	mov edi,eax
-	mov ecx,sizeof _GscHeader
+	mov ecx,[esi+_GscInfo.sHeader.nHeaderSize]
 	invoke _memcpy
 	mov edi,[ebx].Reserved
 	assume edi:ptr _GscInfo
 	mov esi,[ebx].nStreamSize
-	sub esi,24h
-	add @pStream,24h
+	mov eax,[edi].sHeader.nHeaderSize
+	sub esi,eax
+	add @pStream,eax
 	
 	sub esi,[edi].sHeader.nControlStreamSize
 	invoke _MakeFromStream,[edi].sHeader.nControlStreamSize,addr @pStream
@@ -83,7 +89,7 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	or eax,eax
 	je _NomemGT
 	mov [edi].lpText,eax
-	
+ 
 	invoke _MakeFromStream,esi,addr @pStream
 	or eax,eax
 	je _NomemGT
@@ -94,9 +100,15 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	je _NomemGT
 	mov [edi].lpIndexCS,eax
 	
-	invoke _ProcControlStream,edi
-	or eax,eax
-	je _ErrScriptGT
+	.if [edi].sHeader.nHeaderSize==24h
+		invoke _ProcControlStream,edi,offset dtParamSize20
+		or eax,eax
+		je _ErrScriptGT
+	.elseif [edi].sHeader.nHeaderSize==1ch
+		invoke _ProcControlStream,edi,offset dtParamSize21
+		or eax,eax
+		je _ErrScriptGT
+	.endif
 
 	mov [ebx].nMemoryType,MT_EVERYSTRING
 	
@@ -114,7 +126,20 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	or eax,eax
 	je _NomemGT
 	mov [ebx].lpStreamIndex,eax
+	mov ecx,[ebx].nCharSet
 	mov @pSIdx,eax
+	mov @nCharSet,ecx
+	.if ecx==CS_UNICODE
+		invoke Release,_lpFI
+		mov ecx,_lpRI
+		mov eax,E_ERROR
+		mov dword ptr [ecx],RI_FAIL_ERRORCS
+		ret
+	.endif
+	.if ecx==CS_UNKNOWN && [EBX].bReadOnly
+		mov @nCharSet,CS_SJIS
+		mov [ebx].nCharSet,CS_SJIS
+	.endif
 	assume ebx:nothing
 	
 	xor ebx,ebx
@@ -128,7 +153,7 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 _i51GT:
 			invoke _GetTextByIdx,[esi],edi
 			lea ecx,@pTIdx
-			invoke _AddString,eax,ecx
+			invoke _AddString,eax,ecx,@nCharSet
 			or eax,eax
 			je _Nomem2GT
 			mov ecx,@pSIdx
@@ -144,7 +169,7 @@ _i51GT:
 			mov @dwTemp,ebx
 			invoke _GetTextByIdx,[esi],edi
 			lea ecx,@pTIdx
-			invoke _AddString,eax,ecx
+			invoke _AddString,eax,ecx,@nCharSet
 			or eax,eax
 			je _Nomem2GT
 			add esi,18h
@@ -153,7 +178,7 @@ _i51GT:
 				.break .if !eax
 				invoke _GetTextByIdx,eax,edi
 				lea ecx,@pTIdx
-				invoke _AddString,eax,ecx
+				invoke _AddString,eax,ecx,@nCharSet
 				or eax,eax
 				je _Nomem2GT
 				dec ebx
@@ -164,8 +189,10 @@ _i51GT:
 			inc ecx
 			mov edx,ecx
 			mov edi,@pSIdx
+			@@:
 			mov eax,ebx
-			rep stosd
+			stosd
+			loop @B
 			shl edx,2
 			add @pSIdx,edx
 			pop edi
@@ -183,19 +210,19 @@ _i51GT:
 	mov [ebx].nLineLen,MAX_STRINGLEN
 	assume ebx:nothing
 	
-	mov eax,1
+	xor eax,eax
 	mov ecx,_lpRI
 	mov dword ptr [ecx],RI_SUC_LINEONLY
 	ret
 _ErrScriptGT:
 	invoke Release,_lpFI
-	xor eax,eax
+	or eax,E_ERROR
 	mov ecx,_lpRI
-	mov dword ptr [ecx],RI_FAIL_CODE
+	mov dword ptr [ecx],RI_FAIL_FORMAT
 	ret
 _NomemGT:
 	invoke Release,_lpFI
-	xor eax,eax
+	or eax,E_ERROR
 	mov ecx,_lpRI
 	mov dword ptr [ecx],RI_FAIL_MEM
 	ret
@@ -205,7 +232,7 @@ _Nomem2GT:
 GetText endp
 
 ;预读一遍脚本中的控制流，保证没有异常，指令地址记入IndexCS
-_ProcControlStream proc uses esi edi ebx _lpGscInfo
+_ProcControlStream proc uses esi edi ebx _lpGscInfo,_lpTable2
 	LOCAL @pIdx,@nCSSize
 	mov edx,_lpGscInfo
 	mov eax,[edx+_GscInfo.lpIndexCS]
@@ -235,7 +262,7 @@ _ProcControlStream proc uses esi edi ebx _lpGscInfo
 			add @pIdx,4
 			add edx,eax
 		.else
-			lea edi,dtParamSize2
+			mov edi,_lpTable2
 			movzx ecx,cl
 			movsx eax,byte ptr [edi+ecx]
 			.if eax==-1
@@ -281,14 +308,179 @@ _ProcControlStream endp
 
 ;
 ModifyLine proc uses ebx edi esi _lpFI,_nLine
-	mov eax,1
+	LOCAL @pNewStr,@nSelectTableIndex
+	LOCAL @nCharSet,@nTextBufferSize
+	invoke _GetStringInList,_lpFI,_nLine
+	mov @pNewStr,eax
+	mov edi,_lpFI
+	assume edi:ptr _FileInfo
+	mov eax,[edi].lpStream
+	mov ecx,[eax+_GscHeader.nTextSize]
+	shl ecx,1
+	mov @nTextBufferSize,ecx
+	mov eax,[edi].nCharSet
+	mov ecx,[edi].lpStreamIndex
+	mov @nCharSet,eax
+	mov edx,_nLine
+	lea esi,[ecx+edx*4]
+	mov eax,[esi]
+	mov @nSelectTableIndex,0
+	sub esi,4
+	.if esi>=ecx && eax==dword ptr [esi]
+		inc @nSelectTableIndex
+		.while esi>ecx
+			sub esi,4
+			.break .if eax!=dword ptr [esi]
+			inc @nSelectTableIndex
+		.endw
+	.endif
+	mov ebx,[edi].Reserved
+	assume ebx:ptr _GscInfo
+	mov ecx,[ebx].lpIndexCS
+	mov esi,[ecx+eax*4]
+	add esi,[ebx].lpControlStream
+	assume edi:nothing
+	lodsw
+	.if ax==51h
+		add esi,14h
+_i51ML:
+		invoke _GetTextByIdx,[esi],ebx
+		mov edi,eax
+		invoke lstrlenA,eax
+		inc eax
+		invoke WideCharToMultiByte,@nCharSet,0,@pNewStr,-1,edi,eax,0,0
+		.if !eax
+			invoke GetLastError
+			.if eax==ERROR_INSUFFICIENT_BUFFER
+				mov ecx,[ebx].sHeader.nTextSize
+				mov edx,ecx
+				mov eax,@nTextBufferSize
+				add ecx,[ebx].lpText
+				sub eax,edx
+				invoke WideCharToMultiByte,@nCharSet,0,@pNewStr,-1,ecx,eax,0,0
+				.if !eax
+					mov eax,E_NOTENOUGHBUFF
+					jmp _ExML
+				.endif
+				mov edx,[ebx].sHeader.nTextSize
+				add [ebx].sHeader.nTextSize,eax
+				mov ecx,[ebx].lpIndex
+				mov eax,[esi]
+				mov [ecx+eax*4],edx
+			.endif
+		.endif
+		
+	.elseif ax==52h
+		add esi,10h
+		jmp _i51ML
+	.elseif ax==0eh
+		xor eax,eax
+		lodsw
+		mov ecx,@nSelectTableIndex
+		.if ecx>eax
+			mov eax,E_PLUGINERROR
+			jmp _ExML
+		.endif
+		or ecx,ecx
+		je _i51ML
+		dec ecx
+		lea esi,[esi+ecx*4+18h]
+		jmp _i51ML
+	.else
+		mov eax,E_PLUGINERROR
+		jmp _ExML
+	.endif
+	assume ebx:nothing
+	xor eax,eax
+_ExML:
 	ret
 ModifyLine endp
 
 ;
 SaveText proc uses edi ebx esi _lpFI
+	LOCAL @hFile
+	LOCAL @lpfnBak
+	mov edi,_lpFI
+	assume edi:ptr _FileInfo
+	
+	invoke lstrlenW,edi
+	add eax,5
+	shl eax,1
+	invoke HeapAlloc,hHeap,0,eax
+	mov @lpfnBak,eax
+	.if eax
+		invoke lstrcpyW,eax,edi
+		invoke lstrcatW,@lpfnBak,$CTW0(".bak")
+		invoke CopyFileW,edi,@lpfnBak,FALSE
+	.endif
+	
+	mov esi,[edi].Reserved
+	assume esi:ptr _GscInfo
+	mov eax,[esi].sHeader.nHeaderSize
+	add eax,[esi].sHeader.nControlStreamSize
+	add eax,[esi].sHeader.nIndexSize
+	add eax,[esi].sHeader.nTextSize
+	
+	mov ebx,[esi].sHeader.nExtra
+	mov ecx,[esi].sHeader.nExtra[4]
+	shl ecx,1
+	add ebx,ecx
+	.if [esi].sHeader.nHeaderSize==24h
+		mov ecx,[esi].sHeader.nExtra[8]
+		shl ecx,1
+		add ebx,ecx
+		add ebx,[esi].sHeader.nExtra[12]
+	.endif
+	add eax,ebx
+	mov [esi].sHeader.nFileSize,eax
+	mov ecx,[edi].hFile
+	mov @hFile,ecx
+	assume edi:nothing
+	mov edi,1
+	invoke SetFilePointer,@hFile,0,0,FILE_BEGIN
+	invoke WriteFile,@hFile,esi,[esi].sHeader.nHeaderSize,offset dwTemp,0
+	and edi,eax
+	invoke WriteFile,@hFile,[esi].lpControlStream,[esi].sHeader.nControlStreamSize,offset dwTemp,0
+	and edi,eax
+	invoke WriteFile,@hFile,[esi].lpIndex,[esi].sHeader.nIndexSize,offset dwTemp,0
+	and edi,eax
+	invoke WriteFile,@hFile,[esi].lpText,[esi].sHeader.nTextSize,offset dwTemp,0
+	and edi,eax
+	invoke WriteFile,@hFile,[esi].lpExtraData,ebx,offset dwTemp,0
+	and edi,eax
+	invoke SetEndOfFile,@hFile
+	
+	.if !edi
+		.if @lpfnBak
+			invoke CopyFileW,@lpfnBak,ebx,FALSE
+			invoke DeleteFileW,@lpfnBak
+			invoke HeapFree,hHeap,0,@lpfnBak
+		.endif
+		mov eax,E_FILEACCESSERROR
+		ret
+	.endif
+	.if @lpfnBak
+		invoke DeleteFileW,@lpfnBak
+		invoke HeapFree,hHeap,0,@lpfnBak
+	.endif
+	
+	xor eax,eax
 	ret
 SaveText endp
+
+SetLine proc _lpsz,_lpRange
+	cmp _lpRange,0
+	je _ExSL
+	mov eax,_lpsz
+	.if dword ptr [eax]==67005eh
+		mov ecx,_lpRange
+		mov dword ptr [ecx],5
+		mov dword ptr [ecx+4],-1
+	.endif
+	invoke _SetLine,_lpsz,_lpRange
+_ExSL:
+	ret
+SetLine endp
 
 Release proc uses esi edi ebx _lpFI
 	mov eax,_lpFI
@@ -314,10 +506,6 @@ Release proc uses esi edi ebx _lpFI
 Release endp
 
 ;
-SetLine proc _lpsz,_lpRange
-	ret
-SetLine endp
-
 _MakeFromStream proc uses esi edi _nSize,_lppStream
 	mov eax,_nSize
 	shl eax,1
@@ -367,7 +555,8 @@ _GetTextByIdx proc _idx,_lpGscInfo
 	ret
 _GetTextByIdx endp
 
-_AddString proc _lpStr,_lppTIdx
+_AddString proc _lpStr,_lppTIdx,_nCharSet
+	LOCAL @pStr
 	invoke lstrlenA,_lpStr
 	.if eax<MAX_STRINGLEN
 		mov eax,MAX_STRINGLEN
@@ -375,11 +564,12 @@ _AddString proc _lpStr,_lppTIdx
 	invoke HeapAlloc,hHeap,0,eax
 	or eax,eax
 	je _NomemAS
+	mov @pStr,eax
 	mov ecx,_lppTIdx
 	mov edx,[ecx]
 	mov [edx],eax
 	add dword ptr [ecx],4
-	invoke lstrcpyA,eax,_lpStr
+	invoke MultiByteToWideChar,_nCharSet,0,_lpStr,-1,@pStr,MAX_STRINGLEN/2
 	mov eax,1
 	ret
 _NomemAS:

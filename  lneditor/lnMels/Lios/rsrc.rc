@@ -1,8 +1,8 @@
 #define IDR_VERSION1 1
 
 IDR_VERSION1 VERSIONINFO
-FILEVERSION 1,0,0,0
-PRODUCTVERSION 1,0,0,0
+FILEVERSION 1,1,15,0
+PRODUCTVERSION 1,1,15,0
 FILEOS 0x00000004
 FILETYPE 0x00000002
 BEGIN
@@ -10,8 +10,8 @@ BEGIN
   BEGIN
     BLOCK "080404B0"
     BEGIN
-      VALUE "FileVersion", "1.0.0.0\0"
-      VALUE "ProductVersion", "1.0.0.0\0"
+      VALUE "FileVersion", "1.1.15\0"
+      VALUE "ProductVersion", "1.1.15\0"
       VALUE "CompanyName", "AmaF\0"
       VALUE "FileDescription", "LiosGame Script plugin for lnedit.\0"
       VALUE "InternalName", "lios.mel\0"
