@@ -610,7 +610,7 @@ _TryMatch proc uses edi esi ebx _lpszName
 	
 	lea esi,@pFunc
 	mov edi,esi
-	xor eax,eax
+	or eax,-1
 	mov ecx,MAX_MELCOUNT
 	rep stosd
 	xor ebx,ebx
@@ -631,9 +631,9 @@ _TryMatch proc uses edi esi ebx _lpszName
 	.endw
 	assume edi:nothing
 	lea esi,@pFunc
-	cmp dword ptr [esi],0
+	cmp dword ptr [esi],-1
 	je _SelfMatchTM
-		.if !dword ptr [esi+4]
+		.if dword ptr [esi+4]==-1
 			mov eax,[esi]
 			jmp _ExTM
 		.endif

@@ -107,12 +107,17 @@ _OpenScript proc
 				.if FileInfo2.nCharSet!=CS_GBK && FileInfo2.nCharSet!=CS_UNICODE
 					mov FileInfo2.nCharSet,CS_GBK
 					xor ebx,ebx
+					xor edi,edi
 					.while ebx<FileInfo2.nLine
 						push ebx
 						push offset FileInfo2
 						call dbSimpFunc+_SimpFunc.ModifyLine
+						or edi,eax
 						inc ebx
 					.endw
+					.if edi
+						mov FileInfo2.nCharSet,CS_SJIS
+					.endif
 				.endif 
 				invoke _SetOpen,1
 			.endif

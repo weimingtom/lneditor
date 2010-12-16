@@ -31,11 +31,11 @@
 
 _GscHeader struct
 	nFileSize dd ?
-	nHeaderSize dd ?
+	nHeaderSize dd ?	;目前发现24h和1ch两种，使用不同的指令。
 	nControlStreamSize dd ?
 	nIndexSize dd ?
 	nTextSize dd ?
-	nExtra	dd	4	dup(?)
+	nExtra	dd	8	dup(?)
 _GscHeader ends
 
 _GscInfo struct
@@ -54,10 +54,10 @@ SaveText proto :dword
 Release proto :dword
 _memcpy proto
 _MakeFromStream proto :dword,:dword
-_ProcControlStream proto :dword
+_ProcControlStream proto :dword,:dword
 _ReleaseHeap proto :dword
 _GetTextByIdx proto :dword,:dword
-_AddString proto :dword,:dword
+_AddString proto :dword,:dword,:dword
 
 .data?
 	hInstance		dd		?
@@ -69,7 +69,8 @@ _AddString proto :dword,:dword
 	dtParamSize1 db	-1,	6,	6,	6,	6,	6,	6,	6,	6,	6,	6,	6,	6,	6,	6,	4
 	
 ;					0,	1,	2,	3,	4,	5,	6,	7,	8,	9,	A,	B,	C,	D,	E,	F
-	dtParamSize2 db 	-1,	-1,	-1,	4,	4,	4,	-1,	-1,	0,	4,	0,	0,	4,	4,	58,	30h;Modified
+	;紫影のソナーニル
+	dtParamSize20 db 	-1,	-1,	-1,	4,	4,	4,	-1,	-1,	0,	4,	0,	0,	4,	4,	58,	30h;Modified
 				db	4,	0,	8,	4,	8,	0,	16,	8,	8,	4,	0,	0,	12,	8,	24,	-1
 				db	24,	20,	20,	8,	8,	8,	16,	12,	8,	8,	8,	8,	4,	8,	4,	8	;2
 				db	8,	8,	4,	0,	0,	4,	-1,	0,	20,	0,	0,	16,	12,	8,	4,	12
@@ -86,7 +87,22 @@ _AddString proto :dword,:dword
 				db	-1,	20,	-1,	-1,	-1,	-1,	4,	4,	-1,	-1,	-1,	-1,	-1,	-1,	-1,	-1
 				db	15 dup (-1),20
 
-	
-	
+	;Forest
+	dtParamSize21 db 	-1,	-1,	-1,	4,	4,	4,	-1,	-1,	0,	4,	0,	0,	4,	4,	58,	4
+				db	4,	0,	8,	4,	8,	0,	16,	8,	8,	4,	0,	0,	12,	8,	24,	-1
+				db	24,	20,	20,	8,	8,	8,	12,	12,	8,	8,	8,	8,	4,	8,	4,	8
+				db	8,	8,	4,	0,	0,	4,	-1,	0,	20,	0,	0,	16,	8,	4,	4,	12
+				db	4,	4,	16,	4,	0,	0,	16,	16,	4,	8,	4,	16,	-1,	16,	-1,	-1
+				db	4,	28,	24,	4,	-1,	-1,	-1,	-1,	-1,	-1,	12,	20,	8,	8,	4,	8
+				db	8,	8,	8,	12,	12,	8,	4,	8,	16,	-1,	-1,	-1,	-1,	-1,	12,	12
+				db	4,	8,	8,	-1,	-1,	-1,	-1,	-1,	-1,	8,	-1,	-1,	-1,	-1,	-1,	-1
+				db	-1,	-1,	16,	20,	8,	-1,	12,	20,	12,	-1,	-1,	-1,	-1,	-1,	-1,	-1
+				db	-1,	-1,	-1,	-1,	-1,	-1,	8,	8,	8,	8,	8,	8,	-1,	-1,	-1,	-1	
+				db	16 dup(-1)
+				db	16 dup(-1)
+				db	16 dup(-1)
+				db	16 dup(-1)
+				db	16 dup(-1)
+				db	16 dup(-1)
 	
 		
