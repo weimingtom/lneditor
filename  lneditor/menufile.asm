@@ -49,18 +49,18 @@ _OpenScript proc
 	push offset FileInfo1
 	call dword ptr [dbSimpFunc+_SimpFunc.GetText]
 	.if !eax
-		.if FileInfo1.nMemoryType==MT_POINTERONLY
-			invoke _MakeStringListFromStream,offset FileInfo1
-			.if eax
-				mov ecx,eax
-				mov eax,IDS_ERRORCODE
-				invoke _GetConstString
-				invoke wsprintfW,addr @szstr,eax,ecx
-				invoke _ClearAll,offset FileInfo1
-				invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
-			.endif
-		.endif
 		.if @nReturnInfo==RI_SUC_LINEONLY
+			.if FileInfo1.nMemoryType==MT_POINTERONLY
+				invoke _MakeStringListFromStream,offset FileInfo1
+				.if eax
+					mov ecx,eax
+					mov eax,IDS_ERRORCODE
+					invoke _GetConstString
+					invoke wsprintfW,addr @szstr,eax,ecx
+					invoke _ClearAll,offset FileInfo1
+					invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
+				.endif
+			.endif
 			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,FileInfo1.nLine
 			mov lpMarkTable,eax
 			mov nCurIdx,-1
@@ -88,20 +88,20 @@ _OpenScript proc
 				invoke MessageBoxW,hWinMain,eax,0,MB_OK OR MB_ICONERROR
 				jmp _Ex2OS
 			.endif
-			.if FileInfo2.nMemoryType==MT_POINTERONLY
-				invoke _MakeStringListFromStream,offset FileInfo2
-				.if eax
-					mov ecx,eax
-					mov eax,IDS_ERRORCODE
-					invoke _GetConstString
-					invoke wsprintfW,addr @szstr,eax,ecx
-					invoke _ClearAll,offset FileInfo1
-					invoke _ClearAll,offset FileInfo2
-					invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
-					jmp _Ex2OS
-				.endif
-			.endif
 			.if @nReturnInfo==RI_SUC_LINEONLY
+				.if FileInfo2.nMemoryType==MT_POINTERONLY
+					invoke _MakeStringListFromStream,offset FileInfo2
+					.if eax
+						mov ecx,eax
+						mov eax,IDS_ERRORCODE
+						invoke _GetConstString
+						invoke wsprintfW,addr @szstr,eax,ecx
+						invoke _ClearAll,offset FileInfo1
+						invoke _ClearAll,offset FileInfo2
+						invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
+						jmp _Ex2OS
+					.endif
+				.endif
 				mov nCurIdx,-1
 				invoke _AddLinesToList,offset FileInfo2,hList2
 				.if FileInfo2.nCharSet!=CS_GBK && FileInfo2.nCharSet!=CS_UNICODE
@@ -201,18 +201,18 @@ _LoadScript proc
 			invoke MessageBoxW,hWinMain,eax,0,MB_OK OR MB_ICONERROR
 			jmp _ExLS
 		.endif
-		.if FileInfo2.nMemoryType==MT_POINTERONLY
-			invoke _MakeStringListFromStream,offset FileInfo2
-			.if eax
-				mov ecx,eax
-				mov eax,IDS_ERRORCODE
-				invoke _GetConstString
-				invoke wsprintfW,addr @szstr,eax,ecx
-				invoke _ClearAll,offset FileInfo2
-				invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
-			.endif
-		.endif
 		.if @nReturnInfo==RI_SUC_LINEONLY
+			.if FileInfo2.nMemoryType==MT_POINTERONLY
+				invoke _MakeStringListFromStream,offset FileInfo2
+				.if eax
+					mov ecx,eax
+					mov eax,IDS_ERRORCODE
+					invoke _GetConstString
+					invoke wsprintfW,addr @szstr,eax,ecx
+					invoke _ClearAll,offset FileInfo2
+					invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
+				.endif
+			.endif
 			mov nCurIdx,-1
 			invoke _AddLinesToList,offset FileInfo2,hList2
 			invoke _SetOpen,1
@@ -370,11 +370,110 @@ _Ex2CSC:
 _CloseScript endp
 
 ;
-_SetSaveDir proc
-	invoke _Dev
+_SetCode proc
+	invoke DialogBoxParamW,hInstance,IDD_CODE,hWinMain,offset _WndCodeProc,0
+	ret
+_SetCode endp
+
+
+_WndCodeProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
+	mov eax,uMsg
+	.if eax==WM_COMMAND
+		mov eax,wParam
+		.if ax==IDC_CODE_OK
+			invoke SendDlgItemMessageW,hwnd,IDC_CODE_OPEN1,CB_GETCURSEL,0,0
+			mov ecx,dword ptr [eax*4+dbCodeTable]
+			mov ebx,FileInfo1.nCharSet
+			.if ecx!=ebx
+				mov FileInfo1.nCharSet,ecx
+				invoke _RecodeFile,offset FileInfo1
+				.if eax
+					.if eax==E_FATALERROR
+						mov bModified,0
+						invoke _CloseScript
+						mov eax,IDS_CODEFAILED
+						invoke _GetConstString
+						invoke MessageBoxW,hwnd,eax,0,MB_OK or MB_ICONERROR
+						jmp _ExitWCP
+					.endif
+					mov FileInfo1.nCharSet,ebx
+				.endif
+			.endif
+			invoke SendDlgItemMessageW,hwnd,IDC_CODE_OPEN2,CB_GETCURSEL,0,0
+			mov ecx,dword ptr [eax*4+dbCodeTable]
+			mov ebx,FileInfo2.nCharSet
+			.if ecx!=ebx
+				mov FileInfo2.nCharSet,ecx
+				invoke _RecodeFile,offset FileInfo2
+				.if eax
+					.if eax==E_FATALERROR
+						mov bModified,0
+						invoke _CloseScript
+						mov eax,IDS_CODEFAILED
+						invoke _GetConstString
+						invoke MessageBoxW,hwnd,eax,0,MB_OK or MB_ICONERROR
+						jmp _ExitWCP
+					.endif
+					mov FileInfo1.nCharSet,ebx
+					mov eax,IDS_FAILCONVERT
+					invoke _GetConstString
+					invoke MessageBoxW,hwnd,eax,0,MB_OK or MB_ICONEXCLAMATION
+					jmp _ExWCP
+				.endif
+			.endif
+			invoke SendDlgItemMessageW,hwnd,IDC_CODE_SAVE2,CB_GETCURSEL,0,0
+			mov ecx,dword ptr [eax*4+dbCodeTable]
+			mov esi,FileInfo2.nCharSet
+			.if ecx!=esi
+				mov FileInfo2.nCharSet,ecx
+				xor ebx,ebx
+				xor edi,edi
+				.while ebx<FileInfo2.nLine
+					push ebx
+					push offset FileInfo2
+					call dbSimpFunc+_SimpFunc.ModifyLine
+					or edi,eax
+					inc ebx
+				.endw
+				.if edi
+					mov FileInfo2.nCharSet,esi
+					mov eax,IDS_FAILCONVERT
+					invoke _GetConstString
+					invoke MessageBoxW,hwnd,eax,0,MB_OK or MB_ICONEXCLAMATION
+					jmp _ExWCP
+				.endif
+			.endif 
+			invoke InvalidateRect,hList1,0,TRUE
+			invoke InvalidateRect,hList2,0,TRUE
+			invoke SendMessageW,hList1,LB_GETCURSEL,0,0
+			invoke _SetTextToEdit,eax
+			jmp _ExitWCP
+		.elseif ax==IDC_CODE_CANCEL
+_ExitWCP:
+			invoke EndDialog,hwnd,0
+		.endif
+	.elseif eax==WM_INITDIALOG
+		invoke GetDlgItem,hwnd,IDC_CODE_OPEN1
+		invoke _AddCodeCombo,eax
+		invoke GetDlgItem,hwnd,IDC_CODE_OPEN2
+		invoke _AddCodeCombo,eax
+		invoke GetDlgItem,hwnd,IDC_CODE_SAVE2
+		invoke _AddCodeCombo,eax
+		.if bOpen
+			invoke _GetCodeIndex,FileInfo1.nCharSet
+			invoke SendDlgItemMessageW,hwnd,IDC_CODE_OPEN1,CB_SETCURSEL,eax,0
+			invoke _GetCodeIndex,FileInfo2.nCharSet
+			mov ebx,eax
+			invoke SendDlgItemMessageW,hwnd,IDC_CODE_OPEN2,CB_SETCURSEL,eax,0
+			invoke SendDlgItemMessageW,hwnd,IDC_CODE_SAVE2,CB_SETCURSEL,ebx,0
+		.endif
+	.elseif eax==WM_CLOSE
+		invoke EndDialog,hwnd,0
+	.endif
+_ExWCP:
 	xor eax,eax
 	ret
-_SetSaveDir endp
+_WndCodeProc endp
 
 ;
 _ExportTxt proc

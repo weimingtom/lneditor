@@ -125,10 +125,8 @@ _WndExpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			invoke GetDlgItem,hwnd,IDC_EA_OK
 			invoke EnableWindow,eax,FALSE
 		.endif
-		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_ADDSTRING,0,offset szcdDefault
-		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_ADDSTRING,0,offset szcdGBK
-		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_ADDSTRING,0,offset szcdSJIS
-		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_ADDSTRING,0,offset szcdUnicode
+		invoke GetDlgItem,hwnd,IDC_EA_CODE
+		invoke _AddCodeCombo,eax
 		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_SETCURSEL,0,0
 	.elseif eax==WM_CLOSE
 		invoke EndDialog,hwnd,0

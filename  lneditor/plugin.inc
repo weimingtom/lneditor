@@ -43,7 +43,7 @@ _Functions struct
 	SaveScript			dd		?
 	SaveAs				dd		?
 	CloseScipt			dd		?
-	SetSaveDir			dd		?
+	SetCode				dd		?
 	ExportTxt				dd		?
 	ImportTxt			dd		?
 	Exit					dd		?

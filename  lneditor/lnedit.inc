@@ -65,6 +65,7 @@ E_NOMEM				EQU		1
 E_OVERMEM				EQU		2
 E_NOTENOUGHBUFF		EQU		3
 E_FILEACCESSERROR		EQU		4
+E_FATALERROR			EQU		5
 E_INVALIDPARAMETER		EQU		10H
 E_PLUGINERROR			EQU		11H
 E_LINENOTEXIST			EQU		100h
@@ -136,6 +137,8 @@ _Dev	proto
 ;Misc2
 _MakeStringListFromStream	proto :dword
 _GetStringFromStmPtr	proto :dword,:dword,:dword
+_GetCodeIndex		proto :dword
+_AddCodeCombo		proto :dword
 
 ;Record
 _ReadRec			proto
@@ -148,6 +151,9 @@ _LoadScript			proto
 _SaveScript			proto
 _SaveAs				proto
 _CloseScript			proto
+_SetCode				proto
+_RecodeFile			proto :dword
+_WndCodeProc		proto :dword,:dword,:dword,:dword
 _ExportTxt			proto
 _ExportSingleTxt		proto :dword,:dword
 _ImportTxt			proto
@@ -361,7 +367,7 @@ _FileRec ends
 				dd	offset _SaveScript
 				dd	offset _SaveAs
 				dd	offset _CloseScript
-				dd	offset _SetSaveDir
+				dd	offset _SetCode
 				dd	offset _ExportTxt
 				dd	offset _ImportTxt
 				dd	offset _Exit
@@ -481,7 +487,7 @@ _FileRec ends
 	TW0		'WindowsLoc',	szcfWL
 
 .data
-	TW0		'DEFAULT(0)',		szcdDefault
+	TW0		'UNKNOWN(0)',	szcdDefault
 	TW0		'GBK(936)',		szcdGBK
 	TW0		'Shift-JIS(932)',		szcdSJIS
 	TW0		'UNICODE(-1)',		szcdUnicode

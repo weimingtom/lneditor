@@ -194,3 +194,77 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 _ExGSFS:
 	ret
 _GetStringFromStmPtr endp
+
+_RecodeFile proc uses esi ebx edi _lpFI
+	LOCAL @ret
+	mov esi,_lpFI
+	assume esi:ptr _FileInfo
+	.if [esi].nMemoryType==MT_POINTERONLY
+		mov ebx,[esi].lpTextIndex
+		invoke _MakeStringListFromStream,_lpFI
+		.if eax
+			mov [esi].lpTextIndex,ebx
+			jmp _ExRF
+		.endif
+		mov edi,ebx
+		xor ebx,ebx
+		.while ebx<[esi].nLine
+			invoke HeapFree,hGlobalHeap,0,[edi+ebx*4]
+			inc ebx
+		.endw
+		invoke VirtualFree,edi,0,MEM_RELEASE
+	.else
+		mov eax,dbSimpFunc+_SimpFunc.Release
+		.if eax
+			push esi
+			call eax
+		.endif
+		.if [esi].nMemoryType==MT_EVERYSTRING
+			mov edi,[esi].lpTextIndex
+			xor ebx,ebx
+			.while ebx<[esi].nLine
+				invoke HeapFree,hGlobalHeap,0,[edi+ebx*4]
+				inc ebx
+			.endw
+		.endif
+		invoke VirtualFree,[esi].lpText,0,MEM_RELEASE
+		invoke VirtualFree,[esi].lpTextIndex,0,MEM_RELEASE
+		invoke VirtualFree,[esi].lpStreamIndex,0,MEM_RELEASE
+		lea eax,@ret
+		push eax
+		push _lpFI
+		call dword ptr [dbSimpFunc+_SimpFunc.GetText]
+		.if eax
+			mov eax,E_FATALERROR
+			jmp _ExRF
+		.endif
+	.endif
+	assume esi:nothing
+	xor eax,eax
+_ExRF:
+	ret
+_RecodeFile endp
+
+;
+_GetCodeIndex proc _code
+	mov ecx,_code
+	.if ecx==CS_GBK
+		mov eax,1
+	.elseif ecx==CS_SJIS
+		mov eax,2
+	.elseif ecx==CS_UNICODE
+		mov eax,3
+	.else
+		xor eax,eax
+	.endif
+	ret
+_GetCodeIndex endp
+
+;
+_AddCodeCombo proc _hCombo
+	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdDefault
+	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdGBK
+	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdSJIS
+	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdUnicode
+	ret
+_AddCodeCombo endp
