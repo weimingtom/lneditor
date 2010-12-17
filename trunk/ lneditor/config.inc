@@ -33,7 +33,7 @@ _Configs struct
 	nNewLoc				dd			?
 	nAutoConvert			dd			?
 	bAutoOpen			dd			?
-	bSaveInChLine		dd			?;
+	bSaveInChLine		dd			?
 	bAutoSelText			dd			?
 	lpDefaultMel			dd			?
 	lpInitDir1				dd			?
