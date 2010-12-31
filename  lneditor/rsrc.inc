@@ -194,6 +194,7 @@ IDS_FAILCONVERT         equ 46
 IDS_SELECTBKGND         equ 47
 IDS_ERRORCODE           equ 48
 IDS_CODEFAILED          equ 49
+IDS_CODECVTFAILED       equ 50
 IDR_ACCEL1              equ 1
 IDR_VERSION1            equ 1
 IDR_XPMANIFEST1         equ 1

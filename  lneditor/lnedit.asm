@@ -282,7 +282,10 @@ _LoadMain:
 		mov edi,lParam
 		assume edi:ptr MEASUREITEMSTRUCT
 		.if [edi].CtlType==ODT_LISTBOX
-			invoke _CalHeight,[edi].itemID
+			invoke _GetRealLine,[edi].itemID
+			.if eax!=-1
+				invoke _CalHeight,[edi].itemID
+			.endif
 			mov [edi].itemHeight,eax
 		.endif
 		assume edi:nothing

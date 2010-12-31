@@ -34,6 +34,9 @@ _WndConfigProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 			mov dbConf+_Configs.bAutoOpen,eax
 			invoke IsDlgButtonChecked,hwnd,IDC_CF_AUTOSELECT
 			mov dbConf+_Configs.bAutoSelText,eax
+			invoke SendDlgItemMessageW,hwnd,IDC_CF_SAVEWITHCODE,CB_GETCURSEL,0,0
+			mov ecx,dword ptr [eax*4+dbCodeTable]
+			mov dbConf+_Configs.nAutoCode,ecx
 			invoke _SaveConfig
 			jmp @F
 		.elseif eax==IDCANCEL
@@ -53,6 +56,13 @@ _WndConfigProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 		invoke CheckRadioButton,hwnd,IDC_CF_AC_NOT,IDC_CF_AC_HALF,eax
 		invoke CheckDlgButton,hwnd,IDC_CF_AUTOOPEN,dbConf+_Configs.bAutoOpen
 		invoke CheckDlgButton,hwnd,IDC_CF_AUTOSELECT,dbConf+_Configs.bAutoSelText
+		invoke GetDlgItem,hwnd,IDC_CF_SAVEWITHCODE
+		mov ebx,eax
+		invoke SendMessageW,ebx,CB_ADDSTRING,0,offset szcdNotConvert
+		invoke SendMessageW,ebx,CB_ADDSTRING,0,offset szcdGBK
+		invoke SendMessageW,ebx,CB_ADDSTRING,0,offset szcdSJIS
+		invoke _GetCodeIndex,dbConf+_Configs.nAutoCode
+		invoke SendDlgItemMessageW,hwnd,IDC_CF_SAVEWITHCODE,CB_SETCURSEL,eax,0
 	.elseif eax==WM_CLOSE
 		invoke EndDialog,hwnd,0
 	.endif

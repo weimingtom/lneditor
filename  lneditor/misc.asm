@@ -240,7 +240,7 @@ _AddLines proc uses esi edi ebx _pdb
 	invoke HeapFree,hGlobalHeap,0,_pdb
 	.if nCurIdx!=-1
 		@@:
-		invoke _SetLineInListbox,nCurIdx
+		invoke _SetLineInListbox,nCurIdx,0
 	.else
 		invoke _ReadRec
 		mov nCurIdx,eax

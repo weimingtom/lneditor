@@ -104,8 +104,9 @@ _OpenScript proc
 				.endif
 				mov nCurIdx,-1
 				invoke _AddLinesToList,offset FileInfo2,hList2
-				.if FileInfo2.nCharSet!=CS_GBK && FileInfo2.nCharSet!=CS_UNICODE
-					mov FileInfo2.nCharSet,CS_GBK
+				mov ecx,dbConf+_Configs.nAutoCode
+				.if ecx && FileInfo2.nCharSet!=CS_UNICODE
+					mov FileInfo2.nCharSet,ecx
 					xor ebx,ebx
 					xor edi,edi
 					.while ebx<FileInfo2.nLine
@@ -116,7 +117,9 @@ _OpenScript proc
 						inc ebx
 					.endw
 					.if edi
-						mov FileInfo2.nCharSet,CS_SJIS
+						mov eax,IDS_CODECVTFAILED
+						invoke _GetConstString
+						invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
 					.endif
 				.endif 
 				invoke _SetOpen,1
@@ -341,6 +344,10 @@ _CloseScript proc
 	.if lpMarkTable
 		invoke HeapFree,hGlobalHeap,0,lpMarkTable
 		mov lpMarkTable,0
+	.endif
+	.if lpDisp2Real
+		invoke HeapFree,hGlobalHeap,0,lpDisp2Real
+		mov lpDisp2Real,0
 	.endif
 	invoke SendMessageW,hList1,LB_RESETCONTENT,0,0
 	invoke SendMessageW,hList2,LB_RESETCONTENT,0,0

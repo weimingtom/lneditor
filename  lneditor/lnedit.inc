@@ -32,6 +32,12 @@
 
 	include rsrc.inc
 
+MAX_STRINGLEN		EQU		512
+TOTAL_STRINGNUM	EQU		100
+SHORT_STRINGLEN	EQU		64
+MAX_MELCOUNT		EQU		50
+BF_UNDO_SIZE		EQU		1000000
+
 UNICODE			EQU		1
 
 IDC_LIST1			EQU		1001
@@ -44,12 +50,6 @@ IDC_STATUS			EQU		1005
 ;IDC_CODE2O			EQU		1008
 ;IDC_CODE2N			EQU		1009
 IDC_TIMER			EQU		1
-
-MAX_STRINGLEN		EQU		512
-TOTAL_STRINGNUM	EQU		50
-SHORT_STRINGLEN	EQU		64
-MAX_MELCOUNT		EQU		50
-BF_UNDO_SIZE		EQU		1000000
 
 LI_MARGIN_WIDTH	EQU		2
 LI_FRAME_WIDTH		EQU		2
@@ -139,6 +139,9 @@ _MakeStringListFromStream	proto :dword
 _GetStringFromStmPtr	proto :dword,:dword,:dword
 _GetCodeIndex		proto :dword
 _AddCodeCombo		proto :dword
+_GetDispLine			proto :dword
+_GetRealLine			proto :dword
+_IsDisplay			proto :dword
 
 ;Record
 _ReadRec			proto
@@ -183,7 +186,7 @@ _SummaryFind		proto
 _WndSSProc			proto :dword,:dword,:dword,:dword
 _Gotoline			proto
 _WndGTProc		proto :dword,:dword,:dword,:dword
-_SetLineInListbox		proto :dword
+_SetLineInListbox		proto :dword,:dword
 
 ;UI menu
 _SetFont				proto
@@ -257,14 +260,14 @@ _MelInfo struct
 	pMatch				dd		?							;插件的匹配函数指针
 _MelInfo ends
 
-;每个文件的当前行数等信息
+;打开过的脚本的记录文件的文件头
 _FileRec struct
-	nPos			dd		?
-	nCharSet1		dd		?
-	nCharSet2		dd		?
+	nPos			dd		?	;上次退出时光标所在位置
+	nCharSet1		dd		?	;左列使用的字符集
+	nCharSet2		dd		?	;右列使用的字符集
 	Reserverd		dd		?
-	nOffsetMT		dd		?
-	nLenMT			dd		?
+	nOffsetMT		dd		?	;MarkTable的文件偏移
+	nLenMT			dd		?	;长度，等同于行数
 	nOffsetResv		dd		6	dup(?)
 _FileRec ends
 
@@ -282,7 +285,9 @@ _FileRec ends
 	lpUndo			dd		?	;撤销列表指针
 	lpPreData		dd		?	;传递给插件的PreProc函数的指针
 	lpOriFuncTable	dd		?	;原始的菜单函数地址表
-	lpMarkTable		dd		?
+	
+	lpMarkTable		dd		?	;对每行的标记表
+	lpDisp2Real		dd		?	;显示出来的行与实际行数的对应表
 	
 	nCurMel			dd		?	;当前插件编号（在lpMels中的位置）
 	nCurIdx			dd		?	;
@@ -421,6 +426,8 @@ _FileRec ends
 					dd			120
 					dd			NL_CURRENT
 					DD			AC_NOT
+					dd			CS_GBK
+					
 					dd			TRUE
 					dd			FALSE
 					dd			TRUE
@@ -464,6 +471,7 @@ _FileRec ends
 	
 	TW0		'EditMode',		szcfEM
 	TW0		'AutoSaveTime',	szcfAST
+	TW0		'AutoCode',		szcfACD
 	TW0		'NewScSaveLoc',	szcfNSSL
 	TW0		'SaveInChangingLine',	szcfSCL
 	TW0		'AutoSelectText',	szcfASL
@@ -487,6 +495,8 @@ _FileRec ends
 	TW0		'WindowsLoc',	szcfWL
 
 .data
+	TW0		'Not Convert',		szcdNotConvert
+	
 	TW0		'UNKNOWN(0)',	szcdDefault
 	TW0		'GBK(936)',		szcdGBK
 	TW0		'Shift-JIS(932)',		szcdSJIS
