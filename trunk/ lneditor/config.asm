@@ -47,6 +47,8 @@ _LoadConfig proc
 		mov dbConf+_Configs.nAutoSaveTime,eax
 		invoke GetPrivateProfileIntW,offset szcfSett,offset szcfNSSL,dbConf+_Configs.nNewLoc,lpszConfigFile
 		mov dbConf+_Configs.nNewLoc,eax
+		invoke GetPrivateProfileIntW,offset szcfSett,offset szcfACD,dbConf+_Configs.nAutoCode,lpszConfigFile
+		mov dbConf+_Configs.nAutoCode,eax
 		invoke GetPrivateProfileIntW,offset szcfSett,offset szcfAO,dbConf+_Configs.bAutoOpen,lpszConfigFile
 		mov dbConf+_Configs.bAutoOpen,eax
 		invoke GetPrivateProfileIntW,offset szcfSett,offset szcfSCL,dbConf+_Configs.bSaveInChLine,lpszConfigFile
@@ -109,6 +111,8 @@ _SaveConfig proc uses esi edi ebx
 	invoke _WriteSetting,offset szcfAST,addr @s
 	invoke _Int2Str,dbConf+_Configs.nNewLoc,addr @s,FALSE
 	invoke _WriteSetting,offset szcfNSSL,addr @s
+	invoke _Int2Str,dbConf+_Configs.nAutoCode,addr @s,FALSE
+	invoke _WriteSetting,offset szcfACD,addr @s
 	invoke _Int2Str,dbConf+_Configs.bAutoOpen,addr @s,FALSE
 	invoke _WriteSetting,offset szcfAO,addr @s
 	invoke _Int2Str,dbConf+_Configs.bSaveInChLine,addr @s,FALSE

@@ -32,6 +32,8 @@ _Configs struct
 	nAutoSaveTime		dd			?
 	nNewLoc				dd			?
 	nAutoConvert			dd			?
+	nAutoCode			dd			?
+	
 	bAutoOpen			dd			?
 	bSaveInChLine		dd			?
 	bAutoSelText			dd			?

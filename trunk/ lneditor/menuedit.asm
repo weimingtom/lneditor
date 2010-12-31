@@ -183,32 +183,23 @@ _ModifyStringInList endp
 
 ;
 _PrevLine proc
-	invoke SendMessageW,hList2,LB_GETCURSEL,0,0
+	invoke SendMessageW,hList2,LB_GETCURSEL,0,1
 	mov ebx,eax
-;	.if dbConf+_Configs.bSaveInChLine
-;		push ebx
-;		push offset FileInfo2
-;		call dbFunc+_Functions.ModifyLine
-;	.endif
 	.if ebx
 		dec ebx
-		invoke _SetLineInListbox,ebx
+		invoke _SetLineInListbox,ebx,1
 	.endif
 	ret
 _PrevLine endp
 
 ;
 _NextLine proc
-	invoke SendMessageW,hList2,LB_GETCURSEL,0,0
+	invoke SendMessageW,hList2,LB_GETCURSEL,0,1
 	mov ebx,eax
-;	.if dbConf+_Configs.bSaveInChLine
-;		push ebx
-;		push offset FileInfo2
-;		call dbFunc+_Functions.ModifyLine
-;	.endif
+	invoke SendMessageW,hList2,LB_GETCOUNT,0,0
 	inc ebx
-	.if ebx<FileInfo2.nLine
-		invoke _SetLineInListbox,ebx
+	.if ebx<eax
+		invoke _SetLineInListbox,ebx,1
 	.endif
 	ret
 _NextLine endp
@@ -220,6 +211,7 @@ _MarkLine proc
 	mov esi,lpMarkTable
 	.if esi
 		xor byte ptr [esi+eax],1
+		invoke SendMessageW,hList2,LB_GETCURSEL,0,1
 		mov ebx,eax
 		invoke SendMessageW,hList1,LB_GETITEMRECT,ebx,addr @rect
 		invoke InvalidateRect,hList1,addr @rect,TRUE
@@ -236,19 +228,44 @@ _PrevMark proc
 	.if esi
 		.repeat
 			dec eax
-			.if byte ptr [esi+eax]
-				invoke _SetLineInListbox,eax
+			.if byte ptr [esi+eax] & 1 && !(byte ptr [esi+eax] & 2)
+				invoke _SetLineInListbox,eax,0
 				jmp @F
 			.endif
 		.until !eax
 	.endif
 	@@:
-	ret	
+	ret
 _PrevMark endp
 
+;
+_NextMark proc
+	invoke SendMessageW,hList2,LB_GETCURSEL,0,0
+	mov esi,lpMarkTable
+	mov ebx,FileInfo2.nLine
+	dec ebx
+	.if esi
+		.repeat
+			inc eax
+			.if byte ptr [esi+eax] &1 && !(byte ptr [esi+eax] & 2)
+				invoke _SetLineInListbox,eax,0
+				jmp @F
+			.endif
+		.until eax>=ebx
+	.endif
+	@@:
+	ret
+_NextMark endp
+
 _UnmarkAll proc
-	.if lpMarkTable
-		invoke RtlZeroMemory,lpMarkTable,FileInfo2.nLine
+	mov esi,lpMarkTable
+	.if esi
+		xor eax,eax
+		mov ecx,FileInfo2.nLine
+		.while eax<ecx
+			and byte ptr [esi+eax],0feh
+			inc eax
+		.endw
 		invoke InvalidateRect,hList1,0,TRUE
 		invoke InvalidateRect,hList2,0,TRUE
 	.endif
@@ -264,12 +281,16 @@ POSTF	EQU		_StartTF-_ToFull
 	xor esi,esi
 	xor edi,edi
 	.while esi<FileInfo2.nLine
+		invoke _IsDisplay,esi
+		or eax,eax
+		je @F
 		invoke _GetStringInList,offset FileInfo2,esi
 		invoke _ConvertFA,eax,ebx
 		push esi
 		push offset FileInfo2
 		call dbSimpFunc+_SimpFunc.ModifyLine
 		or edi,eax
+		@@:
 		inc esi
 	.endw
 	invoke _SetModified,1
@@ -291,25 +312,6 @@ _ToHalf proc
 	mov eax,offset _ToFull+POSTF
 	jmp eax
 _ToHalf endp
-
-;
-_NextMark proc
-	invoke SendMessageW,hList2,LB_GETCURSEL,0,0
-	mov esi,lpMarkTable
-	mov ebx,FileInfo2.nLine
-	dec ebx
-	.if esi
-		.repeat
-			inc eax
-			.if byte ptr [esi+eax]
-				invoke _SetLineInListbox,eax
-				jmp @F
-			.endif
-		.until eax>=ebx
-	.endif
-	@@:
-	ret	
-_NextMark endp
 
 ;
 _Find proc
@@ -383,19 +385,28 @@ _FindNFN:
 			.if eax==BST_CHECKED
 				mov eax,@nCurIdx
 				.while eax<FileInfo2.nLine && eax!=-1
-					invoke _GetStringInList,@pFileInfo,eax
+					mov esi,eax
+					invoke _IsDisplay,eax
+					or eax,eax
+					je @F
+					invoke _GetStringInList,@pFileInfo,esi
 					invoke _WildcharMatchW,offset FindInfo.szFind,eax
 					.if eax
-						invoke _SetLineInListbox,@nCurIdx
+						invoke _SetLineInListbox,@nCurIdx,0
 						jmp _ExWFP
 					.endif
+					@@:
 					add @nCurIdx,ebx
 					mov eax,@nCurIdx
 				.endw
 			.else
 				mov eax,@nCurIdx
 				.while eax<FileInfo2.nLine && eax!=-1
-					invoke _GetStringInList,@pFileInfo,eax
+					mov esi,eax
+					invoke _IsDisplay,eax
+					or eax,eax
+					je @F
+					invoke _GetStringInList,@pFileInfo,esi
 					mov @pStr,eax
 					mov esi,eax
 					.while word ptr [esi]
@@ -404,7 +415,7 @@ _FindNFN:
 						inc ecx
 						repe cmpsw
 						.if !ecx
-							invoke _SetLineInListbox,@nCurIdx
+							invoke _SetLineInListbox,@nCurIdx,0
 							invoke _GetStringInList,@pFileInfo,@nCurIdx
 							mov ecx,@pStr
 							sub ecx,eax
@@ -422,6 +433,7 @@ _FindNFN:
 						add @pStr,2
 						mov esi,@pStr
 					.endw
+					@@:
 					add @nCurIdx,ebx
 					mov eax,@nCurIdx
 				.endw
@@ -509,7 +521,11 @@ _FindNWRP:
 			add eax,ebx
 			mov @nCurIdx,eax
 			.while eax<FileInfo2.nLine && eax!=-1
-				invoke _GetStringInList,offset FileInfo2,eax
+				mov esi,eax
+				invoke _IsDisplay,eax
+				or eax,eax
+				je _NextLineWRP
+				invoke _GetStringInList,offset FileInfo2,esi
 				mov @pStr,eax
 				mov esi,eax
 				.while word ptr [esi]
@@ -524,7 +540,7 @@ _FindNWRP:
 						shr esi,1
 						mov edi,esi
 						add edi,@nFindLen
-						invoke _SetLineInListbox,@nCurIdx
+						invoke _SetLineInListbox,@nCurIdx,0
 						invoke SendMessageW,hEdit2,EM_SETSEL,esi,edi
 						invoke GetDlgItem,hwnd,IDC_RPC_REPLACE
 						invoke EnableWindow,eax,TRUE
@@ -534,6 +550,7 @@ _FindNWRP:
 					add @pStr,2
 					mov esi,@pStr
 				.endw
+				_NextLineWRP:
 				add @nCurIdx,ebx
 				mov eax,@nCurIdx
 			.endw
@@ -583,8 +600,12 @@ _FindNWRP:
 				jmp _ExWRP
 			.endif
 			invoke _SetModified,1
-			invoke SendMessageW,hList2,LB_GETITEMRECT,@nCurIdx,addr @rect
-			invoke InvalidateRect,hList2,addr @rect,TRUE
+			invoke _GetDispLine,@nCurIdx
+			.if eax!=-1
+				lea ecx,@rect
+				invoke SendMessageW,hList2,LB_GETITEMRECT,eax,ecx
+				invoke InvalidateRect,hList2,addr @rect,TRUE
+			.endif
 			mov ebx,1
 			jmp _FindNWRP
 		.elseif eax==IDC_RPC_RPCALL
@@ -596,7 +617,11 @@ _FindNWRP:
 			mov @nTotal,0
 			mov @nErrTotal,0
 			.while eax<FileInfo2.nLine
-				invoke _GetStringInList,offset FileInfo2,eax
+				mov esi,eax
+				invoke _IsDisplay,eax
+				or eax,eax
+				je _NextLine2WRP
+				invoke _GetStringInList,offset FileInfo2,esi
 				mov @pStr,eax
 				mov esi,eax
 				.while word ptr [esi]
@@ -652,6 +677,7 @@ _FindNWRP:
 					@@:
 					mov esi,@pStr
 				.endw
+				_NextLine2WRP:
 				inc @nCurIdx
 				mov eax,@nCurIdx
 			.endw
@@ -776,7 +802,11 @@ _SummarySearch proc uses esi edi ebx _lpszToFind,_lpFI,_lpRslt,_nSizeRslt,_bMark
 	xor eax,eax
 	mov @nLine,eax
 	.while eax<[ebx].nLine
-		invoke _GetStringInList,ebx,eax
+		mov esi,eax
+		invoke _IsDisplay,eax
+		or eax,eax
+		je @F
+		invoke _GetStringInList,ebx,esi
 		mov edi,eax
 		mov edx,eax
 		.while word ptr [edi]
@@ -787,8 +817,10 @@ _SummarySearch proc uses esi edi ebx _lpszToFind,_lpFI,_lpRslt,_nSizeRslt,_bMark
 			.if !ecx
 				.if _bMark
 					mov ecx,lpMarkTable
-					add ecx,@nLine
-					mov byte ptr [ecx],1
+					.if ecx
+						add ecx,@nLine
+						or byte ptr [ecx],1
+					.endif
 				.endif
 				invoke _DirFileNameW,ebx
 				mov ecx,@nLine
@@ -843,7 +875,7 @@ _WndGTProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			invoke GetDlgItemInt,hwnd,IDC_GT_LINE,addr @bIsTranslated,FALSE
 			.if @bIsTranslated && eax<=FileInfo2.nLine && eax
 				dec eax
-				invoke _SetLineInListbox,eax
+				invoke _SetLineInListbox,eax,1
 				invoke EndDialog,hwnd,0
 			.else
 				invoke SendDlgItemMessageW,hwnd,IDC_GT_LINE,EM_SETSEL,0,-1
@@ -852,9 +884,10 @@ _WndGTProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			invoke EndDialog,hwnd,0
 		.endif
 	.elseif eax==WM_INITDIALOG
-		invoke SendMessageW,hList1,LB_GETCURSEL,0,0
-		inc eax
-		invoke wsprintfW,addr @szStr,offset szLinesFormat,eax,FileInfo2.nLine
+		invoke SendMessageW,hList1,LB_GETCURSEL,0,1
+		lea ebx,[eax+1]
+		invoke SendMessageW,hList1,LB_GETCOUNT,0,0
+		invoke wsprintfW,addr @szStr,offset szLinesFormat,ebx,eax
 		invoke SetDlgItemTextW,hwnd,IDC_GT_TOTAL,addr @szStr
 	.elseif eax==WM_CLOSE
 		invoke EndDialog,hwnd,0
@@ -863,11 +896,11 @@ _WndGTProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 	ret
 _WndGTProc endp
 
-_SetLineInListbox proc _nLine
+_SetLineInListbox proc _nLine,_bIsDisp
 	invoke SendMessageW,hList1,WM_SETREDRAW,FALSE,0
 	invoke SendMessageW,hList2,WM_SETREDRAW,FALSE,0
-	invoke SendMessageW,hList1,LB_SETCURSEL,_nLine,0
-	invoke SendMessageW,hList2,LB_SETCURSEL,_nLine,0
+	invoke SendMessageW,hList1,LB_SETCURSEL,_nLine,_bIsDisp
+	invoke SendMessageW,hList2,LB_SETCURSEL,_nLine,_bIsDisp
 	invoke SendMessageW,hWinMain,WM_COMMAND,LBN_SELCHANGE*65536+IDC_LIST2,hList2
 	ret
 _SetLineInListbox endp

@@ -268,3 +268,138 @@ _AddCodeCombo proc _hCombo
 	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdUnicode
 	ret
 _AddCodeCombo endp
+
+;
+_GetDispLine proc uses esi _nRealLine
+	.if lpDisp2Real
+_BeginGDL:
+		mov eax,_nRealLine
+		mov ecx,lpMarkTable
+		test byte ptr [ecx+eax],2
+		jne _ErrGDL
+		mov ecx,lpDisp2Real
+		xor edx,edx
+		.while edx<FileInfo1.nLine
+			.if eax==dword ptr [ecx+edx*4]
+				mov eax,edx
+				ret
+			.endif
+			inc edx
+		.endw
+		jmp _ErrGDL
+	.endif
+	push esi
+	push edi
+	mov esi,lpMarkTable
+	.if esi
+		mov eax,FileInfo1.nLine
+		shl eax,2
+		invoke HeapAlloc,hGlobalHeap,0,eax
+		or eax,eax
+		je _ErrGDL
+		mov lpDisp2Real,eax
+		mov edi,eax
+		or eax,-1
+		mov ecx,FileInfo1.nLine
+		rep stosb
+		mov edi,lpDisp2Real
+		xor eax,eax
+		mov edx,FileInfo1.nLine
+		.while eax<edx
+			.if !(byte ptr [esi+eax]&2)
+				stosd
+			.endif
+			inc eax
+		.endw
+	.else
+		pop edi
+		mov eax,_nRealLine
+		pop esi
+		ret
+	.endif
+	pop edi
+	pop esi
+	jmp _BeginGDL
+	ret
+_ErrGDL:
+	or eax,-1
+	ret
+_GetDispLine endp
+
+;
+_GetRealLine proc _nDispLine
+	.if lpDisp2Real
+_BeginGRL:
+		mov eax,_nDispLine
+		mov ecx,lpDisp2Real
+		mov eax,[ecx+eax*4]
+		ret
+	.endif
+	push esi
+	push edi
+	mov esi,lpMarkTable
+	.if esi
+		mov eax,FileInfo1.nLine
+		shl eax,2
+		invoke HeapAlloc,hGlobalHeap,0,eax
+		or eax,eax
+		je _ErrGRL
+		mov lpDisp2Real,eax
+		mov edi,eax
+		or eax,-1
+		mov ecx,FileInfo1.nLine
+		rep stosb
+		mov edi,lpDisp2Real
+		xor eax,eax
+		mov edx,FileInfo1.nLine
+		.while eax<edx
+			.if !(byte ptr [esi+eax]&2)
+				stosd
+			.endif
+			inc eax
+		.endw
+	.else
+		pop edi
+		mov eax,_nDispLine
+		pop esi
+		ret
+	.endif
+	pop edi
+	pop esi
+	jmp _BeginGRL
+;	mov esi,lpMarkTable
+;	mov eax,_nDispLine
+;	.if esi
+;		mov ebx,FileInfo1.nLine
+;		xor ecx,ecx
+;		xor edx,edx
+;		.while ecx!=eax
+;			.if !(byte ptr [esi+edx] & 2)
+;				inc ecx
+;			.endif
+;			inc edx
+;			.break .if edx>=ebx
+;		.endw
+;		mov eax,edx
+;	.endif
+;	ret
+_ErrGRL:
+	or eax,-1
+	ret
+_GetRealLine endp
+
+;
+_IsDisplay proc _nRealLine
+	mov ecx,lpMarkTable
+	.if ecx
+		mov edx,_nRealLine
+		mov al,[ecx+edx]
+		shr eax,1
+		not eax
+		and eax,1
+		ret
+	.else
+		mov eax,1
+		ret
+	.endif
+_IsDisplay endp

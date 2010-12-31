@@ -101,7 +101,20 @@ _WndExpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			invoke GetDlgItemInt,hwnd,IDC_EA_MELIDX,0,FALSE
 			mov ecx,dword ptr [ebx*4+dbCodeTable]
 			invoke _ExportAllToTxt,@plstr,@plstr2,eax,ecx
+			mov ebx,eax
 			invoke HeapFree,hGlobalHeap,0,@plstr
+			.if !ebx
+				mov eax,IDS_SUCEXPORT
+				invoke _GetConstString
+				mov ecx,eax
+				mov eax,IDS_WINDOWTITLE
+				invoke _GetConstString
+				invoke MessageBoxW,hwnd,ecx,eax,MB_OK or MB_ICONINFORMATION
+			.else
+				mov eax,IDS_FAILEXPORT
+				invoke _GetConstString
+				invoke MessageBoxW,hwnd,ecx,0,MB_OK or MB_ICONERROR
+			.endif
 		.elseif ax==IDCANCEL
 			invoke EndDialog,hwnd,0
 		.endif
@@ -208,6 +221,7 @@ _Next2EATT:
 		invoke FindClose,@hFindFile
 	.endif
 	assume ebx:nothing
+	mov eax,@err
 	ret
 _ExportAllToTxt endp
 

@@ -220,6 +220,7 @@ _NewListProc proc uses ebx esi edi,hwnd,uMsg,wParam,lParam
 		.else
 			invoke _MarkLine
 		.endif
+		invoke SetFocus,hEdit2
 	.elseif eax==WM_LBUPDATE
 		invoke GetWindowLongW,hwnd,4
 		mov ebx,eax
@@ -244,6 +245,18 @@ _NewListProc proc uses ebx esi edi,hwnd,uMsg,wParam,lParam
 		.if ax!=-1
 			invoke SendMessageW,hWinMain,WM_COMMAND,IDM_MODIFY,0
 		.endif
+	.elseif eax==LB_GETCURSEL
+		invoke CallWindowProcW,lpOldListProc,hwnd,LB_GETCURSEL,0,0
+		.if lParam
+			invoke _GetRealLine,eax
+		.endif
+		ret
+	.elseif eax==LB_SETCURSEL
+		mov eax,wParam
+		.if lParam
+			invoke _GetDispLine,wParam
+		.endif
+		invoke CallWindowProcW,lpOldListProc,hwnd,LB_SETCURSEL,eax,0
 	.elseif eax==WM_CREATE
 		invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,sizeof _MyListData
 		.if !eax
@@ -273,6 +286,7 @@ _DrawListItem proc uses edi ebx _lpDIS
 	LOCAL @bf:BLENDFUNCTION
 	LOCAL @hmdc,@hBmp,@hOldBmp
 	LOCAL @hmdc2,@hBmp2,@hOldBmp2
+	LOCAL @nRealLine
 	mov dword ptr @bf,0
 	
 	mov edi,_lpDIS
@@ -281,6 +295,10 @@ _DrawListItem proc uses edi ebx _lpDIS
 	je _ExDLI
 	cmp [edi].itemAction,ODA_FOCUS
 	je _ExDLI
+	invoke _GetRealLine,[edi].itemID
+	cmp eax,-1
+	je _ExDLI
+	mov @nRealLine,eax
 	invoke GetWindowLongW,[edi].hwndItem,4
 	mov ebx,eax
 	assume ebx:ptr _MyListData
@@ -312,17 +330,19 @@ _DrawListItem proc uses edi ebx _lpDIS
 	invoke BitBlt,@hmdc,0,0,@cx,@cy,[ebx].StoredDC,[edi].rcItem.left,[edi].rcItem.top,SRCCOPY
 	invoke BitBlt,@hmdc2,0,0,@cx,@cy,[ebx].StoredDC,[edi].rcItem.left,[edi].rcItem.top,SRCCOPY
 	mov eax,lpMarkTable
-	add eax,[edi].itemID
-	.if byte ptr [eax]
-		invoke CreateSolidBrush,dbConf+_Configs.HiColorMarked
-		push eax
-		invoke FillRect,@hmdc2,addr @rect,eax
-		call DeleteObject
-		mov @bf.SourceConstantAlpha,130
-		invoke AlphaBlend,@hmdc,0,0,@cx,@cy,@hmdc2,0,0,@cx,@cy,dword ptr @bf
+	.if eax
+		add eax,@nRealLine
+		.if byte ptr [eax] &1
+			invoke CreateSolidBrush,dbConf+_Configs.HiColorMarked
+			push eax
+			invoke FillRect,@hmdc2,addr @rect,eax
+			call DeleteObject
+			mov @bf.SourceConstantAlpha,130
+			invoke AlphaBlend,@hmdc,0,0,@cx,@cy,@hmdc2,0,0,@cx,@cy,dword ptr @bf
+		.endif
 	.endif
 	mov eax,[ebx].nCurIdx
-	.if eax==[edi].itemID
+	.if eax==@nRealLine
 		mov ecx,[edi].itemState
 		and ecx,ODS_SELECTED
 		mov eax,dbConf+_Configs.HiColorDefault
@@ -344,12 +364,14 @@ _DrawListItem proc uses edi ebx _lpDIS
 			jmp @B
 		.endif
 		mov eax,lpMarkTable
-		add eax,[edi].itemID
-		.if !byte ptr [eax]
-			invoke GetStockObject,WHITE_BRUSH
-			invoke FillRect,@hmdc2,addr @rect,eax
-			mov @bf.SourceConstantAlpha,100
-			invoke AlphaBlend,@hmdc,0,0,@cx,@cy,@hmdc2,0,0,@cx,@cy,dword ptr @bf
+		.if eax
+			add eax,@nRealLine
+			.if !(byte ptr [eax]&1)
+				invoke GetStockObject,WHITE_BRUSH
+				invoke FillRect,@hmdc2,addr @rect,eax
+				mov @bf.SourceConstantAlpha,100
+				invoke AlphaBlend,@hmdc,0,0,@cx,@cy,@hmdc2,0,0,@cx,@cy,dword ptr @bf
+			.endif
 		.endif
 	.endif
 	assume ebx:nothing
@@ -364,9 +386,9 @@ _DrawListItem proc uses edi ebx _lpDIS
 		invoke SetTextColor,@hmdc,dbConf+_Configs.TextColorSelected
 	.endif
 	.if [edi].CtlID==IDC_LIST1
-		invoke _GetStringInList,offset FileInfo1,[edi].itemID
+		invoke _GetStringInList,offset FileInfo1,@nRealLine
 	.else
-		invoke _GetStringInList,offset FileInfo2,[edi].itemID
+		invoke _GetStringInList,offset FileInfo2,@nRealLine
 	.endif
 	.if eax
 		mov ebx,eax
