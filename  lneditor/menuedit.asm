@@ -60,6 +60,11 @@ _Modify proc
 	.endif
 	invoke SendMessageW,hWinMain,WM_COMMAND,IDM_NEXTTEXT,0
 	invoke _SetModified,1
+	mov edi,lpModifyTable
+	.if edi
+		invoke SendMessageW,hList2,LB_GETCURSEL,0,0
+		mov byte ptr [eax+edi],1
+	.endif
 _ExML:
 	xor eax,eax
 	ret
@@ -904,3 +909,22 @@ _SetLineInListbox proc _nLine,_bIsDisp
 	invoke SendMessageW,hWinMain,WM_COMMAND,LBN_SELCHANGE*65536+IDC_LIST2,hList2
 	ret
 _SetLineInListbox endp
+
+_Progress proc
+	LOCAL @str[32]:byte
+	mov edi,lpModifyTable
+	.if edi
+		mov ecx,FileInfo1.nLine
+		xor edx,edx
+		@@:
+			.if byte ptr [edi+ecx-1]
+				inc edx
+			.endif
+		loop @B
+	.endif
+	mov eax,IDS_LINEMODIFIED
+	invoke _GetConstString
+	invoke wsprintfW,addr @str,eax,edx
+	invoke MessageBoxW,hWinMain,addr @str,offset szDisplayName,MB_OK or MB_ICONEXCLAMATION
+	ret
+_Progress endp

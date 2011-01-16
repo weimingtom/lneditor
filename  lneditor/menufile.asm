@@ -27,7 +27,6 @@ _OpenScript proc
 			invoke GetLastError
 			.if eax==ERROR_FILE_NOT_FOUND
 				invoke CopyFileW,offset FileInfo1.szName,offset FileInfo2.szName,FALSE
-				mov FileInfo2.nCharSet,CS_SJIS
 				invoke _LoadFile,offset FileInfo2,LM_HALF
 				or eax,eax
 				jne @F
@@ -105,7 +104,7 @@ _OpenScript proc
 				mov nCurIdx,-1
 				invoke _AddLinesToList,offset FileInfo2,hList2
 				mov ecx,dbConf+_Configs.nAutoCode
-				.if ecx && FileInfo2.nCharSet!=CS_UNICODE
+				.if ecx && FileInfo2.nCharSet!=CS_UNICODE && FileInfo2.nCharSet!=CS_UTF8
 					mov FileInfo2.nCharSet,ecx
 					xor ebx,ebx
 					xor edi,edi
@@ -137,6 +136,9 @@ _OpenScript proc
 		
 		invoke _ReadRec
 		mov nCurIdx,eax
+		
+		invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,FileInfo1.nLine
+		mov lpModifyTable,eax
 		
 		invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN+SHORT_STRINGLEN
 		or eax,eax
@@ -218,6 +220,24 @@ _LoadScript proc
 			.endif
 			mov nCurIdx,-1
 			invoke _AddLinesToList,offset FileInfo2,hList2
+			mov ecx,dbConf+_Configs.nAutoCode
+;			.if ecx && FileInfo2.nCharSet!=CS_UNICODE && File2.nCharSet!=CS_UTF8
+;				mov FileInfo2.nCharSet,ecx
+;				xor ebx,ebx
+;				xor edi,edi
+;				.while ebx<FileInfo2.nLine
+;					push ebx
+;					push offset FileInfo2
+;					call dbSimpFunc+_SimpFunc.ModifyLine
+;					or edi,eax
+;					inc ebx
+;				.endw
+;				.if edi
+;					mov eax,IDS_CODECVTFAILED
+;					invoke _GetConstString
+;					invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
+;				.endif
+;			.endif
 			invoke _SetOpen,1
 		.endif
 	.else
@@ -348,6 +368,10 @@ _CloseScript proc
 	.if lpDisp2Real
 		invoke HeapFree,hGlobalHeap,0,lpDisp2Real
 		mov lpDisp2Real,0
+	.endif
+	.if lpModifyTable
+		invoke HeapFree,hGlobalHeap,0,lpModifyTable
+		mov lpModifyTable,0
 	.endif
 	invoke SendMessageW,hList1,LB_RESETCONTENT,0,0
 	invoke SendMessageW,hList2,LB_RESETCONTENT,0,0

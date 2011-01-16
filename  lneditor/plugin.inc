@@ -23,10 +23,11 @@ MT_POINTERONLY			EQU		4
 
 ;nCharSet”Ú
 CS_UNKNOWN			EQU		0
-CS_UNICODE				EQU		-1
 CS_GBK					EQU		936
 CS_SJIS					EQU		932
 CS_BIG5					EQU		950
+CS_UTF8					EQU		65001
+CS_UNICODE				EQU		-1
 
 ;nStringType”Ú
 ST_CUSTOM				EQU		0
@@ -77,6 +78,7 @@ _Functions struct
 	ToFull				dd		?
 	ToHalf				dd		?
 	UnmarkAll			dd		?
+	Progress				dd		?
 	Reserved				dd		10		dup(?)
 _Functions ends
 
