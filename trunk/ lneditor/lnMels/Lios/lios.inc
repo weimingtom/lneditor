@@ -29,6 +29,10 @@
 	include \masm32\lneditor\config.inc
 	includelib \masm32\lneditor\lnedit.lib
 
+MAX_LINELENGTH		EQU		20
+CT_ADD				equ		1
+CT_DEL				equ		1
+
 _GscHeader struct
 	nFileSize dd ?
 	nHeaderSize dd ?	;目前发现24h和1ch两种，使用不同的指令。
@@ -58,6 +62,8 @@ _ProcControlStream proto :dword,:dword
 _ReleaseHeap proto :dword
 _GetTextByIdx proto :dword,:dword
 _AddString proto :dword,:dword,:dword
+_CorrectRTCS proto :dword,:dword,:dword,:dword
+_Relocate proto :dword,:dword,:dword,:dword
 
 .data?
 	hInstance		dd		?

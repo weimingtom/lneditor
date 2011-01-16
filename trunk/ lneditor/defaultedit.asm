@@ -29,13 +29,17 @@ _ForceUniGT:
 ;		.if word ptr [edi-4]!=0dh
 			inc ecx
 ;		.endif
+	.elseif word ptr [edi]==0bbefh && byte ptr [edi+2]==0bfh
+		mov [ebx].nCharSet,CS_UTF8
+		add edi,3
+		jmp _ForceMBCS
 	.else
 		.if [ebx].nCharSet==CS_UNICODE
 			mov @bIsUnicode,1
-			jmp _ForceUniGT
+			jmp _ForceUniGT		
 		.endif
 		mov @bIsUnicode,0
-		mov [ebx].nCharSet,CS_GBK
+_ForceMBCS:
 		xor ecx,ecx
 		.repeat
 			.if word ptr [edi]==0a0dh

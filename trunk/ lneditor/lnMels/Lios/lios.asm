@@ -99,6 +99,10 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	or eax,eax
 	je _NomemGT
 	mov [edi].lpIndexCS,eax
+	invoke VirtualAlloc,0,[edi].sHeader.nControlStreamSize,MEM_COMMIT,PAGE_READWRITE
+	or eax,eax
+	je _NomemGT
+	mov [edi].lpRelocTable,eax
 	
 	.if [edi].sHeader.nHeaderSize==24h
 		invoke _ProcControlStream,edi,offset dtParamSize20
@@ -150,6 +154,16 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 		lodsw
 		.if ax==51h
 			add esi,14h
+			.if dword ptr [esi-4]
+				invoke _GetTextByIdx,[esi-4],edi
+				lea ecx,@pTIdx
+				invoke _AddString,eax,ecx,@nCharSet
+				or eax,eax
+				je _Nomem2GT
+				mov ecx,@pSIdx
+				mov [ecx],ebx
+				add @pSIdx,4
+			.endif 
 _i51GT:
 			invoke _GetTextByIdx,[esi],edi
 			lea ecx,@pTIdx
@@ -277,23 +291,25 @@ _ProcControlStream proc uses esi edi ebx _lpGscInfo,_lpTable2
 			pop eax
 			add edx,eax
 			
-;			.if (cl>=03 && cl<=05)
-;				lea eax,[edx-4]
-;				mov edi,sGscInfo.lpRelocTable
-;				mov [edi+ebx],eax
-;				add ebx,4
-;				.continue
-;			.elseif cl==0eh
-;				lea eax,[edx-52]
-;				mov edi,sGscInfo.lpRelocTable
-;				mov ecx,5
-;				@@:
-;					mov [edi+ebx],eax
-;					add eax,4
-;					add ebx,4
-;					.continue .if !dword ptr [esi+eax]
-;				loop @B
-;			.endif
+			.if (cl>=03 && cl<=05)
+				lea eax,[edx-4]
+				mov ecx,_lpGscInfo
+				mov edi,[ecx+_GscInfo.lpRelocTable]
+				mov [edi+ebx],eax
+				add ebx,4
+				.continue
+			.elseif cl==0eh
+				lea eax,[edx-52]
+				mov ecx,_lpGscInfo
+				mov edi,[ecx+_GscInfo.lpRelocTable]
+				mov ecx,5
+				@@:
+					mov [edi+ebx],eax
+					add eax,4
+					add ebx,4
+					.continue .if !dword ptr [esi+eax]
+				loop @B
+			.endif
 		.endif
 	.endw
 	mov edx,_lpGscInfo
@@ -305,6 +321,29 @@ _ProcControlStream proc uses esi edi ebx _lpGscInfo,_lpTable2
 	mov eax,1
 	ret
 _ProcControlStream endp
+
+_CheckPage proc uses esi _lpStr
+	mov esi,_lpStr
+	xor edx,edx
+	.repeat
+		mov ecx,40
+		.repeat
+			lodsw
+			.if ax=='^'
+				lodsw
+				.if ax=='d' || ax=='c' || ax=='f'
+					
+				.endif
+			.elseif !ah
+				dec ecx
+			.else
+				sub ecx,2
+			.endif
+		.until 0
+		inc edx
+	.until 0
+	ret
+_CheckPage endp
 
 ;
 ModifyLine proc uses ebx edi esi _lpFI,_nLine
@@ -343,6 +382,14 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	lodsw
 	.if ax==51h
 		add esi,14h
+		mov ecx,_lpFI
+		mov ecx,[ecx+_FileInfo.lpStreamIndex]
+		mov edx,_nLine
+		lea eax,[ecx+edx*4]
+		mov ecx,[eax]
+		.if ecx==[eax+4]
+			sub esi,4
+		.endif
 _i51ML:
 		invoke _GetTextByIdx,[esi],ebx
 		mov edi,eax
@@ -372,7 +419,31 @@ _i51ML:
 		
 	.elseif ax==52h
 		add esi,10h
-		jmp _i51ML
+		invoke _GetTextByIdx,[esi],ebx
+		mov edi,eax
+		invoke lstrlenA,eax
+		inc eax
+		invoke WideCharToMultiByte,@nCharSet,0,@pNewStr,-1,edi,eax,0,0
+		.if !eax
+			invoke GetLastError
+			.if eax==ERROR_INSUFFICIENT_BUFFER
+				mov ecx,[ebx].sHeader.nTextSize
+				mov edx,ecx
+				mov eax,@nTextBufferSize
+				add ecx,[ebx].lpText
+				sub eax,edx
+				invoke WideCharToMultiByte,@nCharSet,0,@pNewStr,-1,ecx,eax,0,0
+				.if !eax
+					mov eax,E_NOTENOUGHBUFF
+					jmp _ExML
+				.endif
+				mov edx,[ebx].sHeader.nTextSize
+				add [ebx].sHeader.nTextSize,eax
+				mov ecx,[ebx].lpIndex
+				mov eax,[esi]
+				mov [ecx+eax*4],edx
+			.endif
+		.endif
 	.elseif ax==0eh
 		xor eax,eax
 		lodsw
@@ -576,6 +647,106 @@ _NomemAS:
 	xor eax,eax
 	ret
 _AddString endp
+
+;
+_CorrectRTCS proc uses edi esi _lpGscInfo,_idx,_nBytes,_Flags
+	mov ecx,_lpGscInfo
+	mov edi,[ecx+_GscInfo.lpIndexCS]
+	mov esi,[ecx+_GscInfo.lpRelocTable]
+	.if _Flags==CT_ADD
+		xor ecx,ecx
+		.repeat
+			add edi,4
+			inc ecx
+		.until !dword ptr [edi]
+		.while ecx>_idx
+			mov eax,[edi-4]
+			mov [edi],eax
+			sub edi,4
+			dec ecx
+		.endw
+		add edi,4
+		mov eax,_nBytes
+		.while dword ptr [edi]
+			add dword ptr [edi],eax
+			add edi,4
+		.endw
+		
+		mov ecx,_lpGscInfo
+		mov edi,[ecx+_GscInfo.lpIndexCS]
+		mov eax,_idx
+		mov edx,[edi+eax*4]
+		mov ecx,_nBytes
+		.while dword ptr [esi]
+			.if dword ptr [esi]>=edx
+				add dword ptr [esi],ecx
+			.endif
+			add esi,4
+		.endw
+	.else
+		mov eax,_idx
+		lea edi,[edi+eax*4]
+		.while dword ptr [edi]
+			mov eax,[edi+4]
+			mov [edi],eax
+			add edi,4
+		.endw
+		mov ecx,_lpGscInfo
+		mov edi,[ecx+_GscInfo.lpIndexCS]
+		mov eax,_idx
+		lea edi,[edi+eax*4]
+		mov eax,_nBytes
+		.while dword ptr [edi]
+			sub dword ptr [edi],eax
+			add edi,4
+		.endw
+		
+		mov ecx,_lpGscInfo
+		mov edi,[ecx+_GscInfo.lpIndexCS]
+		mov eax,_idx
+		mov edx,[edi+eax*4]
+		mov ecx,_nBytes
+		.while dword ptr [esi]
+			.if dword ptr [esi]>=edx
+				sub dword ptr [esi],ecx
+			.endif
+			add esi,4
+		.endw
+		
+	.endif
+	invoke _Relocate,_lpGscInfo,_idx,_nBytes,_Flags
+	ret
+_CorrectRTCS endp
+;
+_Relocate proc uses edi esi _lpGscInfo,_idx,_nBytes,_Flags
+	mov ecx,_lpGscInfo
+	mov edi,[ecx+_GscInfo.lpIndexCS]
+	mov eax,_idx
+	mov edx,[edi+eax*4]
+	mov esi,[ecx+_GscInfo.lpRelocTable]
+	lodsd
+	mov edi,[ecx+_GscInfo.lpControlStream]
+	.if _Flags==CT_ADD
+		.while eax
+			mov ecx,[edi+eax]
+			.if ecx>edx
+				add ecx,_nBytes
+				mov [edi+eax],ecx
+			.endif
+			lodsd
+		.endw
+	.else
+		.while eax
+			mov ecx,[edi+eax]
+			.if ecx>edx
+				sub ecx,_nBytes
+				mov [edi+eax],ecx
+			.endif
+			lodsd
+		.endw
+	.endif
+	ret
+_Relocate endp
 
 ;
 _memcpy proc

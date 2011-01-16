@@ -133,6 +133,7 @@ IDM_PREVMARK            equ 10017
 IDM_NEXTMARK            equ 10018
 IDM_CVTFULL             equ 10037
 IDM_CVTHALF             equ 10038
+IDM_PROGRESS            equ 10040
 IDM_FIND                equ 10019
 IDM_REPLACE             equ 10020
 IDM_SUMMARY             equ 10021
@@ -146,6 +147,8 @@ IDM_IMALL               equ 10030
 IDM_SUMALL              equ 10031
 IDM_CONFIG              equ 10033
 IDM_ABOUT               equ 10035
+IDM_GOTO2               equ 10022
+IDM_PROGRESS2           equ 10040
 IDS_WINDOWTITLE         equ 1
 IDS_CLASSNAME           equ 2
 IDS_DEFAULTFONT         equ 3
@@ -195,6 +198,7 @@ IDS_SELECTBKGND         equ 47
 IDS_ERRORCODE           equ 48
 IDS_CODEFAILED          equ 49
 IDS_CODECVTFAILED       equ 50
+IDS_LINEMODIFIED        equ 51
 IDR_ACCEL1              equ 1
 IDR_VERSION1            equ 1
 IDR_XPMANIFEST1         equ 1

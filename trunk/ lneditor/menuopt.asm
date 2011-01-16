@@ -61,6 +61,7 @@ _WndConfigProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 		invoke SendMessageW,ebx,CB_ADDSTRING,0,offset szcdNotConvert
 		invoke SendMessageW,ebx,CB_ADDSTRING,0,offset szcdGBK
 		invoke SendMessageW,ebx,CB_ADDSTRING,0,offset szcdSJIS
+		invoke SendMessageW,ebx,CB_ADDSTRING,0,offset szcdUTF8
 		invoke _GetCodeIndex,dbConf+_Configs.nAutoCode
 		invoke SendDlgItemMessageW,hwnd,IDC_CF_SAVEWITHCODE,CB_SETCURSEL,eax,0
 	.elseif eax==WM_CLOSE

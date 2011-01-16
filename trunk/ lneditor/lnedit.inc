@@ -187,6 +187,7 @@ _WndSSProc			proto :dword,:dword,:dword,:dword
 _Gotoline			proto
 _WndGTProc		proto :dword,:dword,:dword,:dword
 _SetLineInListbox		proto :dword,:dword
+_Progress				proto
 
 ;UI menu
 _SetFont				proto
@@ -287,6 +288,7 @@ _FileRec ends
 	lpOriFuncTable	dd		?	;原始的菜单函数地址表
 	
 	lpMarkTable		dd		?	;对每行的标记表
+	lpModifyTable		dd		?	;修改过的行的标记表
 	lpDisp2Real		dd		?	;显示出来的行与实际行数的对应表
 	
 	nCurMel			dd		?	;当前插件编号（在lpMels中的位置）
@@ -323,6 +325,7 @@ _FileRec ends
 	
 .data
 	szNULL			dd		0
+	TW0			'Multiline Editor',	szDisplayName
 	TW0			' v0.4',			szDisplayVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
@@ -406,6 +409,7 @@ _FileRec ends
 				dd	offset _ToFull
 				dd	offset _ToHalf
 				dd	offset _UnmarkAll
+				dd	offset _Progress
 				dd	10	dup(0)
 	
 	dbSimpFunc	dd	offset _GetText
@@ -500,6 +504,7 @@ _FileRec ends
 	TW0		'UNKNOWN(0)',	szcdDefault
 	TW0		'GBK(936)',		szcdGBK
 	TW0		'Shift-JIS(932)',		szcdSJIS
+	TW0		'UTF-8(65001)',		szcdUTF8
 	TW0		'UNICODE(-1)',		szcdUnicode
 	
-	dbCodeTable		dd		0,936,932,-1
+	dbCodeTable		dd		0,936,932,65001,-1

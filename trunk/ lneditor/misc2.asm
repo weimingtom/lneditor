@@ -252,8 +252,10 @@ _GetCodeIndex proc _code
 		mov eax,1
 	.elseif ecx==CS_SJIS
 		mov eax,2
-	.elseif ecx==CS_UNICODE
+	.elseif ecx==CS_UTF8
 		mov eax,3
+	.elseif ecx==CS_UNICODE
+		mov eax,4
 	.else
 		xor eax,eax
 	.endif
@@ -265,6 +267,7 @@ _AddCodeCombo proc _hCombo
 	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdDefault
 	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdGBK
 	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdSJIS
+	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdUTF8
 	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdUnicode
 	ret
 _AddCodeCombo endp
