@@ -47,6 +47,9 @@ PreProc proc _lpPreData
 	mov eax,_lpPreData
 	mov ecx,[eax+_PreData.hGlobalHeap]
 	mov hHeap,ecx
+	mov edx,[eax+_PreData.lpHandles]
+	mov ecx,[edx]
+	mov hWinMain,ecx
 	ret
 PreProc endp
 
@@ -224,6 +227,7 @@ _i51GT:
 	mov [ebx].nLineLen,MAX_STRINGLEN
 	assume ebx:nothing
 	
+	mov bIsSilent,0
 	xor eax,eax
 	mov ecx,_lpRI
 	mov dword ptr [ecx],RI_SUC_LINEONLY
@@ -322,28 +326,90 @@ _ProcControlStream proc uses esi edi ebx _lpGscInfo,_lpTable2
 	ret
 _ProcControlStream endp
 
-_CheckPage proc uses esi _lpStr
+_CheckPage proc uses esi _lpStr,_line,_char
 	mov esi,_lpStr
 	xor edx,edx
 	.repeat
-		mov ecx,40
+		mov ecx,_char
 		.repeat
+			_Ctn1:
 			lodsw
 			.if ax=='^'
 				lodsw
+				.break .if ax=='n'
 				.if ax=='d' || ax=='c' || ax=='f'
-					
+					lodsw
+					or ax,ax
+					je _NoPage
+				.elseif ax=='g' || ax=='a' || ax=='v'
+					.repeat
+						lodsw
+					.until ax<'0' || ax>'9'
+					or ax,ax
+					je _NoPage
+					.if !ah
+						dec ecx
+					.else
+						sub ecx,2
+					.endif
+				.else
+					cmp ax,'s'
+					je _NoPage
+					cmp ax,'m'
+					je _NoPage
+					or ax,ax
+					je _NoPage
 				.endif
 			.elseif !ah
 				dec ecx
 			.else
 				sub ecx,2
 			.endif
+			cmp ecx,0
+			jg _Ctn1
+			.break
 		.until 0
 		inc edx
-	.until 0
+		.if edx>_line
+			sub esi,_lpStr
+			mov eax,esi
+			ret
+		.endif
+	.until !word ptr [esi]
+_NoPage:
+	xor eax,eax
 	ret
 _CheckPage endp
+
+_WndProc proc hwnd,uMsg,wParam,lParm
+	LOCAL @str[64]:byte
+	LOCAL @str2[64]:byte
+	mov eax,uMsg
+	.if eax==WM_COMMAND
+		mov eax,wParam
+		.if ax==IDC_OK
+			invoke IsDlgButtonChecked,hwnd,IDC_CHK1
+			.if eax==BST_CHECKED
+				mov bIsSilent,1
+			.else
+				mov bIsSilent,0
+			.endif
+			jmp @F
+		.endif
+	.elseif eax==WM_INITDIALOG
+		invoke LoadStringW,hInstance,IDS_MORELINE,addr @str2,32
+		mov eax,nLine
+		inc eax
+		lea ecx,@str
+		invoke wsprintfW,ecx,addr @str2,eax
+		invoke SetDlgItemTextW,hwnd,IDC_TEXTLONG,addr @str
+	.elseif eax==WM_CLOSE
+	@@:
+		invoke EndDialog,hwnd,0
+	.endif
+	xor eax,eax
+	ret
+_WndProc endp
 
 ;
 ModifyLine proc uses ebx edi esi _lpFI,_nLine
@@ -390,6 +456,12 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		.if ecx==[eax+4]
 			sub esi,4
 		.endif
+		invoke _CheckPage,@pNewStr,3,42
+		.if eax && !bIsSilent
+			mov eax,_nLine
+			mov nLine,eax
+			invoke DialogBoxParamW,hInstance,IDD_DLG1,hWinMain,_WndProc,0
+		.endif
 _i51ML:
 		invoke _GetTextByIdx,[esi],ebx
 		mov edi,eax
@@ -419,6 +491,12 @@ _i51ML:
 		
 	.elseif ax==52h
 		add esi,10h
+		invoke _CheckPage,@pNewStr,2,42
+		.if eax && !bIsSilent
+			mov eax,_nLine
+			mov nLine,eax
+			invoke DialogBoxParamW,hInstance,IDD_DLG1,hWinMain,_WndProc,0
+		.endif
 		invoke _GetTextByIdx,[esi],ebx
 		mov edi,eax
 		invoke lstrlenA,eax
