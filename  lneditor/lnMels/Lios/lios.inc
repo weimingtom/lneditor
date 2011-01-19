@@ -28,6 +28,8 @@
 	include \masm32\lneditor\plugin.inc
 	include \masm32\lneditor\config.inc
 	includelib \masm32\lneditor\lnedit.lib
+	
+	INCLUDE rsrc.inc
 
 MAX_LINELENGTH		EQU		20
 CT_ADD				equ		1
@@ -67,8 +69,12 @@ _Relocate proto :dword,:dword,:dword,:dword
 
 .data?
 	hInstance		dd		?
+	hWinMain	dd		?
 	hHeap		dd		?
 	dwTemp		dd		?
+	
+	bIsSilent		dd		?
+	nLine		dd		?
 
 .const
 ;					0,	1,	2,	3,	4,	5,	6,	7,	8,	9,	A,	B,	C,	D,	E,	F
