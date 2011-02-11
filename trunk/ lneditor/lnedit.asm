@@ -258,7 +258,9 @@ _LoadMain:
 				invoke SendMessageW,hList2,WM_SETREDRAW,TRUE,0
 				invoke RedrawWindow,hList1,0,0,RDW_FRAME or RDW_INVALIDATE or RDW_UPDATENOW
 				invoke RedrawWindow,hList2,0,0,RDW_FRAME or RDW_INVALIDATE or RDW_UPDATENOW
-				invoke _SetTextToEdit,ebx
+				.if ebx!=-1 && ebx<FileInfo1.nLine
+					invoke _SetTextToEdit,ebx
+				.endif
 			.endif
 		.elseif eax==IDC_EDIT2
 			mov eax,wParam
@@ -803,6 +805,8 @@ _SetTextToEdit proc uses esi edi ebx _nIdx
 	
 _Dis2STTE:
 	invoke _GetStringInList,offset FileInfo2,_nIdx
+	or eax,eax
+	je _ExSTTE2
 	mov esi,eax
 	invoke lstrlenW,esi
 	inc eax

@@ -1,0 +1,7 @@
+EXPORTS
+GetText
+ModifyLine
+Release
+Match
+SaveText
+SetLine
