@@ -236,9 +236,8 @@ _AddLines proc uses esi edi ebx _pdb
 		.endw
 	.endif
 	invoke SendMessageW,@hList,WM_SETREDRAW,TRUE,0
-	assume edi:nothing
 	invoke HeapFree,hGlobalHeap,0,_pdb
-	.if nCurIdx!=-1
+	.if nCurIdx!=-1 && ![edi].bReadOnly
 		@@:
 		invoke _SetLineInListbox,nCurIdx,0
 	.else
@@ -246,6 +245,7 @@ _AddLines proc uses esi edi ebx _pdb
 		mov nCurIdx,eax
 		jmp @b
 	.endif
+	assume edi:nothing
 	ret
 _AddLines endp
 
