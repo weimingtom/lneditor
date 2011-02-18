@@ -483,6 +483,14 @@ _SetLine proc uses edi ebx _lpsz,_lpRange
 		cld
 		cmp ecx,1
 		ja @B
+		mov eax,_lpRange
+		mov dword ptr [eax],1
+		jmp _ExSL
+	.endif
+	
+	.if word ptr [edi]==3000h
+		mov eax,_lpRange
+		mov dword ptr [eax],1
 	.endif
 	
 	lea edi,[edi+ebx*2-2]
@@ -510,6 +518,10 @@ _SetLine proc uses edi ebx _lpsz,_lpRange
 		repne scasw
 		cmp ecx,1
 		ja @B
+		
+		mov eax,_lpRange
+		dec ebx
+		mov [eax+4],ebx
 	.endif
 _ExSL:
 	ret
