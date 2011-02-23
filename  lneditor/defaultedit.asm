@@ -32,6 +32,7 @@ _ForceUniGT:
 	.elseif word ptr [edi]==0bbefh && byte ptr [edi+2]==0bfh
 		mov [ebx].nCharSet,CS_UTF8
 		add edi,3
+		mov @bIsUnicode,0
 		jmp _ForceMBCS
 	.else
 		.if [ebx].nCharSet==CS_UNICODE
@@ -450,7 +451,48 @@ _ExRIM:
 _ReplaceInMem endp
 
 ;
-_SetLine proc uses edi ebx _lpsz,_lpRange
+_SetLine proc uses esi ebx _lpsz,_lpRange
+	cmp _lpRange,0
+	je _ExSL
+	mov esi,_lpsz
+	invoke lstrlenW,esi
+	mov ebx,eax
+	.if word ptr [esi]==3000h
+		mov eax,_lpRange
+		mov dword ptr [eax],1
+	.endif
+	
+	xor ecx,ecx
+	.while ecx<ebx
+		lodsw
+		.if ax==300ch || ax==300eh
+			mov eax,_lpRange
+			inc ecx
+			mov [eax],ecx
+			.break
+		.endif
+		inc ecx
+	.endw
+	
+	mov esi,_lpsz
+	lea esi,[esi+ebx*2]
+	.repeat
+		dec ebx
+		sub esi,2
+		mov ax,[esi]
+		.if ax==300dh || ax==300fh
+			mov eax,_lpRange
+			mov [eax+4],ebx
+			.break
+		.endif
+	.until !ebx
+
+_ExSL:
+	ret
+_SetLine endp
+
+;
+_SetLine2 proc uses edi ebx _lpsz,_lpRange
 	cmp _lpRange,0
 	je _ExSL
 	mov edi,_lpsz
@@ -525,6 +567,6 @@ _SetLine proc uses edi ebx _lpsz,_lpRange
 	.endif
 _ExSL:
 	ret
-_SetLine endp
+_SetLine2 endp
 
 
