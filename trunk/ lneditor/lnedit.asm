@@ -682,7 +682,7 @@ _SelfMatch proc uses esi edi ebx _lpszName
 	mov eax,dword ptr [@buff]
 	and eax,0ffffffh
 	cmp eax,0bfbbefh
-	je _NOSM
+	je _OKSM
 	invoke GetFileSizeEx,@hFile,addr @buff
 	invoke SetFilePointer,@hFile,0,0,FILE_BEGIN
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,512
