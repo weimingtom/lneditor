@@ -178,7 +178,7 @@ _ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet
 			cmp eax,MR_ERR
 			je _Next2EATT
 			invoke lstrcpyW,addr @stFileInfo.szName,edi
-			invoke _LoadFile,addr @stFileInfo,LM_NONE
+			invoke _LoadFile,addr @stFileInfo,LM_NONE,[ebx].lpMelInfo2
 			or eax,eax
 			je _Next2EATT
 			
@@ -227,5 +227,22 @@ _ExportAllToTxt endp
 
 ;
 _About proc
+	invoke DialogBoxParamW,hInstance,IDD_ABOUT,hWinMain,offset _WndAboutProc,0
 	ret
 _About endp
+
+_WndAboutProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
+	mov eax,uMsg
+	.if eax==WM_COMMAND
+		mov eax,wParam
+		.if ax==IDC_AB_OK || AX==IDC_AB_CANCEL
+			invoke EndDialog,hwnd,0
+		.endif
+	.elseif eax==WM_INITDIALOG
+		invoke SetDlgItemTextW,hwnd,IDC_AB_VER,offset szFullVer
+	.elseif eax==WM_CLOSE
+		invoke EndDialog,hwnd,0
+	.endif
+	xor eax,eax
+	ret
+_WndAboutProc endp

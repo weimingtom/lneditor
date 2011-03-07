@@ -491,82 +491,9 @@ _ExSL:
 	ret
 _SetLine endp
 
-;
-_SetLine2 proc uses edi ebx _lpsz,_lpRange
-	cmp _lpRange,0
-	je _ExSL
-	mov edi,_lpsz
-	invoke lstrlenW,edi
-	mov ebx,eax
-	mov ax,[edi]
-	.if ax==300ch || ax==300eh
-		lea edi,[edi+ebx*2]
-		std
-		mov edx,edi
-		mov ecx,ebx
-		mov ax,300dh
-		repne scasw
-		.if ecx>1
-			cld
-		@@:
-			mov eax,_lpRange
-			mov dword ptr [eax],1
-			sub edi,_lpsz
-			shr edi,1
-			inc edi
-			mov [eax+4],edi
-			jmp _ExSL
-		.endif
-		
-		mov edi,edx
-		mov ax,300fh
-		mov ecx,ebx
-		repne scasw
-		cld
-		cmp ecx,1
-		ja @B
-		mov eax,_lpRange
-		mov dword ptr [eax],1
-		jmp _ExSL
-	.endif
-	
-	.if word ptr [edi]==3000h
-		mov eax,_lpRange
-		mov dword ptr [eax],1
-	.endif
-	
-	lea edi,[edi+ebx*2-2]
-	mov ax,[edi]
-	.if ax==300dh || ax==300fh
-		cld
-		mov edi,_lpsz
-		mov ax,300ch
-		mov ecx,ebx
-		repne scasw
-		.if ecx>1
-			@@:
-			mov eax,_lpRange
-			dec ebx
-			mov [eax+4],ebx
-			sub edi,_lpsz
-			shr edi,1
-			mov [eax],edi
-			jmp _ExSL
-		.endif
-		
-		mov edi,_lpsz
-		mov ax,300eh
-		mov ecx,ebx
-		repne scasw
-		cmp ecx,1
-		ja @B
-		
-		mov eax,_lpRange
-		dec ebx
-		mov [eax+4],ebx
-	.endif
-_ExSL:
+_IsLineAdding proc _lpsz
+;	invoke _MatchFilter,_lpsz,offset dbConf+_Configs.TxtFilter
+	mov eax,1
 	ret
-_SetLine2 endp
-
+_IsLineAdding endp
 

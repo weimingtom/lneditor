@@ -97,8 +97,9 @@ _DirBackW proc uses edi _lpszPath
 	xor ax,ax
 	mov ecx,MAX_STRINGLEN/2
 	repne scasw
-	.if word ptr [edi-4]=='\'
-		sub edi,6
+	sub edi,4
+	.if word ptr [edi]=='\'
+		sub edi,2
 	.endif
 	sub ecx,MAX_STRINGLEN/2
 	neg ecx
@@ -120,7 +121,8 @@ _DirFileNameW proc uses edi _lpszPath
 	xor ax,ax
 	mov ecx,MAX_STRINGLEN/2
 	repne scasw
-	.if word ptr [edi-4]=='\'
+	sub edi,2
+	.if word ptr [edi-2]=='\'
 		xor eax,eax
 		ret
 	.endif
@@ -209,6 +211,7 @@ _DirModifyExtendName endp
 ;将FileInfo中的String添加到列表框里面
 _AddLines proc uses esi edi ebx _pdb
 	LOCAL @hList
+	LOCAL @nLine
 	mov eax,_pdb
 	mov edi,[eax]
 	mov ecx,[eax+4]
@@ -220,30 +223,43 @@ _AddLines proc uses esi edi ebx _pdb
 	assume edi:ptr _FileInfo
 	xor ebx,ebx
 	invoke SendMessageW,@hList,WM_SETREDRAW,FALSE,0
+	mov ecx,[edi].nLine
+	mov @nLine,ecx
 	.if [edi].nMemoryType!=MT_FIXEDSTRING
 		mov esi,[edi].lpTextIndex
-		.while ebx<[edi].nLine
-			invoke SendMessageW,@hList,LB_ADDSTRING,0,[esi]
+		.while ebx<@nLine
+			mov ecx,lpMarkTable
+			.if !(byte ptr [ecx+ebx]&2)
+				invoke SendMessageW,@hList,LB_ADDSTRING,0,[esi]
+			.endif
 			add esi,4
 			inc ebx
 		.endw
 	.else
 		mov esi,[edi].lpText
-		.while ebx<[edi].nLine
-			invoke SendMessageW,@hList,LB_ADDSTRING,0,esi
+		.while ebx<@nLine
+			mov ecx,lpMarkTable
+			.if !(byte ptr [ecx+ebx]&2)
+				invoke SendMessageW,@hList,LB_ADDSTRING,0,esi
+			.endif
 			add esi,[edi].nLineLen
 			inc ebx
 		.endw
 	.endif
 	invoke SendMessageW,@hList,WM_SETREDRAW,TRUE,0
 	invoke HeapFree,hGlobalHeap,0,_pdb
-	.if nCurIdx!=-1 && ![edi].bReadOnly
-		@@:
-		invoke _SetLineInListbox,nCurIdx,0
-	.else
-		invoke _ReadRec
-		mov nCurIdx,eax
-		jmp @b
+	.if ![edi].bReadOnly
+		.if nCurIdx!=-1
+			@@:
+			invoke _SetLineInListbox,nCurIdx,1
+		.else
+			invoke _ReadRec,REC_LINEPOS
+			.if eax==-1
+				inc eax
+			.endif
+			mov nCurIdx,eax
+			jmp @b
+		.endif
 	.endif
 	assume edi:nothing
 	ret
@@ -332,36 +348,49 @@ _ExGN:
 _GenName2 endp
 
 ;通过FileInfo结构中的文件名，打开文件并将其读入内存
-_LoadFile proc uses edi _pFI,_LargeMem
+_LoadFile proc uses edi _pFI,_LargeMem,_lpMelInfo2
 	LOCAL @nFileSize:LARGE_INTEGER
 	mov edi,_pFI
 	assume edi:ptr _FileInfo
-	invoke CreateFileW,edi,GENERIC_READ or GENERIC_WRITE,FILE_SHARE_READ or FILE_SHARE_WRITE,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
+_BeginLF:
+	.if [edi].bReadOnly
+		mov ecx,GENERIC_READ
+	.else
+		mov ecx,GENERIC_READ or GENERIC_WRITE
+	.endif
+	invoke CreateFileW,edi,ecx,FILE_SHARE_READ or FILE_SHARE_WRITE,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
 	cmp eax,-1
 	je _FailLF
 	mov [edi].hFile,eax
 	
-	invoke GetFileSizeEx,[edi].hFile,addr @nFileSize
-	.if _LargeMem==LM_HALF
+	mov ecx,_lpMelInfo2
+	.if !(_MelInfo2.nCharacteristic[ecx] & MIC_NOPREREAD)
+		invoke GetFileSizeEx,[edi].hFile,addr @nFileSize
 		mov eax,dword ptr @nFileSize
-		mov ecx,eax
-		shr ecx,1
-		add eax,ecx
-		mov dword ptr @nFileSize,eax
-	.elseif _LargeMem==LM_ONE
-		mov eax,dword ptr @nFileSize
-		shl eax,1
-		mov dword ptr @nFileSize,eax
+		.if !eax && !dword ptr [@nFileSize+4]
+			invoke CloseHandle,[edi].hFile
+			invoke DeleteFileW,edi
+			jmp _BeginLF
+		.endif
+		.if _LargeMem==LM_HALF
+			mov ecx,eax
+			shr ecx,1
+			add eax,ecx
+			mov dword ptr @nFileSize,eax
+		.elseif _LargeMem==LM_ONE
+			shl eax,1
+			mov dword ptr @nFileSize,eax
+		.endif
+		invoke VirtualAlloc,0,dword ptr @nFileSize,MEM_COMMIT,PAGE_READWRITE
+		or eax,eax
+		je _FailLF
+		mov [edi].lpStream,eax
+		invoke ReadFile,[edi].hFile,[edi].lpStream,dword ptr @nFileSize,offset dwTemp,0
+		or eax,eax
+		je _FailLF
+		mov eax,dwTemp
+		mov [edi].nStreamSize,eax
 	.endif
-	invoke VirtualAlloc,0,dword ptr @nFileSize,MEM_COMMIT,PAGE_READWRITE
-	or eax,eax
-	je _FailLF
-	mov [edi].lpStream,eax
-	invoke ReadFile,[edi].hFile,[edi].lpStream,dword ptr @nFileSize,offset dwTemp,0
-	or eax,eax
-	je _FailLF
-	mov eax,dwTemp
-	mov [edi].nStreamSize,eax
 	assume edi:nothing
 _SucLF:
 	mov eax,1
@@ -392,7 +421,8 @@ _ClearAll proc uses edi _pFI
 		push edi
 		call eax
 	.endif
-	.if [edi].nMemoryType==MT_EVERYSTRING
+	mov ecx,[edi].nMemoryType
+	.if ecx==MT_EVERYSTRING || ecx==MT_POINTERONLY
 		push esi
 		push ebx
 		mov esi,[edi].lpTextIndex
@@ -514,30 +544,47 @@ _SetModified proc uses ebx _bFlag
 _SetModified endp
 
 ;
-_SetOpen proc uses esi edi _bFlag
-	LOCAL @bCanImport
-	mov @bCanImport,MF_ENABLED
+_SetOpen proc uses esi edi ebx _bFlag
+	invoke EnableMenuItem,hMenu,IDM_EXPORT,MF_GRAYED
+	invoke EnableMenuItem,hMenu,IDM_IMPORT,MF_GRAYED
 	.if _bFlag
+		mov ecx,sizeof _MelInfo
+		mov eax,nCurMel
+		.if eax!=-1
+			mul cx
+			add eax,lpMels
+			mov ebx,_MelInfo.lpMelInfo2[eax]
+		.else
+			lea ebx,dbMelInfo2
+		.endif
 		mov bOpen,1
 		mov esi,MF_ENABLED
 		mov edi,MF_GRAYED
-		mov eax,lpOriFuncTable
-		mov eax,[eax+sizeof _Functions+_SimpFunc.GetText]
-		.if eax==dbSimpFunc+_SimpFunc.GetText
-			mov @bCanImport,MF_GRAYED
+		.if !(_MelInfo2.nCharacteristic[ebx]&MIC_NOBATCHIMP)
+			invoke EnableMenuItem,hMenu,IDM_IMPORT,ESI
+		.endif
+		.if !(_MelInfo2.nCharacteristic[ebx]&MIC_NOBATCHEXP)
+			invoke EnableMenuItem,hMenu,IDM_EXPORT,ESI
 		.endif
 	.else
 		mov bOpen,0
 		mov edi,MF_ENABLED
 		mov esi,MF_GRAYED
+		invoke EnableMenuItem,hMenu,IDM_SAVE,esi
 	.endif
-	invoke EnableMenuItem,hMenu,IDM_SAVEAS,esi
 	invoke EnableMenuItem,hMenu,IDM_CLOSE,esi
-	invoke EnableMenuItem,hMenu,IDM_EXPORT,@bCanImport
-	invoke EnableMenuItem,hMenu,IDM_IMPORT,@bCanImport
-	invoke EnableMenuItem,hMenu,IDM_MODIFY,esi
-	invoke EnableMenuItem,hMenu,IDM_PREVTEXT,esi
-	invoke EnableMenuItem,hMenu,IDM_NEXTTEXT,esi
+	invoke EnableMenuItem,hMenu,IDM_SAVEAS,esi
+	invoke EnableMenuItem,hMenu,IDM_SETCODE,esi
+	mov ebx,IDM_MODIFY
+	.while ebx<=IDM_GOTO
+		invoke EnableMenuItem,hMenu,ebx,esi
+		inc ebx
+	.endw
+	mov ebx,IDM_CVTFULL
+	.while ebx<=IDM_PROGRESS
+		invoke EnableMenuItem,hMenu,ebx,esi
+		inc ebx
+	.endw
 	ret
 _SetOpen endp
 
@@ -608,10 +655,16 @@ _CalHeight proc uses edi _nPos
 	mov @hdc,eax
 	invoke SelectObject,@hdc,hFontList
 	mov dword ptr @s,3001h
+	mov ecx,_nPos
+	.if ecx>FileInfo1.nLine
+		lea eax,@s
+		jmp @F
+	.endif
 	invoke _GetStringInList,offset FileInfo1,_nPos
 	.if !eax || !word ptr [eax]
 		lea eax,@s
 	.endif
+	@@:
 	mov @pStr,eax
 	invoke lstrlenW,@pStr
 	mov ecx,eax
@@ -651,6 +704,68 @@ _CalHeight proc uses edi _nPos
 	.endif
 	ret
 _CalHeight endp
+
+;将列表框中的文本显示在编辑框中
+_SetTextToEdit proc uses esi edi ebx _nIdx
+	LOCAL @ps1,@ps2
+	LOCAL @range[2]:dword
+	invoke _GetStringInList,offset FileInfo1,_nIdx
+	mov esi,eax
+	invoke lstrlenW,esi
+	inc eax
+	mov ebx,eax
+	shl eax,2
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
+	or eax,eax
+	je _ExSTTE
+	mov @ps1,eax
+	mov edi,eax
+	mov ecx,ebx
+	rep movsw
+	
+_Dis2STTE:
+	invoke _GetStringInList,offset FileInfo2,_nIdx
+	or eax,eax
+	je _ExSTTE2
+	mov esi,eax
+	invoke lstrlenW,esi
+	inc eax
+	mov ebx,eax
+	shl eax,2
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
+	or eax,eax
+	je _ExSTTE2
+	mov @ps2,eax
+	mov edi,eax
+	mov ecx,ebx
+	rep movsw
+	
+	mov dword ptr @range,0
+	mov dword ptr [@range+4],-1
+	mov ebx,dbSimpFunc+_SimpFunc.SetLine
+	.if ebx
+		push 0
+		push @ps1
+		call ebx
+		lea eax,@range
+		push eax
+		push @ps2
+		call ebx
+	.endif
+	invoke SendMessageW,hEdit1,WM_SETTEXT,0,@ps1
+	invoke SendMessageW,hEdit2,WM_SETTEXT,0,@ps2
+	invoke SetFocus,hEdit2
+	.if dbConf+_Configs.bAutoSelText==TRUE
+		invoke SendMessageW,hEdit2,EM_SETSEL,@range,[@range+4]
+	.ENDIF
+
+	invoke HeapFree,hGlobalHeap,0,@ps2
+_ExSTTE2:
+	invoke HeapFree,hGlobalHeap,0,@ps1
+_ExSTTE:
+	xor eax,eax
+	ret
+_SetTextToEdit endp
 
 ;
 _ShowPic proc uses ebx _hdc,_lpszName

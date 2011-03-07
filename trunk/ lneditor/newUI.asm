@@ -106,7 +106,7 @@ _NewListProc proc uses ebx esi edi,hwnd,uMsg,wParam,lParam
 			mov [esi].dwFlags,TME_LEAVE
 			mov eax,hwnd
 			mov [esi].hwndTrack,eax
-			mov [esi].dwHoverTime,0			
+			mov [esi].dwHoverTime,0
 			invoke TrackMouseEvent,esi
 			assume esi:nothing
 			add esp,sizeof TRACKMOUSEEVENT
@@ -247,16 +247,17 @@ _NewListProc proc uses ebx esi edi,hwnd,uMsg,wParam,lParam
 		.endif
 	.elseif eax==LB_GETCURSEL
 		invoke CallWindowProcW,lpOldListProc,hwnd,LB_GETCURSEL,0,0
-		.if lParam
+		.if lParam && eax!=-1
 			invoke _GetRealLine,eax
 		.endif
 		ret
 	.elseif eax==LB_SETCURSEL
 		mov eax,wParam
 		.if lParam
-			invoke _GetDispLine,wParam
+			invoke _GetDispLine,eax
 		.endif
 		invoke CallWindowProcW,lpOldListProc,hwnd,LB_SETCURSEL,eax,0
+		ret
 	.elseif eax==WM_CREATE
 		invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,sizeof _MyListData
 		.if !eax
@@ -342,7 +343,7 @@ _DrawListItem proc uses edi ebx _lpDIS
 		.endif
 	.endif
 	mov eax,[ebx].nCurIdx
-	.if eax==@nRealLine
+	.if eax==[edi].itemID
 		mov ecx,[edi].itemState
 		and ecx,ODS_SELECTED
 		mov eax,dbConf+_Configs.HiColorDefault

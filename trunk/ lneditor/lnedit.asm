@@ -3,9 +3,9 @@
 option casemap:none
 
 
+include plugin.inc
 include lnedit.inc
 include config.inc
-include plugin.inc
 include com.inc
 
 include _browsefolder.asm
@@ -20,6 +20,7 @@ include menuasm.asm
 include menuopt.asm
 include defaultedit.asm
 include record.asm
+include log.asm
 
 
 include misc.asm
@@ -56,6 +57,8 @@ xor ebx,ebx
 	invoke LoadStringW,hInstance,ebx,eax,MAX_STRINGLEN/2
 	inc ebx
 .endw
+
+invoke _OpenLog
 
 invoke GetCommandLineW
 invoke CommandLineToArgvW,eax,offset dwTemp
@@ -178,16 +181,16 @@ _BeginOpenMain:
 					mov eax,IDS_ERRMATCH
 					invoke _GetConstString
 					invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
+					mov word ptr FileInfo1.szName,0
 					jmp _ExMain
 				.ELSEif ebx==-2
 					mov eax,IDS_NOMATCH
 					invoke _GetConstString
 					invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
+					mov word ptr FileInfo1.szName,0
 					jmp _ExMain
 				.elseif ebx==-1
 					invoke _SelfPreProc
-					invoke EnableMenuItem,hMenu,IDM_EXPORT,MF_GRAYED
-					invoke EnableMenuItem,hMenu,IDM_IMPORT,MF_GRAYED
 					jmp _Open2Main
 				.endif 
 				xor eax,eax
@@ -246,7 +249,7 @@ _LoadMain:
 					mov edi,hList2
 				.else
 					mov edi,hList1
-				.endif				
+				.endif
 				invoke SendMessageW,esi,LB_GETCURSEL,0,0
 				mov ebx,eax
 				invoke SendMessageW,hList1,WM_SETREDRAW,FALSE,0
@@ -258,8 +261,9 @@ _LoadMain:
 				invoke SendMessageW,hList2,WM_SETREDRAW,TRUE,0
 				invoke RedrawWindow,hList1,0,0,RDW_FRAME or RDW_INVALIDATE or RDW_UPDATENOW
 				invoke RedrawWindow,hList2,0,0,RDW_FRAME or RDW_INVALIDATE or RDW_UPDATENOW
-				.if ebx!=-1 && ebx<FileInfo1.nLine
-					invoke _SetTextToEdit,ebx
+				invoke _GetRealLine,ebx
+				.if eax!=-1 && eax<FileInfo1.nLine
+					invoke _SetTextToEdit,eax
 				.endif
 			.endif
 		.elseif eax==IDC_EDIT2
@@ -285,9 +289,7 @@ _LoadMain:
 		assume edi:ptr MEASUREITEMSTRUCT
 		.if [edi].CtlType==ODT_LISTBOX
 			invoke _GetRealLine,[edi].itemID
-			.if eax!=-1
-				invoke _CalHeight,[edi].itemID
-			.endif
+			invoke _CalHeight,eax
 			mov [edi].itemHeight,eax
 		.endif
 		assume edi:nothing
@@ -426,7 +428,11 @@ _PaintMain:
 		.if dbConf+_Configs.nEditMode==EM_SINGLE && dbConf+_Configs.bAutoOpen
 			mov eax,dbConf+_Configs.lpPrevFile
 			.if word ptr [eax]
-				invoke lstrcpyW,offset FileInfo1.szName,eax
+				invoke CreateFileW,eax,0,FILE_SHARE_READ or FILE_SHARE_WRITE,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
+				cmp eax,-1
+				je _ExMain
+				invoke CloseHandle,eax
+				invoke lstrcpyW,offset FileInfo1.szName,dbConf+_Configs.lpPrevFile
 				invoke WaitForSingleObject,@hFile,INFINITE
 				invoke CloseHandle,@hFile
 				mov esi,IDM_OPEN
@@ -435,9 +441,17 @@ _PaintMain:
 		.endif
 		
 	.elseif eax==WM_CLOSE
+		invoke HeapAlloc,hGlobalHeap,0,MAX_STRINGLEN
+		mov ebx,eax
+		.if ebx
+			invoke lstrcpyW,ebx,offset FileInfo1.szName
+		.endif
 		invoke _CloseScript
 		cmp eax,-1
 		je _ExMain
+		.if ebx
+			invoke lstrcpyW,dbConf+_Configs.lpPrevFile,ebx
+		.endif
 		invoke _SaveConfig
 		invoke DestroyWindow,hwnd
 		invoke PostQuitMessage,NULL
@@ -488,22 +502,6 @@ _InitWindow proc hwnd
 		dbConf+_Configs.windowRect[WRI_STATUS]+RECT.left,dbConf+_Configs.windowRect[WRI_STATUS]+RECT.top,\
 		dbConf+_Configs.windowRect[WRI_STATUS]+RECT.right,dbConf+_Configs.windowRect[WRI_STATUS]+RECT.bottom,hwnd,IDC_STATUS,hInstance,NULL
 	mov hStatus,eax
-;	invoke CreateWindowExW,WS_EX_LEFT,offset szCCombobox,0,CBS_DROPDOWN or WS_CHILD or WS_VISIBLE,\
-;		dbConf+_Configs.windowRect[WRI_CODE1O]+RECT.left,dbConf+_Configs.windowRect[WRI_CODE1O]+RECT.top,\
-;		dbConf+_Configs.windowRect[WRI_CODE1O]+RECT.right,dbConf+_Configs.windowRect[WRI_CODE1O]+RECT.bottom,hwnd,IDC_CODE1O,hInstance,NULL
-;	mov hCode1O,eax
-;	invoke CreateWindowExW,WS_EX_LEFT,offset szCCombobox,0,CBS_DROPDOWN or WS_CHILD,\; | WS_VISIBLE,\
-;		dbConf+_Configs.windowRect[WRI_CODE1N]+RECT.left,dbConf+_Configs.windowRect[WRI_CODE1N]+RECT.top,\
-;		dbConf+_Configs.windowRect[WRI_CODE1N]+RECT.right,dbConf+_Configs.windowRect[WRI_CODE1N]+RECT.bottom,hwnd,IDC_CODE1N,hInstance,NULL
-;	mov hCode1N,eax
-;	invoke CreateWindowExW,WS_EX_LEFT,offset szCCombobox,0,CBS_DROPDOWN or WS_CHILD or WS_VISIBLE,\
-;		dbConf+_Configs.windowRect[WRI_CODE2O]+RECT.left,dbConf+_Configs.windowRect[WRI_CODE2O]+RECT.top,\
-;		dbConf+_Configs.windowRect[WRI_CODE2O]+RECT.right,dbConf+_Configs.windowRect[WRI_CODE2O]+RECT.bottom,hwnd,IDC_CODE2O,hInstance,NULL
-;	mov hCode2O,eax
-;	invoke CreateWindowExW,WS_EX_LEFT,offset szCCombobox,0,CBS_DROPDOWN or WS_CHILD or WS_VISIBLE,\
-;		dbConf+_Configs.windowRect[WRI_CODE2N]+RECT.left,dbConf+_Configs.windowRect[WRI_CODE2N]+RECT.top,\
-;		dbConf+_Configs.windowRect[WRI_CODE2N]+RECT.right,dbConf+_Configs.windowRect[WRI_CODE2N]+RECT.bottom,hwnd,IDC_CODE2N,hInstance,NULL
-;	mov hCode2N,eax
 
 	invoke CreateFontIndirectW,offset dbConf+_Configs.listFont
 	mov hFontList,eax
@@ -550,16 +548,40 @@ _LoadMel proc uses edi esi ebx _lParam
 					invoke lstrcpyW,esi,edi
 					invoke GetProcAddress,[esi].hModule,offset szFMatch
 					.if !eax
+					_BadMel:
 						invoke FreeLibrary,[esi].hModule
+						invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,edi,offset szWltEMel1
 						jmp _CtnLM
 					.endif
 					mov [esi].pMatch,eax
+					invoke GetProcAddress,[esi].hModule,offset szFInitInfo
+					or eax,eax
+					je _BadMel
+					mov edi,eax
+					invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,sizeof _MelInfo2
+					.if !eax
+						lea ecx,@stFindData.cFileName
+						invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,ecx,offset szWltEMem1
+						jmp _CtnLM
+					.endif
+					mov [esi].lpMelInfo2,eax
+					push eax
+					call edi
+					mov ecx,[esi].lpMelInfo2
+					mov eax,_MelInfo2.nInterfaceVer[ecx]
+					shr eax,16
+					.if eax<(INTERFACE_VER shr 16)
+						lea ecx,@stFindData.cFileName
+						invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,ecx,offset szWltEMel2
+						jmp _CtnLM
+					.endif
 				.endif
 				add esi,sizeof _MelInfo
 				inc ebx
 _CtnLM:
 				invoke FindNextFileW,@hFind,addr @stFindData
 			.until eax==FALSE || ebx>=MAX_MELCOUNT-1
+			mov nMels,ebx
 _Ex2LM:
 			invoke FindClose,@hFind
 			assume esi:nothing
@@ -585,7 +607,7 @@ _TryMatch proc uses edi esi ebx _lpszName
 	.if edi && word ptr [edi]
 		mov esi,lpMels
 		xor ebx,ebx
-		.repeat
+		.while ebx<nMels
 			invoke lstrcmpW,esi,edi
 			.if !eax
 				assume esi:ptr _MelInfo
@@ -610,7 +632,7 @@ _TryMatch proc uses edi esi ebx _lpszName
 			.endif
 			inc ebx
 			add esi,sizeof _MelInfo
-		.until !word ptr [esi]
+		.endw
 	.endif
 	
 	lea esi,@pFunc
@@ -621,7 +643,7 @@ _TryMatch proc uses edi esi ebx _lpszName
 	xor ebx,ebx
 	mov edi,lpMels
 	assume edi:ptr _MelInfo
-	.while word ptr [edi]
+	.while ebx<nMels
 		push _lpszName
 		call [edi].pMatch
 		.if eax==MR_YES
@@ -784,68 +806,6 @@ _FailGSF:
 	xor eax,eax
 	ret
 _GetSimpFunc endp
-
-;将列表框中的文本显示在编辑框中
-_SetTextToEdit proc uses esi edi ebx _nIdx
-	LOCAL @ps1,@ps2
-	LOCAL @range[2]:dword
-	invoke _GetStringInList,offset FileInfo1,_nIdx
-	mov esi,eax
-	invoke lstrlenW,esi
-	inc eax
-	mov ebx,eax
-	shl eax,2
-	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
-	or eax,eax
-	je _ExSTTE
-	mov @ps1,eax
-	mov edi,eax
-	mov ecx,ebx
-	rep movsw
-	
-_Dis2STTE:
-	invoke _GetStringInList,offset FileInfo2,_nIdx
-	or eax,eax
-	je _ExSTTE2
-	mov esi,eax
-	invoke lstrlenW,esi
-	inc eax
-	mov ebx,eax
-	shl eax,2
-	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
-	or eax,eax
-	je _ExSTTE2
-	mov @ps2,eax
-	mov edi,eax
-	mov ecx,ebx
-	rep movsw
-	
-	mov dword ptr @range,0
-	mov dword ptr [@range+4],-1
-	mov ebx,dbSimpFunc+_SimpFunc.SetLine
-	.if ebx
-		push 0
-		push @ps1
-		call ebx
-		lea eax,@range
-		push eax
-		push @ps2
-		call ebx
-	.endif
-	invoke SendMessageW,hEdit1,WM_SETTEXT,0,@ps1
-	invoke SendMessageW,hEdit2,WM_SETTEXT,0,@ps2
-	invoke SetFocus,hEdit2
-	.if dbConf+_Configs.bAutoSelText==TRUE
-		invoke SendMessageW,hEdit2,EM_SETSEL,@range,[@range+4]
-	.ENDIF
-
-	invoke HeapFree,hGlobalHeap,0,@ps2
-_ExSTTE2:
-	invoke HeapFree,hGlobalHeap,0,@ps1
-_ExSTTE:
-	xor eax,eax
-	ret
-_SetTextToEdit endp
 
 
 end start

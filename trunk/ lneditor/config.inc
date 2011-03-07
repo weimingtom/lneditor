@@ -43,6 +43,9 @@ _Configs struct
 	lpNewScDir			dd			?
 	lpPrevFile			dd			?
 	
+	bAlwaysFilter			dd			?
+	TxtFilter				_TextFilter	<?>
+	
 	lpBackName			dd			?
 	TextColorSelected		dd			?
 	TextColorDefault		dd			?

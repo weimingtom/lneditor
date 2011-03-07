@@ -22,10 +22,6 @@ _WildcharMatchW proc uses esi edi ebx _lpszPattern,_lpszStr
 		mov ax,[edi]
 		.if ax=='*'
 			add edi,2
-			mov ax,[edi]
-			.if ax=='*' || ax=='?' || ax=='%'
-				jmp singleComp
-			.endif
 			.break .if !word ptr [edi]
 			mov ebx,edi
 			.repeat
@@ -54,6 +50,24 @@ _WildcharMatchW proc uses esi edi ebx _lpszPattern,_lpszStr
 				add esi,2
 			.until !word ptr [esi]
 			jmp matchFail
+		.elseif ax=='\'
+			add edi,2
+			mov ax,[edi]
+			cmp ax,'*'
+			je singleComp
+			cmp ax,'%'
+			je singleComp
+			cmp ax,'?'
+			je singleComp
+			cmp ax,'\'
+			je singleComp
+			.if ax=='t'
+				add edi,2
+				lodsw
+				cmp ax,9
+				jne matchFail
+				.continue
+			.endif
 		.elseif ax=='?'
 			add esi,2
 			add edi,2

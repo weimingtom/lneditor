@@ -1,7 +1,8 @@
+RECORD_VER			EQU		1
+
 .code 
 
-
-_ReadRec proc uses ebx
+_ReadRec proc uses ebx _nType
 	LOCAL @str[MAX_STRINGLEN]:byte
 	LOCAL @hFile
 	LOCAL @dbHdr[sizeof _FileRec]:byte
@@ -26,25 +27,31 @@ _ReadRec proc uses ebx
 	lea edi,@dbHdr
 	invoke ReadFile,@hFile,edi,sizeof _FileRec,offset dwTemp,0
 	assume edi:ptr _FileRec
-	mov eax,[edi].nLenMT
-	.if lpMarkTable && eax==FileInfo1.nLine
-		invoke SetFilePointer,@hFile,[edi].nOffsetMT,0,FILE_BEGIN
-		invoke ReadFile,@hFile,lpMarkTable,[edi].nLenMT,offset dwTemp,0
-	.endif
-	invoke CloseHandle,@hFile
-	mov eax,[edi].nCharSet1
-	mov ecx,[edi].nCharSet2
-	.if !FileInfo1.nCharSet
+	
+	cmp [edi].szMagic,'CERM'
+	jne _ErrRR
+	cmp [edi].nVer,RECORD_VER
+	jB _ErrRR
+	
+	.if _nType==REC_MARKTABLE
+		mov eax,[edi].nLenMT
+		.if lpMarkTable && eax==FileInfo1.nLine
+			invoke SetFilePointer,@hFile,[edi].nOffsetMT,0,FILE_BEGIN
+			invoke ReadFile,@hFile,lpMarkTable,[edi].nLenMT,offset dwTemp,0
+		.endif
+		invoke CloseHandle,@hFile
+	.elseif _nType==REC_CHARSET
+		mov eax,[edi].nCharSet1
+		mov ecx,[edi].nCharSet2
 		mov FileInfo1.nCharSet,eax
-	.endif
-	.if !FileInfo2.nCharSet
 		mov FileInfo2.nCharSet,ecx
+		invoke CloseHandle,@hFile
+	.elseif _nType==REC_LINEPOS
+		invoke CloseHandle,@hFile
+		mov eax,[edi].nPos
 	.endif
-	mov eax,[edi].nPos
-	ret
 	assume edi:ptr _nothing
 _ErrRR:
-	xor eax,eax
 	ret
 _ReadRec endp
 
@@ -76,13 +83,23 @@ _WriteRec proc uses ebx edi
 	je _ErrWR
 	mov @hFile,eax
 	lea edi,@dbHdr
+	mov ecx,sizeof _FileRec/4
+	xor eax,eax
+	rep stosd
+	lea edi,@dbHdr
 	assume edi:ptr _FileRec
 	mov [edi].nPos,0
-	invoke SendMessageW,hList1,LB_GETCURSEL,0,0
+	invoke SendMessageW,hList1,LB_GETCURSEL,0,1
 	.if eax!=-1
 		mov [edi].nPos,eax
 	.endif
-	mov [edi].nOffsetMT,sizeof _FileRec
+	mov [edi].szMagic,'CERM'
+	mov [edi].nVer,RECORD_VER
+	.if lpMarkTable
+		mov [edi].nOffsetMT,sizeof _FileRec
+	.else
+		mov [edi].nOffsetMT,0
+	.endif
 	mov eax,FileInfo1.nLine
 	mov ecx,FileInfo1.nCharSet
 	mov [edi].nLenMT,eax
