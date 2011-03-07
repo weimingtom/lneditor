@@ -4,6 +4,7 @@ assume fs:nothing
 ;
 _OpenScript proc
 	LOCAL @nReturnInfo
+	LOCAL @nPos
 	LOCAL @szstr[SHORT_STRINGLEN]:byte
 	
 	xor eax,eax
@@ -16,18 +17,28 @@ _OpenScript proc
 		je _ExOS
 	.endif
 	
-	invoke _LoadFile,offset FileInfo1,LM_NONE
+	mov eax,nCurMel
+	.if eax!=-1
+		mov edi,lpMels
+		mov bx,sizeof _MelInfo
+		mul bx
+		add edi,eax
+		mov ebx,_MelInfo.lpMelInfo2[edi]
+	.else
+		mov ebx,offset dbMelInfo2
+	.endif
+	invoke _LoadFile,offset FileInfo1,LM_NONE,ebx
 	.if !eax
 		invoke _ClearAll,offset FileInfo1
 		jmp _ErrLoadOS
 	.endif
 	.if dbConf+_Configs.nEditMode==EM_SINGLE
-		invoke _LoadFile,offset FileInfo2,LM_HALF
+		invoke _LoadFile,offset FileInfo2,LM_HALF,ebx
 		.if !eax
 			invoke GetLastError
 			.if eax==ERROR_FILE_NOT_FOUND
 				invoke CopyFileW,offset FileInfo1.szName,offset FileInfo2.szName,FALSE
-				invoke _LoadFile,offset FileInfo2,LM_HALF
+				invoke _LoadFile,offset FileInfo2,LM_HALF,ebx
 				or eax,eax
 				jne @F
 			.endif
@@ -38,7 +49,7 @@ _OpenScript proc
 	.endif
 	
 	@@:
-	invoke _ReadRec
+	invoke _ReadRec,REC_CHARSET
 	
 	push offset _HandlerOS
 	push fs:[0]
@@ -62,7 +73,10 @@ _OpenScript proc
 			.endif
 			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,FileInfo1.nLine
 			mov lpMarkTable,eax
-			mov nCurIdx,-1
+			invoke _ReadRec,REC_MARKTABLE
+			.if dbConf+_Configs.bAlwaysFilter
+				invoke _UpdateHideTable
+			.endif
 			invoke _AddLinesToList,offset FileInfo1,hList1
 		.endif
 	.else
@@ -82,8 +96,11 @@ _OpenScript proc
 			.if eax!=FileInfo2.nLine
 				invoke _ClearAll,offset FileInfo1
 				invoke _ClearAll,offset FileInfo2
+				.if lpMarkTable
+					invoke HeapFree,hGlobalHeap,0,lpMarkTable
+				.endif
 				mov eax,IDS_LINENOTMATCH
-				invoke _GetConstString
+				invoke _GetConstString				
 				invoke MessageBoxW,hWinMain,eax,0,MB_OK OR MB_ICONERROR
 				jmp _Ex2OS
 			.endif
@@ -98,6 +115,9 @@ _OpenScript proc
 						invoke _ClearAll,offset FileInfo1
 						invoke _ClearAll,offset FileInfo2
 						invoke MessageBoxW,hWinMain,addr @szstr,0,MB_ICONERROR or MB_OK
+						.if lpMarkTable
+							invoke HeapFree,hGlobalHeap,0,lpMarkTable
+						.endif
 						jmp _Ex2OS
 					.endif
 				.endif
@@ -126,6 +146,9 @@ _OpenScript proc
 		.else
 			invoke _ClearAll,offset FileInfo1
 			invoke _ClearAll,offset FileInfo2
+			.if lpMarkTable
+				invoke HeapFree,hGlobalHeap,0,lpMarkTable
+			.endif
 			mov eax,IDS_DLLERR
 			invoke _GetConstString
 			invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
@@ -133,10 +156,7 @@ _OpenScript proc
 		.endif
 		
 		invoke EnableMenuItem,hMenu,IDM_LOAD,MF_GRAYED
-		
-		invoke _ReadRec
-		mov nCurIdx,eax
-		
+
 		invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,FileInfo1.nLine
 		mov lpModifyTable,eax
 		
@@ -184,7 +204,17 @@ _LoadScript proc
 	LOCAL @nReturnInfo
 	LOCAL @szstr[20]:word
 	
-	invoke _LoadFile,offset FileInfo2,LM_HALF
+	mov eax,nCurMel
+	.if eax!=-1
+		mov edi,lpMels
+		mov bx,sizeof _MelInfo
+		mul bx
+		add edi,eax
+		mov ebx,_MelInfo.lpMelInfo2[edi]
+	.else
+		mov ebx,offset dbMelInfo2
+	.endif
+	invoke _LoadFile,offset FileInfo2,LM_HALF,ebx
 	.if !eax
 		invoke _ClearAll,offset FileInfo2
 		jmp _ErrLoadLS
@@ -344,6 +374,8 @@ _SaveAs endp
 
 ;
 _CloseScript proc
+	cmp bOpen,0
+	je _ExCSC
 	.if bModified
 		invoke _SaveOrNot
 		.if eax==IDYES
@@ -358,7 +390,6 @@ _CloseScript proc
 		cmp eax,IDCANCEL
 		je _Ex2CSC
 	.endif
-	invoke lstrcpyW,dbConf+_Configs.lpPrevFile,offset FileInfo1.szName
 	invoke _WriteRec
 	@@:
 	.if lpMarkTable
@@ -476,8 +507,10 @@ _WndCodeProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			.endif 
 			invoke InvalidateRect,hList1,0,TRUE
 			invoke InvalidateRect,hList2,0,TRUE
-			invoke SendMessageW,hList1,LB_GETCURSEL,0,0
-			invoke _SetTextToEdit,eax
+			invoke SendMessageW,hList1,LB_GETCURSEL,0,1
+			.if eax<FileInfo1.nLine
+				invoke _SetTextToEdit,eax
+			.endif
 			jmp _ExitWCP
 		.elseif ax==IDC_CODE_CANCEL
 _ExitWCP:

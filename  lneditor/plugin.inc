@@ -1,3 +1,20 @@
+INTERFACE_VER			EQU		00010000h
+
+MAX_STRINGLEN			equ		1024
+;错误代码
+E_ERROR					EQU		-1
+E_NOMEM				EQU		1
+E_OVERMEM				EQU		2
+E_NOTENOUGHBUFF		EQU		3
+E_FILEACCESSERROR		EQU		4
+E_FATALERROR			EQU		5
+E_INVALIDPARAMETER		EQU		10H
+E_PLUGINERROR			EQU		11H
+E_LINENOTEXIST			EQU		100h
+E_LINETOOLONG			EQU		101h
+E_CODEFAILED				EQU		102H
+
+
 ;Return Information of GetText
 RI_SUC_LINEONLY			EQU		1	;文本已提取到内存中，需要主程序将其添加到列表框中
 RI_SUC_LISTADDED			EQU		2	;文本已添加到列表框中
@@ -36,6 +53,44 @@ ST_PASCAL2				EQU		2
 ST_PASCAL4				EQU		3
 ST_TXTENDA				EQU		10h
 ST_TXTENDW				EQU		11h
+
+;文件信息
+_FileInfo struct
+	;以下域由主程序传入插件
+	szName				db		MAX_STRINGLEN	dup(?)	;文件名(含路径)
+	hFile				dd		?						;文件句柄
+	
+	lpStream				dd		?						;文件直接读入内存后的指针
+	;以下域由插件负责填写
+	nMemoryType			dd		?						
+	;存储类型详细含义见文档。
+	lpText				dd		?						;从文件中提取出的纯文本的内存指针。若采用MT_EVERYSTRING存储，此项可选。
+	lpTextIndex			dd		?						;纯文本字符串索引表指针。
+	lpStreamIndex		dd		?						;可选，原始脚本字符串索引表指针。若为POINTERONLY存储类型，此项必须。
+	nStringType			dd		?						;字符串类型。如C字符串、PASCAL字符串等。
+	nStreamSize			dd		?						;文件长度。跟随脚本编辑随时更新。
+	nLine				dd		?						;文本行数。
+	nLineLen				dd		?						;可选，若使用定长字符串存储，本项须指示字符串长度。独立内存字符串亦可使用。
+	
+	bReadOnly			dw		?						;指定该文件是否为只读（是否在列表框左侧）
+	nCharSet				dd		?						;指示将此文件中字符串解释为何种字符集，用户可以设定，否则插件可根据自己的判断填写。
+	
+	lpCustom				dd		?						;插件自行使用。
+	Reserved				dd		2		dup(?)
+_FileInfo ends
+
+;插件特征
+MIC_CUSTOMEDIT			EQU		00000001H	;非标准插件，重载了_Functions中的函数
+MIC_CUSTOMTXTPROC		EQU		00000002H	;纯文本专用插件（重载了TXT过滤函数）
+MIC_NOPREREAD			EQU		00000004H	;不需要预先将文件读入内存
+MIC_NOBATCHEXP			EQU		00010000H	;不支持批量导出
+MIC_NOBATCHIMP			EQU		00020000H	;不支持批量导入
+MIC_NOHALFANGLE		EQU		00040000H	;不支持半角字符
+
+_MelInfo2 struct
+	nInterfaceVer			dd		?			;接口版本
+	nCharacteristic		dd		?			;插件特征信息
+_MelInfo2 ends
 
 ;菜单项的处理函数，其中OpenScript之前经过了一些处理，其余均为直接调用。均可被插件重载。
 _Functions struct
@@ -78,7 +133,8 @@ _Functions struct
 	ToFull				dd		?
 	ToHalf				dd		?
 	UnmarkAll			dd		?
-	Progress				dd		?
+	Progress				dd		?		;10040
+	TxtFilter				dd		?
 	Reserved				dd		10		dup(?)
 _Functions ends
 
@@ -125,41 +181,3 @@ _PreData struct
 	lpHandles		dd		?	;窗口句柄列表指针，指向_Handles结构
 _PreData ends
 
-ifndef FILEINFOSTRUCT
-FILEINFOSTRUCT EQU 1
-;被打开的脚本的所有信息
-;必须由插件填写的域为nMemoryType,nLine
-_FileInfo struct
-	;以下域由主程序传入插件
-	szName				db		MAX_STRINGLEN	dup(?)	;文件名(含路径)
-	hFile				dd		?						;文件句柄
-	lpStream				dd		?						;文件直接读入内存后的指针
-	
-	;以下域由插件负责填写
-	nMemoryType			dd		?						
-	;存储类型详细含义见文档。
-	lpText				dd		?						;从文件中提取出的纯文本的内存指针。若采用MT_EVERYSTRING存储，此项可选。
-	lpTextIndex			dd		?						;纯文本字符串索引表指针。
-	lpStreamIndex		dd		?						;可选，原始脚本字符串索引表指针。若为POINTERONLY存储类型，此项必须。
-	nStringType			dd		?						;字符串存储类型。
-	nStreamSize			dd		?						;文件长度。跟随脚本编辑随时更新。
-	nLine				dd		?						;文本行数。
-	nLineLen				dd		?						;可选，若使用定长字符串存储，本项须指示字符串长度。独立内存字符串亦可使用。
-	
-	;以下3个域由主程序填写
-	bReadOnly			dw		?						;指定该文件是否为只读（是否在列表框左侧）
-	nCharSet				dd		?						;指示将此文件中字符串解释为何种字符集，用户可以设定，插件亦可根据自己的判断填写。
-	
-	Reserved				dd		2		dup(?)
-_FileInfo ends
-ENDIF
-
-;子窗口句柄
-;_Handles struct
-;	hWinMain		dd		?
-;	hList1			dd		?
-;	hList2			dd		?
-;	hEdit1			dd		?
-;	hEdit2			dd		?
-;	hStatus			dd		?
-;_Handles ends

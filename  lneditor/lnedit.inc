@@ -32,7 +32,6 @@
 
 	include rsrc.inc
 
-MAX_STRINGLEN		EQU		512
 TOTAL_STRINGNUM	EQU		100
 SHORT_STRINGLEN	EQU		64
 MAX_MELCOUNT		EQU		50
@@ -45,32 +44,15 @@ IDC_LIST2			EQU		1002
 IDC_EDIT1			EQU		1003
 IDC_EDIT2			EQU		1004
 IDC_STATUS			EQU		1005
-;IDC_CODE1O			EQU		1006
-;IDC_CODE1N			EQU		1007
-;IDC_CODE2O			EQU		1008
-;IDC_CODE2N			EQU		1009
 IDC_TIMER			EQU		1
 
 LI_MARGIN_WIDTH	EQU		2
 LI_FRAME_WIDTH		EQU		2
 
-;Memory type for strings
-MT_FIXEDSTRING			EQU		1
-MT_VARIABLESTRING		EQU		2
-MT_EVERYSTRING			EQU		3
-MT_POINTERONLY			EQU		4
+REC_MARKTABLE			EQU		1
+REC_CHARSET				EQU		2
+REC_LINEPOS				EQU		3
 
-E_ERROR					EQU		-1
-E_NOMEM				EQU		1
-E_OVERMEM				EQU		2
-E_NOTENOUGHBUFF		EQU		3
-E_FILEACCESSERROR		EQU		4
-E_FATALERROR			EQU		5
-E_INVALIDPARAMETER		EQU		10H
-E_PLUGINERROR			EQU		11H
-E_LINENOTEXIST			EQU		100h
-E_LINETOOLONG			EQU		101h
-E_CODEFAILED				EQU		102H
 
 WM_LBUPDATE		EQU		WM_USER+2
 
@@ -82,7 +64,7 @@ LM_ONE				EQU		2
 ;Type of GenWindowTitle
 GWT_FILENAME1		EQU		1
 GWT_FILENAME2		EQU		2
-GWT_VERSION		EQU		3
+GWT_VERSION			EQU		3
 GWT_MODIFIED		EQU		4
 
 ;main file
@@ -94,7 +76,6 @@ _TryMatch			proto :dword
 _SelfMatch			proto :dword
 _SelfPreProc			proto
 _RestoreFunc			proto
-_SetTextToEdit		proto :dword
 _GetSimpFunc			proto :dword,:dword
 
 ;choosemel dialogbox
@@ -119,9 +100,10 @@ _DirCatW				proto :dword,:dword
 _DirCmpW			proto :dword,:dword
 _DirModifyExtendName proto :dword,:dword
 _ClearAll				proto :dword
-_LoadFile				proto :dword,:dword
+_LoadFile				proto :dword,:dword,:dword
 _SaveOrNot			proto
 _AddLinesToList		proto :dword,:dword
+_SetTextToEdit		proto :dword
 _GenName2			proto :dword,:dword
 _DisplayStatus		proto :dword,:dword
 _SaveFile				proto :dword
@@ -141,10 +123,13 @@ _GetCodeIndex		proto :dword
 _AddCodeCombo		proto :dword
 _GetDispLine			proto :dword
 _GetRealLine			proto :dword
-_IsDisplay			proto :dword
+_IsDisplay				proto :dword
+_MatchFilter			proto :dword,:dword
+_ResetHideTable		proto
+_UpdateHideTable		proto
 
 ;Record
-_ReadRec			proto
+_ReadRec				proto :dword
 _WriteRec			proto
 
 
@@ -203,9 +188,12 @@ _ExportAllToTxt		proto :dword,:dword,:dword,:dword
 _WndExpAllProc		proto :dword,:dword,:dword,:dword
 _ImportAll			proto
 _SummaryFindAll		proto
-_About				proto
 _Config				proto
 _WndConfigProc		proto :dword,:dword,:dword,:dword
+_TxtFilter				proto
+_WndFilterProc			proto :dword,:dword,:dword,:dword
+_About				proto
+_WndAboutProc		proto :dword,:dword,:dword,:dword
 
 ;default edit
 _GetText				proto :dword,:dword
@@ -214,38 +202,12 @@ _ModifyLine			proto :dword,:dword
 _GetStringInTxt		proto :dword,:dword,:dword
 _SetLine				proto :dword,:dword
 _ReplaceInMem		proto :dword,:dword,:dword,:dword,:dword
+_IsLineAdding			proto :dword
 
 ;UI Maker
 _ZoomRect			proto :dword,:dword
 _LightenColor			proto :dword
 _DarkenColor			proto :dword
-
-ifndef FILEINFOSTRUCT
-FILEINFOSTRUCT EQU 1
-_FileInfo struct
-	;以下域由主程序传入插件
-	szName				db		MAX_STRINGLEN	dup(?)	;文件名(含路径)
-	hFile				dd		?						;文件句柄
-	lpStream				dd		?						;文件直接读入内存后的指针
-	
-	;以下域由插件负责填写
-	nMemoryType			dd		?						
-	;存储类型详细含义见文档。
-	lpText				dd		?						;从文件中提取出的纯文本的内存指针。若采用MT_EVERYSTRING存储，此项可选。
-	lpTextIndex			dd		?						;纯文本字符串索引表指针。
-	lpStreamIndex		dd		?						;可选，原始脚本字符串索引表指针。若为POINTERONLY存储类型，此项必须。
-	nStringType			dd		?						;字符串存储类型。
-	nStreamSize			dd		?						;文件长度。须跟随脚本编辑随时更新。
-	nLine				dd		?						;文本行数。
-	nLineLen				dd		?						;可选，若使用定长字符串存储，本项须指示字符串长度。独立内存字符串亦可使用。
-	
-	;以下3个域由主程序填写
-	bReadOnly			dw		?						;指定该文件是否为只读（是否在列表框左侧）
-	nCharSet				dd		?						;指示将此文件中字符串解释为何种字符集，用户可以设定，插件亦可根据自己的判断填写。
-	
-	Reserved				dd		2		dup(?)
-_FileInfo ends
-ENDIF
 
 ;查找替换信息
 _FindInfo struct
@@ -259,44 +221,61 @@ _MelInfo struct
 	szName				db		SHORT_STRINGLEN	dup(?)	;插件文件名
 	hModule				dd		?							;插件句柄
 	pMatch				dd		?							;插件的匹配函数指针
+	lpMelInfo2			dd		?							;插件详细信息指针
 _MelInfo ends
 
 ;打开过的脚本的记录文件的文件头
 _FileRec struct
-	nPos			dd		?	;上次退出时光标所在位置
+	szMagic			dd		?	;"MREC"
+	nVer				dd		?	;版本
+	nPos				dd		?	;上次退出时所在行
 	nCharSet1		dd		?	;左列使用的字符集
 	nCharSet2		dd		?	;右列使用的字符集
 	Reserverd		dd		?
 	nOffsetMT		dd		?	;MarkTable的文件偏移
-	nLenMT			dd		?	;长度，等同于行数
+	nLenMT			dd		?	;MarkTable大小，等同于行数
 	nOffsetResv		dd		6	dup(?)
 _FileRec ends
+
+_TextFilter struct
+	bInclude			db		?
+	bExclude			db		?
+	bTrimHead		db		?
+	bTrimTail			db		?
+	lpszInclude		dd		?
+	lpszExclude		dd		?
+	lpszTrimHead		dd		?
+	lpszTrimTail		dd		?
+_TextFilter ends
 
 .data?
 	hInstance		dd		?
 	hIcon			dd		?
 	hMenu			dd		?
 	hGlobalHeap		dd		?
-	hBackDC			dd		?
-	hBackBmp		dd		?
 	
-	lpszConfigFile		dd		?
-	lpStrings			dd		?	;常量字符串表指针
+	hBackDC			dd		?	;窗口的背景dc
+	hBackBmp		dd		?	;窗口的背景图片句柄
+	
+	lpszConfigFile		dd		?	;配置文件的全路径
+	lpStrings			dd		?	;全局常量字符串表指针
 	lpMels			dd		?	;插件信息表指针
 	lpUndo			dd		?	;撤销列表指针
-	lpPreData		dd		?	;传递给插件的PreProc函数的指针
-	lpOriFuncTable	dd		?	;原始的菜单函数地址表
+	lpPreData		dd		?	;传递给PreProc函数的_PreData结构指针
+	lpOriFuncTable	dd		?	;原始的菜单函数地址表，包括_Functions和_SimpFunc
 	
-	lpMarkTable		dd		?	;对每行的标记表
-	lpModifyTable		dd		?	;修改过的行的标记表
+	lpMarkTable		dd		?	;对每行的标记表，存储在record文件中
+	lpModifyTable		dd		?	;本次编辑修改过的行的标记表
 	lpDisp2Real		dd		?	;显示出来的行与实际行数的对应表
 	
-	nCurMel			dd		?	;当前插件编号（在lpMels中的位置）
-	nCurIdx			dd		?	;
+	nMels			dd		?	;共载入了多少个插件
+	nCurMel			dd		?	;当前使用的插件编号（在lpMels中的位置）
+	nCurIdx			dd		?	;当前编辑行
 	
-	bModified		dd		?
-	bOpen			dd		?
+	bModified		dd		?	;文件本次打开是否被修改过
+	bOpen			dd		?	;编辑器是否打开了文件
 
+	hLogFile			dd		?	;日志文件句柄
 	
 ;当前文件信息
 	FileInfo1			_FileInfo	<>
@@ -326,7 +305,9 @@ _FileRec ends
 .data
 	szNULL			dd		0
 	TW0			'Multiline Editor',	szDisplayName
-	TW0			' v0.4',			szDisplayVer
+	TW0			'lnedit',			szInnerName
+	TW0			' v1.0',			szDisplayVer
+	TW0			' v1.0.0.387',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0
@@ -350,6 +331,7 @@ _FileRec ends
 	szCNewEdit		dw		'e','d','i','t','A','m','a','f',0
 	szCNewList		dw		'l','i','s','t','A','m','a','f',0
 	
+	szFInitInfo		db		'InitInfo',0
 	szFMatch			db		'Match',0
 	szFPreProc		db		'PreProc',0
 	szFGetText		db		'GetText',0
@@ -409,7 +391,8 @@ _FileRec ends
 				dd	offset _ToFull
 				dd	offset _ToHalf
 				dd	offset _UnmarkAll
-				dd	offset _Progress
+				dd	offset _Progress			;10040
+				dd	offset _TxtFilter
 				dd	10	dup(0)
 	
 	dbSimpFunc	dd	offset _GetText
@@ -420,8 +403,10 @@ _FileRec ends
 				dd	0
 				dd	offset _GetStringFromStmPtr
 				
-	dbTxtFunc	dd	0
+	dbTxtFunc	dd	offset _IsLineAdding
 				dd	0
+				
+	dbMelInfo2	_MelInfo2		<INTERFACE_VER,0>
 
 
 .data
@@ -440,6 +425,9 @@ _FileRec ends
 					dd			NULL
 					dd			NULL
 					dd			NULL
+					
+					dd			FALSE
+					_TextFilter	<>
 					
 					dd			NULL
 					dd			000040ffh
@@ -471,6 +459,7 @@ _FileRec ends
 	TW0		'lnedit.ini',		szcfFileName
 	
 	TW0		'Settings',		szcfSett
+	TW0		'TXTFilter',		szcfTxtFlt
 	TW0		'UserInterface',	szcfUI
 	
 	TW0		'EditMode',		szcfEM
@@ -497,6 +486,21 @@ _FileRec ends
 	TW0		'EditFont',		szcfEF
 	TW0		'BackPicture',		szcfBP
 	TW0		'WindowsLoc',	szcfWL
+	
+	TW0		'AlwaysFilter',		szcfAlwaysFlt
+	TW0		'IncludeOn',		szcfInOn
+	TW0		'IncludePattern',	szcfInPtn
+	TW0		'ExcludeOn',		szcfExOn
+	TW0		'ExcludePattern',	szcfExPtn
+	TW0		'TrimHeadOn',		szcfHeadOn
+	TW0		'TrimHeadPattern',	szcfHeadPtn
+	TW0		'TrimTailOn',		szcfTailOn
+	TW0		'TrimTailPattern',	szcfTailPtn
+	
+	dbConfigsOfTxtFilter	dd	offset szcfInOn,offset szcfInPtn
+						dd	offset szcfExOn,offset szcfExPtn
+						dd	offset szcfHeadOn,offset szcfHeadPtn
+						dd	offset szcfTailOn,offset szcfTailPtn
 
 .data
 	TW0		'Not Convert',		szcdNotConvert

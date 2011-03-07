@@ -70,3 +70,66 @@ _WndConfigProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 	xor eax,eax
 	ret
 _WndConfigProc endp
+
+_TxtFilter proc
+	invoke DialogBoxParamW,hInstance,IDD_TXTFILTER,hWinMain,offset _WndFilterProc,0
+	ret
+_TxtFilter endp
+
+_WndFilterProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
+	LOCAL @szStr[MAX_STRINGLEN]:byte
+	mov eax,uMsg
+	.if eax==WM_COMMAND
+		mov ecx,wParam
+		.if cx==IDC_TF_OK
+			invoke IsDlgButtonChecked,hwnd,IDC_TF_ALWAYSAPPLY
+			mov dbConf+_Configs.bAlwaysFilter,eax
+			invoke IsDlgButtonChecked,hwnd,IDC_TF_INON
+			mov byte ptr _Configs.TxtFilter.bInclude[dbConf],al
+			invoke IsDlgButtonChecked,hwnd,IDC_TF_EXON
+			mov byte ptr dbConf+_Configs.TxtFilter.bExclude,al
+			invoke IsDlgButtonChecked,hwnd,IDC_TF_HEADON
+			mov byte ptr dbConf+_Configs.TxtFilter.bTrimHead,al
+			invoke IsDlgButtonChecked,hwnd,IDC_TF_TAILON
+			mov byte ptr dbConf+_Configs.TxtFilter.bTrimTail,al
+			invoke GetDlgItemTextW,hwnd,IDC_TF_INPTN,dbConf+_Configs.TxtFilter.lpszInclude,MAX_STRINGLEN/2
+			invoke GetDlgItemTextW,hwnd,IDC_TF_EXPTN,dbConf+_Configs.TxtFilter.lpszExclude,MAX_STRINGLEN/2
+			invoke GetDlgItemTextW,hwnd,IDC_TF_HEADPTN,dbConf+_Configs.TxtFilter.lpszTrimHead,MAX_STRINGLEN/2
+			invoke GetDlgItemTextW,hwnd,IDC_TF_TAILPTN,dbConf+_Configs.TxtFilter.lpszTrimTail,MAX_STRINGLEN/2
+			
+			invoke SendMessageW,hList1,LB_GETCURSEL,0,1
+			mov nCurIdx,eax
+			
+			invoke _ResetHideTable
+			invoke _UpdateHideTable
+			
+			invoke SendMessageW,hList1,LB_RESETCONTENT,0,0
+			invoke SendMessageW,hList2,LB_RESETCONTENT,0,0
+			invoke _AddLinesToList,offset FileInfo1,hList1
+			invoke _AddLinesToList,offset FileInfo2,hList2
+			jmp @F
+		.endif
+		cmp cx,IDC_TF_CANCEL
+		je @F
+	.elseif eax==WM_INITDIALOG
+		invoke CheckDlgButton,hwnd,IDC_TF_ALWAYSAPPLY,dbConf+_Configs.bAlwaysFilter
+		movzx eax,byte ptr dbConf+_Configs.TxtFilter.bInclude
+		invoke CheckDlgButton,hwnd,IDC_TF_INON,eax
+		movzx eax,byte ptr dbConf+_Configs.TxtFilter.bExclude
+		invoke CheckDlgButton,hwnd,IDC_TF_EXON,eax
+		movzx eax,byte ptr dbConf+_Configs.TxtFilter.bTrimHead
+		invoke CheckDlgButton,hwnd,IDC_TF_HEADON,eax
+		movzx eax,byte ptr dbConf+_Configs.TxtFilter.bTrimTail
+		invoke CheckDlgButton,hwnd,IDC_TF_TAILON,eax
+		invoke SetDlgItemTextW,hwnd,IDC_TF_INPTN,dbConf+_Configs.TxtFilter.lpszInclude
+		invoke SetDlgItemTextW,hwnd,IDC_TF_EXPTN,dbConf+_Configs.TxtFilter.lpszExclude
+		invoke SetDlgItemTextW,hwnd,IDC_TF_HEADPTN,dbConf+_Configs.TxtFilter.lpszTrimHead
+		invoke SetDlgItemTextW,hwnd,IDC_TF_TAILPTN,dbConf+_Configs.TxtFilter.lpszTrimTail
+	.elseif eax==WM_CLOSE
+	@@:
+		invoke EndDialog,hwnd,0
+	.endif
+	xor eax,eax
+	ret
+_WndFilterProc endp
+

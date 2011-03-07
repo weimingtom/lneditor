@@ -1,7 +1,7 @@
 .code
 
 ;载入lnedit.ini
-_LoadConfig proc
+_LoadConfig proc uses ebx
 	LOCAL @s[32]:byte
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,SHORT_STRINGLEN
 	or eax,eax
@@ -24,6 +24,14 @@ _LoadConfig proc
 	or eax,eax
 	je _NomemLC
 	mov dbConf+_Configs.lpPrevFile,eax
+	xor ebx,ebx
+	.while ebx<4
+		invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN
+		or eax,eax
+		je _NomemLC
+		mov [ebx*4+4+offset dbConf+_Configs.TxtFilter],eax
+		inc ebx
+	.endw
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN
 	or eax,eax
 	je _NomemLC
@@ -64,6 +72,17 @@ _LoadConfig proc
 		invoke GetPrivateProfileStringW,offset szcfSett,offset szcfNSD,NULL,dbConf+_Configs.lpNewScDir,SHORT_STRINGLEN/2,lpszConfigFile
 		invoke GetPrivateProfileStringW,offset szcfSett,offset szcfPF,NULL,dbConf+_Configs.lpPrevFile,MAX_STRINGLEN/2,lpszConfigFile
 		
+		invoke GetPrivateProfileIntW,offset szcfTxtFlt,offset szcfAlwaysFlt,0,lpszConfigFile
+		mov dbConf+_Configs.bAlwaysFilter,eax
+		xor ebx,ebx
+		.while ebx<4
+			invoke GetPrivateProfileIntW,offset szcfTxtFlt,[ebx*8+offset dbConfigsOfTxtFilter],0,lpszConfigFile
+			mov byte ptr dbConf+_Configs.TxtFilter[ebx],al
+			invoke GetPrivateProfileStringW,offset szcfTxtFlt,[ebx*8+offset dbConfigsOfTxtFilter+4],NULL,\
+				[ebx*4+4+offset dbConf+_Configs.TxtFilter],MAX_STRINGLEN/2,lpszConfigFile
+			inc ebx
+		.endw
+		
 		invoke GetPrivateProfileStringW,offset szcfUI,offset szcfBP,NULL,dbConf+_Configs.lpBackName,MAX_STRINGLEN/2,lpszConfigFile
 		
 		invoke GetPrivateProfileStringW,offset szcfUI,offset szcfTCS,NULL,addr @s,32,lpszConfigFile
@@ -103,7 +122,7 @@ _WriteUI proc _name,_value
 _WriteUI endp
 
 ;创建lnedit.ini，把默认配置保存进去
-_SaveConfig proc uses esi edi ebx
+_SaveConfig proc uses ebx
 	LOCAL @s[32]:byte
 	invoke _Int2Str,dbConf+_Configs.nEditMode,addr @s,FALSE
 	invoke _WriteSetting,offset szcfEM,addr @s
@@ -126,6 +145,17 @@ _SaveConfig proc uses esi edi ebx
 	invoke _WriteSetting,offset szcfID2,dbConf+_Configs.lpInitDir2
 	invoke _WriteSetting,offset szcfNSD,dbConf+_Configs.lpNewScDir
 	invoke _WriteSetting,offset szcfPF,dbConf+_Configs.lpPrevFile
+	
+	invoke _Int2Str,dbConf+_Configs.bAlwaysFilter,addr @s,FALSE
+	invoke WritePrivateProfileStringW,offset szcfTxtFlt,offset szcfAlwaysFlt,addr @s,lpszConfigFile
+	xor ebx,ebx
+	.while ebx<4
+		movzx ecx,byte ptr dbConf+_Configs.TxtFilter[ebx]
+		invoke _Int2Str,ecx,addr @s,FALSE
+		invoke WritePrivateProfileStringW,offset szcfTxtFlt,[ebx*8+offset dbConfigsOfTxtFilter],addr @s,lpszConfigFile
+		invoke WritePrivateProfileStringW,offset szcfTxtFlt,[ebx*8+offset dbConfigsOfTxtFilter+4],[ebx*4+4+offset dbConf+_Configs.TxtFilter],lpszConfigFile
+		inc ebx
+	.endw
 	
 	invoke _WriteUI,offset szcfBP,dbConf+_Configs.lpBackName
 	invoke _Int2Str,dbConf+_Configs.TextColorSelected,addr @s,TRUE

@@ -273,10 +273,12 @@ _AddCodeCombo proc _hCombo
 _AddCodeCombo endp
 
 ;
-_GetDispLine proc uses esi _nRealLine
+_GetDispLine proc _nRealLine
 	.if lpDisp2Real
 _BeginGDL:
 		mov eax,_nRealLine
+		cmp eax,FileInfo1.nLine
+		ja _ErrGDL
 		mov ecx,lpMarkTable
 		test byte ptr [ecx+eax],2
 		jne _ErrGDL
@@ -396,13 +398,134 @@ _IsDisplay proc _nRealLine
 	mov ecx,lpMarkTable
 	.if ecx
 		mov edx,_nRealLine
-		mov al,[ecx+edx]
-		shr eax,1
-		not eax
-		and eax,1
+		xor eax,eax
+		test byte ptr [ecx+edx],2
+		sete al
 		ret
 	.else
 		mov eax,1
 		ret
 	.endif
 _IsDisplay endp
+
+_MatchFilter proc uses esi edi ebx _lpStr,_lpFilter
+	LOCAL @szStr[MAX_STRINGLEN]:byte
+	mov esi,_lpFilter
+	assume esi:ptr _TextFilter
+	.if [esi].bInclude
+		mov edi,[esi].lpszInclude
+	assume esi:nothing
+		.if word ptr [edi]
+			mov eax,edi
+			.repeat
+				loop1:
+				.while word ptr [edi]!='\'
+					.if !word ptr [edi]
+				loop2:
+						invoke lstrcpyW,addr @szStr,eax
+						jmp loop3
+					.endif
+					add edi,2
+				.endw
+				cmp word ptr [edi+2],0
+				je loop2
+				.if word ptr [edi+2]!='n'
+					add edi,4
+					jmp loop1
+				.endif
+				mov ecx,edi
+				sub ecx,eax
+				shr ecx,1
+				mov esi,eax
+				mov edx,edi
+				lea edi,@szStr
+				rep movsw
+				mov word ptr [edi],0
+				lea edi,[edx+4]
+				loop3:
+				invoke _WildcharMatchW,addr @szStr,_lpStr
+				or eax,eax
+				jne _NextMatch
+			.until !word ptr [edi]
+			jmp _NotMatch
+		.endif
+	.endif
+_NextMatch:
+	mov esi,_lpFilter
+	assume esi:ptr _TextFilter
+	.if [esi].bExclude
+		mov edi,[esi].lpszExclude
+	assume esi:nothing
+		.if word ptr [edi]
+			.repeat
+				mov eax,edi
+				loop4:
+				.while word ptr [edi]!='\'
+					.if !word ptr [edi]
+				loop5:
+						invoke lstrcpyW,addr @szStr,eax
+						jmp loop6
+					.endif
+					add edi,2
+				.endw
+				cmp word ptr [edi+2],0
+				je loop5
+				.if word ptr [edi+2]!='n'
+					add edi,4
+					jmp loop4
+				.endif
+				mov ecx,edi
+				sub ecx,eax
+				shr ecx,1
+				mov esi,eax
+				mov edx,edi
+				lea edi,@szStr
+				rep movsw
+				mov word ptr [edi],0
+				lea edi,[edx+4]
+				loop6:
+				invoke _WildcharMatchW,addr @szStr,_lpStr
+				or eax,eax
+				jne _NotMatch
+			.until !word ptr [edi]
+		.endif
+	.endif
+	mov eax,1
+	ret
+_NotMatch:
+	xor eax,eax
+	ret
+_MatchFilter endp
+
+_UpdateHideTable proc uses esi ebx
+	xor ebx,ebx
+	mov esi,lpMarkTable
+	.while ebx<FileInfo1.nLine
+		invoke _GetStringInList,offset FileInfo1,ebx
+		.if eax
+			invoke _MatchFilter,eax,offset dbConf+_Configs.TxtFilter
+			not al
+			and al,1
+			shl al,1
+			or byte ptr [esi+ebx],al
+		.endif
+		inc ebx
+	.endw
+	ret
+_UpdateHideTable endp
+
+_ResetHideTable proc
+	mov eax,lpMarkTable
+	xor ecx,ecx
+	.if eax
+		.while ecx<FileInfo1.nLine
+			and byte ptr [eax+ecx],not 2
+			inc ecx
+		.endw
+	.endif
+	.if lpDisp2Real
+		invoke HeapFree,hGlobalHeap,0,lpDisp2Real
+		mov lpDisp2Real,0
+	.endif
+	ret
+_ResetHideTable endp
