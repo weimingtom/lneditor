@@ -199,7 +199,7 @@ _BeginOpenMain:
 				add eax,lpMels
 				mov edi,eax
 				assume edi:ptr _MelInfo
-				invoke _RestoreFunc
+				invoke _RestoreFunc,lpOriFuncTable
 				invoke _GetSimpFunc,[edi].hModule,offset dbSimpFunc
 				.if !eax
 					mov eax,IDS_ERREXDLL
@@ -377,6 +377,7 @@ _PaintMain:
 		.endif
 	
 	.elseif eax==WM_CREATE
+		mov nUIStatus,UIS_GUI OR UIS_IDLE
 		mov eax,hwnd
 		mov hWinMain,eax
 		invoke _InitWindow,hwnd
@@ -401,8 +402,6 @@ _PaintMain:
 		push lpszConfigFile
 		pop [eax].lpszConfigFile
 		mov [eax].lpConfigs,offset dbConf
-		mov [eax].lpFileInfo1,offset FileInfo1
-		mov [eax].lpFileInfo2,offset FileInfo2
 		mov [eax].lpMenuFuncs,offset dbFunc
 		mov [eax].lpSimpFuncs,offset dbSimpFunc
 		mov [eax].lpTxtFuncs,offset dbTxtFunc
@@ -413,16 +412,7 @@ _PaintMain:
 		or eax,eax
 		je @B
 		mov lpOriFuncTable,eax
-		mov edi,eax
-		lea esi,dbFunc
-		mov ecx,sizeof _Functions
-		invoke _memcpy
-		lea esi,dbSimpFunc
-		mov ecx,sizeof _SimpFunc
-		invoke _memcpy
-		lea esi,dbTxtFunc
-		mov ecx,sizeof _TxtFunc
-		invoke _memcpy
+		invoke _BackupFunc,eax
 		
 		mov nCurMel,-1
 		.if dbConf+_Configs.nEditMode==EM_SINGLE && dbConf+_Configs.bAutoOpen
@@ -751,42 +741,56 @@ _SelfMatch endp
 
 ;内置预处理函数，把所有可重载函数恢复为默认
 _SelfPreProc proc
-	invoke _RestoreFunc
+	invoke _RestoreFunc,lpOriFuncTable
 	mov nCurMel,-1
 	ret
 _SelfPreProc endp
 
 ;所有可重载函数恢复为默认
-_RestoreFunc proc uses esi edi
-	.if lpOriFuncTable
-		mov esi,lpOriFuncTable
-		lea edi,dbFunc
-		mov ecx,sizeof _Functions
-		invoke _memcpy
-		lea edi,dbSimpFunc
-		mov ecx,sizeof _SimpFunc
-		invoke _memcpy
-		lea edi,dbTxtFunc
-		mov ecx,sizeof _TxtFunc
-		invoke _memcpy
-	.endif
+_RestoreFunc proc uses esi edi _lpFT
+	mov esi,_lpFT
+	lea edi,dbFunc
+	mov ecx,sizeof _Functions
+	invoke _memcpy
+	lea edi,dbSimpFunc
+	mov ecx,sizeof _SimpFunc
+	invoke _memcpy
+	lea edi,dbTxtFunc
+	mov ecx,sizeof _TxtFunc
+	invoke _memcpy
 	ret
 _RestoreFunc endp
+
+_BackupFunc proc uses esi edi _lpFT
+	mov edi,_lpFT
+	lea esi,dbFunc
+	mov ecx,sizeof _Functions
+	invoke _memcpy
+	lea esi,dbSimpFunc
+	mov ecx,sizeof _SimpFunc
+	invoke _memcpy
+	lea esi,dbTxtFunc
+	mov ecx,sizeof _TxtFunc
+	invoke _memcpy
+	ret
+_BackupFunc endp
 
 ;重载SimpFunc的几个函数
 _GetSimpFunc proc uses edi ebx _hModule,_pSF
 	mov edi,_pSF
 	assume edi:ptr _SimpFunc
 	invoke GetProcAddress,_hModule,offset szFGetText
-	or eax,eax
-	je _FailGSF
-	mov [edi].GetText,eax
+	.if eax
+		mov [edi].GetText,eax
+	.endif
 	invoke GetProcAddress,_hModule,offset szFModifyLine
-	or eax,eax
-	je _FailGSF
-	mov [edi].ModifyLine,eax
+	.if eax
+		mov [edi].ModifyLine,eax
+	.endif
 	invoke GetProcAddress,_hModule,offset szFSaveText
-	mov [edi].SaveText,eax
+	.if eax
+		mov [edi].SaveText,eax
+	.endif
 	invoke GetProcAddress,_hModule,offset szFSetLine
 	.if eax
 		mov [edi].SetLine,eax
@@ -795,6 +799,7 @@ _GetSimpFunc proc uses edi ebx _hModule,_pSF
 	mov [edi].RetLine,eax
 	invoke GetProcAddress,_hModule,offset szFRelease
 	mov [edi].Release,eax
+	
 	invoke GetProcAddress,_hModule,offset szFGetStr
 	.if eax
 		mov [edi].GetStr,eax

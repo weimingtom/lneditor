@@ -88,12 +88,14 @@ _WndCMProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 			.endw
 		.else
 			mov esi,lpMels
-			.while dword ptr [esi]
+			xor ebx,ebx
+			.while ebx<nMels
 				invoke _GetMelInfo,esi,@pStr,VT_PRODUCTNAME
 				invoke SendDlgItemMessageW,hwnd,IDC_CM_MELLIST,LB_ADDSTRING,0,@pStr
 				lea ecx,[eax-1]
 				invoke SendDlgItemMessageW,hwnd,IDC_CM_MELLIST,LB_SETITEMDATA,eax,ecx
 				add esi,sizeof _MelInfo
+				inc ebx
 			.endw
 		.endif
 		invoke HeapFree,hGlobalHeap,0,@pStr

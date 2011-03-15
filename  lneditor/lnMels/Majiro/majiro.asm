@@ -18,6 +18,13 @@ DllMain proc _hInstance,_dwReason,_dwReserved
 	ret
 DllMain endp
 
+InitInfo proc _lpMelInfo2
+	mov ecx,_lpMelInfo2
+	mov _MelInfo2.nInterfaceVer[ecx],00010000h
+	mov _MelInfo2.nCharacteristic[ecx],0
+	ret
+InitInfo endp
+
 ;ÅÐ¶ÏÎÄ¼þÍ·
 Match proc uses esi edi _lpszName
 	LOCAL @szMagic[10h]:byte

@@ -23,9 +23,9 @@
       includelib \masm32\lib\shlwapi.lib
       includelib \masm32\lib\msvcrt.lib
       
+	include \masm32\lneditor\plugin.inc
 	include \masm32\lneditor\export.inc
 	include \masm32\lneditor\rsrc.inc
-	include \masm32\lneditor\plugin.inc
 	include \masm32\lneditor\config.inc
 	includelib \masm32\lneditor\lnedit.lib
 	

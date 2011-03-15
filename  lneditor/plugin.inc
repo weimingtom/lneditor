@@ -8,11 +8,14 @@ E_OVERMEM				EQU		2
 E_NOTENOUGHBUFF		EQU		3
 E_FILEACCESSERROR		EQU		4
 E_FATALERROR			EQU		5
+E_WRONGFORMAT			EQU		6
+
 E_INVALIDPARAMETER		EQU		10H
 E_PLUGINERROR			EQU		11H
 E_LINENOTEXIST			EQU		100h
 E_LINETOOLONG			EQU		101h
 E_CODEFAILED				EQU		102H
+E_LINENOTMATCH			EQU		103H
 
 
 ;Return Information of GetText
@@ -33,8 +36,8 @@ MR_NO					EQU		0
 MR_ERR					EQU		-1
 
 ;Memory type for strings
-MT_FIXEDSTRING			EQU		1
-MT_VARIABLESTRING		EQU		2
+;MT_FIXEDSTRING			EQU		1
+;MT_VARIABLESTRING		EQU		2
 MT_EVERYSTRING			EQU		3
 MT_POINTERONLY			EQU		4
 
@@ -83,6 +86,7 @@ _FileInfo ends
 MIC_CUSTOMEDIT			EQU		00000001H	;非标准插件，重载了_Functions中的函数
 MIC_CUSTOMTXTPROC		EQU		00000002H	;纯文本专用插件（重载了TXT过滤函数）
 MIC_NOPREREAD			EQU		00000004H	;不需要预先将文件读入内存
+MIC_CUSTOMGUI			EQU		00000008H	;更改了界面
 MIC_NOBATCHEXP			EQU		00010000H	;不支持批量导出
 MIC_NOBATCHIMP			EQU		00020000H	;不支持批量导入
 MIC_NOHALFANGLE		EQU		00040000H	;不支持半角字符
@@ -169,10 +173,7 @@ _PreData struct
 	hGlobalHeap		dd		?	;全局堆，不推荐用来分配大内存
 	
 	lpszConfigFile		dd		?	;配置文件名，包含全路径
-	lpConfigs		dd		?	;配置
-	
-	lpFileInfo1		dd		?
-	lpFileInfo2		dd		?
+	lpConfigs			dd		?	;配置
 	
 	lpMenuFuncs		dd		?	;菜单函数表指针，指向_Functions结构
 	lpSimpFuncs		dd		?	;简易处理函数表指针，指向_SimpFunc结构
@@ -180,4 +181,15 @@ _PreData struct
 	
 	lpHandles		dd		?	;窗口句柄列表指针，指向_Handles结构
 _PreData ends
+
+_TextFilter struct
+	bInclude			db		?
+	bExclude			db		?
+	bTrimHead		db		?
+	bTrimTail			db		?
+	lpszInclude		dd		?
+	lpszExclude		dd		?
+	lpszTrimHead		dd		?
+	lpszTrimTail		dd		?
+_TextFilter ends
 

@@ -523,6 +523,8 @@ _NewEditProc proc uses ebx esi edi,hwnd,uMsg,wParam,lParam
 			invoke SelectObject,@hmdc,@holdbmp
 			invoke DeleteDC,@hmdc
 			invoke DeleteObject,@hbmp
+			invoke DeleteDC,@hmdc2
+			invoke DeleteDC,@hbmp2
 			mov eax,1
 			ret
 		.endif

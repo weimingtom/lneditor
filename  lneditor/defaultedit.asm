@@ -491,9 +491,3 @@ _ExSL:
 	ret
 _SetLine endp
 
-_IsLineAdding proc _lpsz
-;	invoke _MatchFilter,_lpsz,offset dbConf+_Configs.TxtFilter
-	mov eax,1
-	ret
-_IsLineAdding endp
-

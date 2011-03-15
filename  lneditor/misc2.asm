@@ -497,11 +497,15 @@ _NotMatch:
 	ret
 _MatchFilter endp
 
-_UpdateHideTable proc uses esi ebx
+_UpdateHideTable proc uses esi ebx _lpFI
+	LOCAL @nLine
+	mov ecx,_lpFI
+	mov eax,_FileInfo.nLine[ecx]
+	mov @nLine,eax
 	xor ebx,ebx
 	mov esi,lpMarkTable
-	.while ebx<FileInfo1.nLine
-		invoke _GetStringInList,offset FileInfo1,ebx
+	.while ebx<@nLine
+		invoke _GetStringInList,_lpFI,ebx
 		.if eax
 			invoke _MatchFilter,eax,offset dbConf+_Configs.TxtFilter
 			not al
@@ -514,11 +518,13 @@ _UpdateHideTable proc uses esi ebx
 	ret
 _UpdateHideTable endp
 
-_ResetHideTable proc
+_ResetHideTable proc _lpFI
+	mov ecx,_lpFI
+	mov edx,_FileInfo.nLine[ecx]
 	mov eax,lpMarkTable
 	xor ecx,ecx
 	.if eax
-		.while ecx<FileInfo1.nLine
+		.while ecx<edx
 			and byte ptr [eax+ecx],not 2
 			inc ecx
 		.endw
