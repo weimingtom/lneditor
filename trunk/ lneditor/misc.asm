@@ -545,8 +545,6 @@ _SetModified endp
 
 ;
 _SetOpen proc uses esi edi ebx _bFlag
-	invoke EnableMenuItem,hMenu,IDM_EXPORT,MF_GRAYED
-	invoke EnableMenuItem,hMenu,IDM_IMPORT,MF_GRAYED
 	.if _bFlag
 		mov ecx,sizeof _MelInfo
 		mov eax,nCurMel
@@ -560,31 +558,34 @@ _SetOpen proc uses esi edi ebx _bFlag
 		mov bOpen,1
 		mov esi,MF_ENABLED
 		mov edi,MF_GRAYED
-		.if !(_MelInfo2.nCharacteristic[ebx]&MIC_NOBATCHIMP)
-			invoke EnableMenuItem,hMenu,IDM_IMPORT,ESI
+		.if _MelInfo2.nCharacteristic[ebx]&MIC_NOHALFANGLE
+			push edi
+		.else
+			push esi
 		.endif
-		.if !(_MelInfo2.nCharacteristic[ebx]&MIC_NOBATCHEXP)
-			invoke EnableMenuItem,hMenu,IDM_EXPORT,ESI
-		.endif
+		push IDM_CVTHALF
+		push hMenu
+		call EnableMenuItem
 	.else
 		mov bOpen,0
 		mov edi,MF_ENABLED
 		mov esi,MF_GRAYED
 		invoke EnableMenuItem,hMenu,IDM_SAVE,esi
+		invoke EnableMenuItem,hMenu,IDM_CVTHALF,ESI
 	.endif
 	invoke EnableMenuItem,hMenu,IDM_CLOSE,esi
 	invoke EnableMenuItem,hMenu,IDM_SAVEAS,esi
 	invoke EnableMenuItem,hMenu,IDM_SETCODE,esi
+	invoke EnableMenuItem,hMenu,IDM_IMPORT,ESI
+	invoke EnableMenuItem,hMenu,IDM_EXPORT,ESI
 	mov ebx,IDM_MODIFY
 	.while ebx<=IDM_GOTO
 		invoke EnableMenuItem,hMenu,ebx,esi
 		inc ebx
 	.endw
-	mov ebx,IDM_CVTFULL
-	.while ebx<=IDM_PROGRESS
-		invoke EnableMenuItem,hMenu,ebx,esi
-		inc ebx
-	.endw
+	invoke EnableMenuItem,hMenu,IDM_CVTFULL,esi
+	invoke EnableMenuItem,hMenu,IDM_UNMARKALL,esi
+	invoke EnableMenuItem,hMenu,IDM_PROGRESS,esi
 	ret
 _SetOpen endp
 
@@ -710,6 +711,8 @@ _SetTextToEdit proc uses esi edi ebx _nIdx
 	LOCAL @ps1,@ps2
 	LOCAL @range[2]:dword
 	invoke _GetStringInList,offset FileInfo1,_nIdx
+	or eax,eax
+	je _ExSTTE
 	mov esi,eax
 	invoke lstrlenW,esi
 	inc eax

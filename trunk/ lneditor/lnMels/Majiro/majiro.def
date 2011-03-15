@@ -2,6 +2,7 @@ EXPORTS
 GetText
 ModifyLine
 Release
+InitInfo
 Match
 PreProc
 SaveText

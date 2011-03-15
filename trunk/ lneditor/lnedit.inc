@@ -53,6 +53,11 @@ REC_MARKTABLE			EQU		1
 REC_CHARSET				EQU		2
 REC_LINEPOS				EQU		3
 
+UIS_GUI					EQU		00000000H
+UIS_CONSOLE				EQU		00000001H
+UIS_IDLE					EQU		00000000H
+UIS_BUSY					EQU		00000002H
+
 
 WM_LBUPDATE		EQU		WM_USER+2
 
@@ -75,7 +80,8 @@ _LoadMel			proto :dword
 _TryMatch			proto :dword
 _SelfMatch			proto :dword
 _SelfPreProc			proto
-_RestoreFunc			proto
+_RestoreFunc			proto :dword
+_BackupFunc			proto :dword
 _GetSimpFunc			proto :dword,:dword
 
 ;choosemel dialogbox
@@ -88,7 +94,7 @@ _CharMatchW			proto
 
 ;Misc
 _GetConstString 		proto
-_LoadConfig 			proto
+_LoadConfig			proto
 _SaveConfig			proto
 _Int2Str				proto :dword,:dword,:dword
 _OpenFileDlg			proto :dword,:dword,:dword,:dword
@@ -125,8 +131,8 @@ _GetDispLine			proto :dword
 _GetRealLine			proto :dword
 _IsDisplay				proto :dword
 _MatchFilter			proto :dword,:dword
-_ResetHideTable		proto
-_UpdateHideTable		proto
+_ResetHideTable		proto :dword
+_UpdateHideTable		proto :dword
 
 ;Record
 _ReadRec				proto :dword
@@ -183,7 +189,7 @@ _RecoverUI			proto
 
 ;assemble menu
 _ExportAll			proto
-_ExportAllToTxt		proto :dword,:dword,:dword,:dword
+_ExportAllToTxt		proto :dword,:dword,:dword,:dword,:dword,:dword
 
 _WndExpAllProc		proto :dword,:dword,:dword,:dword
 _ImportAll			proto
@@ -202,7 +208,6 @@ _ModifyLine			proto :dword,:dword
 _GetStringInTxt		proto :dword,:dword,:dword
 _SetLine				proto :dword,:dword
 _ReplaceInMem		proto :dword,:dword,:dword,:dword,:dword
-_IsLineAdding			proto :dword
 
 ;UI Maker
 _ZoomRect			proto :dword,:dword
@@ -237,17 +242,6 @@ _FileRec struct
 	nOffsetResv		dd		6	dup(?)
 _FileRec ends
 
-_TextFilter struct
-	bInclude			db		?
-	bExclude			db		?
-	bTrimHead		db		?
-	bTrimTail			db		?
-	lpszInclude		dd		?
-	lpszExclude		dd		?
-	lpszTrimHead		dd		?
-	lpszTrimTail		dd		?
-_TextFilter ends
-
 .data?
 	hInstance		dd		?
 	hIcon			dd		?
@@ -274,6 +268,7 @@ _TextFilter ends
 	
 	bModified		dd		?	;文件本次打开是否被修改过
 	bOpen			dd		?	;编辑器是否打开了文件
+	nUIStatus			dd		?	;UI状态,UIS_XXX
 
 	hLogFile			dd		?	;日志文件句柄
 	
@@ -403,7 +398,7 @@ _TextFilter ends
 				dd	0
 				dd	offset _GetStringFromStmPtr
 				
-	dbTxtFunc	dd	offset _IsLineAdding
+	dbTxtFunc	dd	0
 				dd	0
 				
 	dbMelInfo2	_MelInfo2		<INTERFACE_VER,0>

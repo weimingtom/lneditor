@@ -75,7 +75,7 @@ _OpenScript proc
 			mov lpMarkTable,eax
 			invoke _ReadRec,REC_MARKTABLE
 			.if dbConf+_Configs.bAlwaysFilter
-				invoke _UpdateHideTable
+				invoke _UpdateHideTable,offset FileInfo1
 			.endif
 			invoke _AddLinesToList,offset FileInfo1,hList1
 		.endif
@@ -602,24 +602,32 @@ _ExportSingleTxt proc uses esi edi ebx _lpFI,_hTxt
 	.if [ecx].nMemoryType!=MT_FIXEDSTRING
 		mov esi,[ecx].lpTextIndex
 		.while ebx<@nLine
+			invoke _IsDisplay,ebx
+			or eax,eax
+			je @F
 			invoke lstrcpyW,edi,[esi]
 			invoke lstrlenW,[esi]
 			shl eax,1
 			add edi,eax
 			mov eax,0a000dh
 			stosd
+			@@:
 			add esi,4
 			inc ebx
 		.endw
 	.else
 		mov esi,[ecx].lpText
 		.while ebx<@nLine
+			invoke _IsDisplay,ebx
+			or eax,eax
+			je @F
 			invoke lstrcpyW,edi,esi
 			invoke lstrlenW,esi
 			shl eax,1
 			add edi,eax
 			mov eax,0a000dh
 			stosd
+			@@:
 			mov ecx,_lpFI
 			add esi,[ecx].nLineLen
 			inc ebx
@@ -641,6 +649,96 @@ _ErrEST:
 	or eax,E_ERROR
 	ret
 _ExportSingleTxt endp
+
+_ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
+	local @nLine
+	mov esi,_lpTxt
+	.if word ptr [esi]!=0feffh
+		mov eax,E_WRONGFORMAT
+		jmp _Ex
+	.endif
+	
+	add esi,2
+	xor ecx,ecx
+	.while word ptr [esi]
+		.if dword ptr [esi]==0a000dh
+			mov dword ptr [esi],0
+			add esi,4
+			inc ecx
+			.continue
+		.endif
+		add esi,2
+	.endw
+	lea ebx,[ecx+1]
+	
+	mov esi,lpMarkTable
+	.if !esi
+		mov ecx,_lpFI
+		mov edx,_FileInfo.nLine[ecx]
+	.else
+		mov edx,_lpFI
+		mov ecx,_FileInfo.nLine[edx]
+		xor edx,edx
+		@@:
+			.if !(byte ptr [esi]&2)
+				inc edx
+			.endif
+			inc esi
+		loop @B
+	.endif
+	.if edx!=ebx
+		mov eax,E_LINENOTMATCH
+		jmp _Ex
+	.endif
+	
+	mov @nLine,ebx
+	
+	mov esi,_lpFI
+	assume esi:ptr _FileInfo
+	mov eax,[esi].nMemoryType
+	.if eax==MT_EVERYSTRING || eax==MT_POINTERONLY
+		xor ebx,ebx
+		mov edi,_lpTxt
+		add edi,2
+		.while ebx<@nLine
+			invoke _IsDisplay,ebx
+			or eax,eax
+			je _NextLine
+			mov eax,[esi].lpTextIndex
+			mov ecx,[eax+ebx*4]
+			mov dword ptr [eax+ebx*4],0
+			invoke HeapFree,hGlobalHeap,0,ecx
+			xor ax,ax
+			push edi
+			or ecx,-1
+			repne scasw
+			add edi,2
+			not ecx
+			inc ecx
+			shl ecx,1
+			invoke HeapAlloc,hGlobalHeap,0,ecx
+			.if !eax
+				add esp,4
+				mov eax,E_NOMEM
+				jmp _Ex
+			.endif
+			mov ecx,[esi].lpTextIndex
+			mov [ecx+ebx*4],eax
+			push eax
+			call lstrcpyW
+		_NextLine:
+			inc ebx
+		.endw
+	.else
+		mov eax,E_PLUGINERROR
+		jmp _Ex
+	.endif
+	assume esi:nothing
+	
+	xor eax,eax
+_Ex:
+	ret
+_ImportSingleTxt endp
 
 ;
 _ImportTxt proc
@@ -669,119 +767,47 @@ _ErrIT:
 _NomemIT:
 			invoke CloseHandle,@hTxtFile
 			mov eax,IDS_NOMEM
-			jmp _ErrIT 
+			jmp _ErrIT
 		.endif
 		mov @lpBuff,eax
 		invoke ReadFile,@hTxtFile,@lpBuff,dword ptr @nFZ,offset dwTemp,0
 		
-		mov edi,@lpBuff
-		.if word ptr [edi]!=0feffh
-			invoke CloseHandle,@hTxtFile
-			invoke VirtualFree,@lpBuff,0,MEM_RELEASE
-			mov eax,IDS_TXTUNICODE
-			jmp _ErrIT
-		.endif
-		mov eax,edi
-		add edi,2
-		add eax,dword ptr @nFZ
-		mov @pEnd,eax
-		
-		xor ecx,ecx
-		.repeat
-			.if word ptr [edi]==0dh
-				inc ecx
-			.endif
-			add edi,2
-		.until edi>=@pEnd || !word ptr [edi]
-		.if word ptr [edi-4]!=0dh
-			inc ecx
-		.endif
-		.if ecx!=FileInfo2.nLine
-			mov eax,IDS_LINENOTMATCH
-			invoke _GetConstString
-			mov ecx,eax
-			mov eax,IDS_WINDOWTITLE
-			invoke _GetConstString
-			invoke MessageBoxW,hWinMain,ecx,eax,MB_YESNO or MB_DEFBUTTON2 or MB_ICONWARNING
-			.if eax==IDNO
-				invoke CloseHandle,@hTxtFile
-				invoke VirtualFree,@lpBuff,0,MEM_RELEASE
-				jmp _ExIT
-			.endif
-		.endif
-		
-		mov edi,@lpBuff
-		add edi,2
-		.if FileInfo2.lpTextIndex
-			mov ebx,FileInfo2.lpTextIndex
-			xor esi,esi
-			.repeat
-				mov eax,edi
-				.while dword ptr [edi]!=0a000dh					
-					add edi,2
-					.break .if !word ptr [edi] || edi>=@pEnd
-				.endw
-				mov dword ptr [edi],0
-				add edi,2
-				mov [ebx],eax
-				add ebx,4
-				inc esi
-			.until edi>=@pEnd || esi>=FileInfo2.nLine
-			invoke VirtualFree,FileInfo2.lpText,0,MEM_RELEASE
-			mov eax,@lpBuff
-			mov FileInfo2.lpText,eax
-			jmp _SucIT
-		.else
-			mov @nFlag,0
-			mov ebx,FileInfo2.lpText
-			xor esi,esi
-			.repeat
-				mov eax,edi
-				.while word ptr [edi]!=0dh
-					add edi,2
-					.break .if !word ptr [edi] || edi>=@pEnd
-				.endw
-				mov word ptr [edi],0
-				add edi,2
-				lea ecx,[edi-2]
-				sub ecx,eax
-				.if ecx<FileInfo2.nLineLen
-					invoke lstrcpyW,ebx,eax
-				.else
-					mov word ptr [ebx],0
-					mov @nFlag,1
+		invoke _ImportSingleTxt,offset FileInfo2,@lpBuff
+		.if !eax
+			xor ebx,ebx
+			.while ebx<FileInfo2.nLine
+				invoke _IsDisplay,ebx
+				or eax,eax
+				je _NextIT
+				push ebx
+				push offset FileInfo2
+				call dbSimpFunc+_SimpFunc.ModifyLine
+				.if eax
+					mov eax,IDS_FAILIMPORT
+					invoke _GetConstString
+					invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
+					jmp _ExIT
 				.endif
-				add ebx,FileInfo2.nLineLen
-				inc esi
-			.until edi>=@pEnd || esi>=FileInfo2.nLine
-			invoke VirtualFree,@lpBuff,0,MEM_RELEASE
-			.if @nFlag
-				mov eax,IDS_IMPORTPART
-				invoke _GetConstString
-				mov ecx,eax
-				mov eax,IDS_WINDOWTITLE
-				invoke _GetConstString
-				invoke MessageBoxW,hWinMain,ecx,eax,MB_OK or MB_ICONINFORMATION
-			.else
-_SucIT:
-				xor ebx,ebx
-				.while ebx<FileInfo2.nLine
-					push ebx
-					push offset FileInfo2
-					call dbSimpFunc+_SimpFunc.ModifyLine
-					.if eax
-						mov eax,IDS_FAILIMPORT
-						invoke _GetConstString
-						invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
-						jmp _ExIT
-					.endif
-				.endw
-				
-				mov eax,IDS_SUCIMPORT
-				invoke _GetConstString
-				invoke _DisplayStatus,eax,2000
+			_NextIT:
+				inc ebx
+			.endw
+		.else
+			cmp eax,E_NOMEM
+			JE _NomemIT
+			.if eax==E_WRONGFORMAT
+				mov eax,IDS_TXTUNICODE
+				jmp _ErrIT
 			.endif
+			.if eax==E_PLUGINERROR
+				jmp _ErrIT
+			.endif
+			.if eax==E_LINENOTMATCH
+				mov eax,IDS_LINENOTMATCH
+				jmp _ErrIT
+			.endif
+			
 		.endif
+				
 		
 		invoke CloseHandle,@hTxtFile
 		invoke _SetModified,1

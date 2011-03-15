@@ -100,8 +100,8 @@ _WndFilterProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 			invoke SendMessageW,hList1,LB_GETCURSEL,0,1
 			mov nCurIdx,eax
 			
-			invoke _ResetHideTable
-			invoke _UpdateHideTable
+			invoke _ResetHideTable,offset FileInfo1
+			invoke _UpdateHideTable,offset FileInfo1
 			
 			invoke SendMessageW,hList1,LB_RESETCONTENT,0,0
 			invoke SendMessageW,hList2,LB_RESETCONTENT,0,0

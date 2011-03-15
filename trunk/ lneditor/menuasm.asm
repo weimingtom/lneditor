@@ -32,15 +32,21 @@ _WndExpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			invoke DialogBoxParamW,hInstance,IDD_CHOOSEMEL,hwnd,offset _WndCMProc,0
 			cmp eax,-10
 			ja _ExWEAP
-			mov ebx,eax
-			invoke SetDlgItemInt,hwnd,IDC_EA_MELIDX,eax,FALSE
-			cmp ebx,-1
+			mov esi,eax
+			cmp eax,-1
 			je @F
-			mov eax,ebx
 			mov edx,sizeof _MelInfo
 			mul dx
 			add eax,lpMels
 			mov ebx,eax
+			mov ecx,_MelInfo.lpMelInfo2[ebx]
+			.if _MelInfo2.nCharacteristic[ecx]&MIC_NOBATCHEXP
+				mov eax,IDS_NOTSUPPORTBATCHEXP
+				invoke _GetConstString
+				invoke MessageBoxW,hwnd,eax,offset szDisplayName,MB_ICONINFORMATION
+				jmp _ExWEAP
+			.endif
+			invoke SetDlgItemInt,hwnd,IDC_EA_MELIDX,esi,FALSE
 			@@:
 			invoke _GetMelInfo,ebx,addr @str,VT_PRODUCTNAME
 			invoke SetDlgItemTextW,hwnd,IDC_EA_NAME,addr @str
@@ -91,16 +97,37 @@ _WndExpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			invoke SetCurrentDirectoryW,@plstr2
 			and eax,ebx
 			.if ZERO?
+				invoke HeapFree,hGlobalHeap,0,@plstr
 				mov eax,IDS_INVALIDDIR
 				invoke _GetConstString
 				invoke MessageBoxW,hwnd,eax,0,MB_OK or MB_ICONERROR
 				jmp _ExWEAP
 			.endif
+			invoke IsDlgButtonChecked,hwnd,IDC_EA_FORCEMEL
+			mov esi,eax
+			invoke IsDlgButtonChecked,hwnd,IDC_EA_FILTERON
+			mov edi,eax
 			invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_GETCURSEL,0,0
-			mov ebx,eax
+			mov ebx,eax			
 			invoke GetDlgItemInt,hwnd,IDC_EA_MELIDX,0,FALSE
+			.if eax!=-1
+				push eax
+				mov dx,sizeof _MelInfo
+				mul dx
+				add eax,lpMels
+				mov ecx,_MelInfo.lpMelInfo2[eax]
+				.if _MelInfo2.nCharacteristic[ecx]&MIC_NOBATCHEXP
+					add esp,4
+					invoke HeapFree,hGlobalHeap,0,@plstr
+					mov eax,IDS_NOTSUPPORTBATCHEXP
+					invoke _GetConstString
+					invoke MessageBoxW,hwnd,eax,offset szDisplayName,MB_ICONINFORMATION
+					jmp _ExWEAP
+				.endif
+				pop eax
+			.endif
 			mov ecx,dword ptr [ebx*4+dbCodeTable]
-			invoke _ExportAllToTxt,@plstr,@plstr2,eax,ecx
+			invoke _ExportAllToTxt,@plstr,@plstr2,eax,ecx,esi,edi
 			mov ebx,eax
 			invoke HeapFree,hGlobalHeap,0,@plstr
 			.if !ebx
@@ -134,13 +161,10 @@ _WndExpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 		invoke SetDlgItemTextW,hwnd,IDC_EA_NAME,addr @str
 		invoke _GetMelInfo,ebx,addr @str,VT_FORMAT
 		invoke SetDlgItemTextW,hwnd,IDC_EA_FORMAT,addr @str
-		.if nCurMel==-1
-			invoke GetDlgItem,hwnd,IDC_EA_OK
-			invoke EnableWindow,eax,FALSE
-		.endif
 		invoke GetDlgItem,hwnd,IDC_EA_CODE
 		invoke _AddCodeCombo,eax
 		invoke SendDlgItemMessageW,hwnd,IDC_EA_CODE,CB_SETCURSEL,0,0
+		invoke CheckDlgButton,hwnd,IDC_EA_FILTERON,dbConf+_Configs.bAlwaysFilter
 	.elseif eax==WM_CLOSE
 		invoke EndDialog,hwnd,0
 	.endif
@@ -150,35 +174,67 @@ _ExWEAP:
 _WndExpAllProc endp
 
 ;
-_ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet
+_ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bForceMel,_bFilterOn
 	LOCAL @stFindData:WIN32_FIND_DATA
 	LOCAL @hFindFile,@hFileT
 	LOCAL @stFileInfo:_FileInfo
-	LOCAL @pGetText,@err,@ri
+	LOCAL @err,@ri
+	LOCAL @lpFuncs,@lpOldMT
+	or nUIStatus,UIS_BUSY
+	invoke HeapAlloc,hGlobalHeap,0,sizeof _Functions+sizeof _SimpFunc+sizeof _TxtFunc
+	mov @lpFuncs,eax
+	.if !eax
+		mov @err,E_NOMEM
+		jmp _ExEATT
+	.endif
+	invoke _BackupFunc,@lpFuncs
+	invoke _RestoreFunc,lpOriFuncTable
+	mov ecx,lpMarkTable
+	mov @lpOldMT,ecx
 	mov eax,_nMelIdx
-	mov edx,sizeof _MelInfo
-	mul dx
-	add eax,lpMels
-	mov ebx,eax
-	assume ebx:ptr _MelInfo
+	.if eax!=-1
+		mov edx,sizeof _MelInfo
+		mul dx
+		add eax,lpMels
+		mov ebx,eax
+		assume ebx:ptr _MelInfo
+		invoke _GetSimpFunc,[ebx].hModule,offset dbSimpFunc
+		invoke GetProcAddress,[ebx].hModule,offset szFPreProc
+		.if eax
+			push lpPreData
+			call eax
+		.endif
+	.endif
 	invoke SetCurrentDirectoryW,_lpszScr
 	invoke FindFirstFileW,offset szAllFiles,addr @stFindData
 	.if eax!=INVALID_HANDLE_VALUE
 		mov @hFindFile,eax
 		invoke RtlZeroMemory,addr @stFileInfo,sizeof _FileInfo
-		invoke GetProcAddress,[ebx].hModule,offset szFGetText
-		mov @pGetText,eax
 		mov @err,0
 		.repeat
 			lea edi,@stFindData.cFileName
-			push edi
-			call [ebx].pMatch
-			cmp eax,MR_NO
-			je _Next2EATT
-			cmp eax,MR_ERR
-			je _Next2EATT
+			.if dword ptr [edi]=='.' || dword ptr [edi]==2e002eh && word ptr [edi+4]==0
+				jmp _Next4EATT
+			.endif
+			.if !_bForceMel
+				.if _nMelIdx!=-1
+					push edi
+					call [ebx].pMatch
+				.else
+					invoke _SelfMatch,edi
+				.endif
+				cmp eax,MR_NO
+				je _Next2EATT
+				cmp eax,MR_ERR
+				je _Next2EATT
+			.endif
 			invoke lstrcpyW,addr @stFileInfo.szName,edi
-			invoke _LoadFile,addr @stFileInfo,LM_NONE,[ebx].lpMelInfo2
+			.if _nMelIdx!=-1
+				mov ecx,[ebx].lpMelInfo2
+			.else
+				lea ecx,offset dbMelInfo2
+			.endif
+			invoke _LoadFile,addr @stFileInfo,LM_NONE,ecx
 			or eax,eax
 			je _Next2EATT
 			
@@ -195,7 +251,7 @@ _ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet
 			push ecx
 			lea eax,@stFileInfo
 			push eax
-			call @pGetText
+			call dbSimpFunc+_SimpFunc.GetText
 			.if eax
 				mov @err,1
 				jmp _Next3EATT
@@ -207,20 +263,41 @@ _ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet
 					jmp _Next3EATT
 				.endif
 			.endif
-			invoke _ExportSingleTxt,addr @stFileInfo,@hFileT
-			.if eax
-				mov @err,1
+			.if _bFilterOn
+				invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,@stFileInfo.nLine
+				or eax,eax
+				je _FilterNext
+				mov lpMarkTable,eax
+				invoke _UpdateHideTable,addr @stFileInfo
+				invoke _ExportSingleTxt,addr @stFileInfo,@hFileT
+				.if eax
+					mov @err,1
+				.endif
+				invoke HeapFree,hGlobalHeap,0,lpMarkTable
+			.else
+				_FilterNext:
+				invoke _ExportSingleTxt,addr @stFileInfo,@hFileT
+				.if eax
+					mov @err,1
+				.endif
 			.endif
 _Next3EATT:
 			invoke CloseHandle,@hFileT
 _Next2EATT:
 			invoke _ClearAll,addr @stFileInfo
 			invoke SetCurrentDirectoryW,_lpszScr
+_Next4EATT:
 			invoke FindNextFileW,@hFindFile,addr @stFindData
 		.until eax==FALSE
 		invoke FindClose,@hFindFile
 	.endif
 	assume ebx:nothing
+	mov ecx,@lpOldMT
+	mov lpMarkTable,ecx
+	invoke _RestoreFunc,@lpFuncs
+	invoke HeapFree,hGlobalHeap,0,@lpFuncs
+_ExEATT:
+	and nUIStatus,not UIS_BUSY
 	mov eax,@err
 	ret
 _ExportAllToTxt endp
