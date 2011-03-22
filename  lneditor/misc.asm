@@ -216,16 +216,12 @@ _AddLines proc uses esi edi ebx _pdb
 	mov edi,[eax]
 	mov ecx,[eax+4]
 	mov @hList,ecx
-;	.if nCurIdx==-1
-;		invoke _ReadRec
-;		mov nCurIdx,eax
-;	.endif
 	assume edi:ptr _FileInfo
 	xor ebx,ebx
 	invoke SendMessageW,@hList,WM_SETREDRAW,FALSE,0
 	mov ecx,[edi].nLine
 	mov @nLine,ecx
-	.if [edi].nMemoryType!=MT_FIXEDSTRING
+	.if [edi].nMemoryType==MT_EVERYSTRING || [edi].nMemoryType==MT_POINTERONLY
 		mov esi,[edi].lpTextIndex
 		.while ebx<@nLine
 			mov ecx,lpMarkTable
@@ -233,16 +229,6 @@ _AddLines proc uses esi edi ebx _pdb
 				invoke SendMessageW,@hList,LB_ADDSTRING,0,[esi]
 			.endif
 			add esi,4
-			inc ebx
-		.endw
-	.else
-		mov esi,[edi].lpText
-		.while ebx<@nLine
-			mov ecx,lpMarkTable
-			.if !(byte ptr [ecx+ebx]&2)
-				invoke SendMessageW,@hList,LB_ADDSTRING,0,esi
-			.endif
-			add esi,[edi].nLineLen
 			inc ebx
 		.endw
 	.endif
@@ -437,7 +423,6 @@ _ClearAll proc uses edi _pFI
 	.endif
 	invoke CloseHandle,[edi].hFile
 	invoke VirtualFree,[edi].lpStream,0,MEM_RELEASE
-	invoke VirtualFree,[edi].lpText,0,MEM_RELEASE
 	invoke VirtualFree,[edi].lpTextIndex,0,MEM_RELEASE
 	invoke VirtualFree,[edi].lpStreamIndex,0,MEM_RELEASE
 	assume edi:nothing
@@ -598,13 +583,11 @@ _GetStringInList proc uses edi _pFI,_nLine
 		xor eax,eax
 		ret
 	.endif
-	.if [edi].nMemoryType!=MT_FIXEDSTRING
+	.if [edi].nMemoryType==MT_EVERYSTRING || [edi].nMemoryType==MT_POINTERONLY
 		mov edi,[edi].lpTextIndex
 		mov eax,dword ptr [edi+eax*4]
 	.else
-		mov ecx,[edi].nLineLen
-		mul ecx
-		add eax,[edi].lpText
+		xor eax,eax
 	.endif
 	assume edi:nothing
 	ret

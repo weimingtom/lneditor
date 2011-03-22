@@ -68,7 +68,6 @@ _ForceMBCS:
 	mov [ebx].lpTextIndex,eax
 	mov edi,eax
 	mov [ebx].lpTextIndex,eax
-	mov [ebx].lpText,0
 	
 	mov eax,@lpCur
 	.if @bIsUnicode && word ptr [eax]==0feffh
@@ -106,7 +105,7 @@ _ForceMBCS:
 	sub edi,[ebx].lpTextIndex
 	shr edi,2
 	mov [ebx].nLine,edi
-	mov [ebx].nLineLen,0
+;	mov [ebx].nLineLen,0
 	mov [ebx].nMemoryType,MT_EVERYSTRING
 	mov ecx,_lpRI
 	mov dword ptr [ecx],RI_SUC_LINEONLY
@@ -476,7 +475,7 @@ _SetLine proc uses esi ebx _lpsz,_lpRange
 	
 	mov esi,_lpsz
 	lea esi,[esi+ebx*2]
-	.repeat
+	.while ebx
 		dec ebx
 		sub esi,2
 		mov ax,[esi]
@@ -485,7 +484,7 @@ _SetLine proc uses esi ebx _lpsz,_lpRange
 			mov [eax+4],ebx
 			.break
 		.endif
-	.until !ebx
+	.endw
 
 _ExSL:
 	ret

@@ -599,7 +599,7 @@ _ExportSingleTxt proc uses esi edi ebx _lpFI,_hTxt
 	mov ecx,_lpFI
 	mov eax,[ecx].nLine
 	mov @nLine,eax
-	.if [ecx].nMemoryType!=MT_FIXEDSTRING
+	.if [ecx].nMemoryType==MT_EVERYSTRING || [ecx].nMemoryType==MT_POINTERONLY
 		mov esi,[ecx].lpTextIndex
 		.while ebx<@nLine
 			invoke _IsDisplay,ebx
@@ -616,22 +616,8 @@ _ExportSingleTxt proc uses esi edi ebx _lpFI,_hTxt
 			inc ebx
 		.endw
 	.else
-		mov esi,[ecx].lpText
-		.while ebx<@nLine
-			invoke _IsDisplay,ebx
-			or eax,eax
-			je @F
-			invoke lstrcpyW,edi,esi
-			invoke lstrlenW,esi
-			shl eax,1
-			add edi,eax
-			mov eax,0a000dh
-			stosd
-			@@:
-			mov ecx,_lpFI
-			add esi,[ecx].nLineLen
-			inc ebx
-		.endw
+		mov eax,E_INVALIDPARAMETER
+		jmp _ExEST
 	.endif
 	sub edi,@lpBuff
 	invoke SetFilePointer,_hTxt,0,0,FILE_BEGIN
@@ -703,7 +689,7 @@ _ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
 		.while ebx<@nLine
 			invoke _IsDisplay,ebx
 			or eax,eax
-			je _NextLine
+			je _NextLine2
 			mov eax,[esi].lpTextIndex
 			mov ecx,[eax+ebx*4]
 			mov dword ptr [eax+ebx*4],0
@@ -726,7 +712,7 @@ _ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
 			mov [ecx+ebx*4],eax
 			push eax
 			call lstrcpyW
-		_NextLine:
+		_NextLine2:
 			inc ebx
 		.endw
 	.else
@@ -799,6 +785,7 @@ _NomemIT:
 				jmp _ErrIT
 			.endif
 			.if eax==E_PLUGINERROR
+				mov eax,IDS_DLLERR
 				jmp _ErrIT
 			.endif
 			.if eax==E_LINENOTMATCH

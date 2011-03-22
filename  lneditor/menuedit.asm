@@ -87,57 +87,7 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 	shl eax,1
 	mov @nLen,eax
 	MOV ECX,[ebx].nMemoryType
-	.if ecx==MT_VARIABLESTRING
-		mov esi,FileInfo2.lpTextIndex
-		mov eax,_nLine
-		mov esi,[esi+eax*4]
-		invoke lstrlenW,esi
-		shl eax,1
-		.if eax>=@nLen
-			invoke lstrcpyW,esi,_lpStr
-		.else
-			mov @nLen,eax
-			mov eax,[ebx].nLine
-			mov esi,[ebx].lpTextIndex
-			mov edi,[esi+eax*4-4]
-			invoke lstrlenW,edi
-			shl eax,1
-			lea edi,[edi+eax+2]
-			or eax,eax
-			mov ecx,[ebx].lpTextIndex
-			mov eax,_nLine
-			mov ecx,[ecx+eax*4+4]
-			mov esi,[esi+eax*4]
-			.if !ecx
-				invoke lstrcpyW,esi,_lpStr
-				xor eax,eax
-				jmp _ExMSIL
-			.endif
-			mov @nTmp,ecx
-			sub edi,ecx
-			invoke VirtualAlloc,0,edi,MEM_COMMIT,PAGE_READWRITE
-			or eax,eax
-			je _NomemMSIL
-			mov @lpTemp,eax
-			invoke RtlMoveMemory,@lpTemp,@nTmp,edi
-			invoke lstrcpyW,esi,_lpStr
-			invoke lstrlenW,esi
-			shl eax,1
-			lea esi,[esi+eax+2]
-			invoke RtlMoveMemory,esi,@lpTemp,edi
-			invoke VirtualFree,@lpTemp,0,MEM_RELEASE
-			sub esi,@nTmp
-			.if !ZERO?
-				mov edi,[ebx].lpTextIndex
-				mov ecx,_nLine
-				inc ecx
-				.while ecx<FileInfo2.nLine
-					add [edi+ecx*4],esi
-					inc ecx
-				.endw
-			.endif
-		.endif
-	.elseif ecx==MT_EVERYSTRING || ecx==MT_POINTERONLY
+	.if ecx==MT_EVERYSTRING || ecx==MT_POINTERONLY
 		mov esi,FileInfo2.lpTextIndex
 		mov eax,_nLine
 		lea edi,[esi+eax*4]
@@ -148,11 +98,11 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 			invoke lstrcpyW,esi,_lpStr
 		.else
 			mov ecx,@nLen
-			.if [ebx].nLineLen && ecx<[ebx].nLineLen
-				invoke lstrcpyW,esi,_lpStr
-				xor eax,eax
-				jmp _ExMSIL
-			.endif
+;			.if [ebx].nLineLen && ecx<[ebx].nLineLen
+;				invoke lstrcpyW,esi,_lpStr
+;				xor eax,eax
+;				jmp _ExMSIL
+;			.endif
 			add ecx,2
 			invoke HeapAlloc,hGlobalHeap,0,ecx
 			or eax,eax
@@ -161,20 +111,6 @@ _ModifyStringInList proc uses esi edi ebx _lpFI,_nLine,_lpStr
 			invoke lstrcpyW,eax,_lpStr
 			invoke HeapFree,hGlobalHeap,0,esi
 		.endif
-	.elseif ecx==MT_FIXEDSTRING
-		mov eax,@nLen
-		.if eax>=FileInfo2.nLineLen
-			mov eax,E_LINETOOLONG
-			jmp _ExMSIL
-		.endif
-		mov edi,[ebx].lpText
-		mov eax,[ebx].nLineLen
-		mov edx,_nLine
-		mul dx
-		shl edx,16
-		or eax,edx
-		add edi,eax
-		invoke lstrcpyW,edi,_lpStr
 	.else
 		mov eax,E_INVALIDPARAMETER
 		jmp _ExMSIL
