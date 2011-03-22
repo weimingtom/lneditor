@@ -302,7 +302,7 @@ _FileRec ends
 	TW0			'Multiline Editor',	szDisplayName
 	TW0			'lnedit',			szInnerName
 	TW0			' v1.0',			szDisplayVer
-	TW0			' v1.0.0.387',		szFullVer
+	TW0			' v1.0.0.397',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0
@@ -503,7 +503,8 @@ _FileRec ends
 	TW0		'UNKNOWN(0)',	szcdDefault
 	TW0		'GBK(936)',		szcdGBK
 	TW0		'Shift-JIS(932)',		szcdSJIS
+	TW0		'BIG5(950)',		szcdBig5
 	TW0		'UTF-8(65001)',		szcdUTF8
 	TW0		'UNICODE(-1)',		szcdUnicode
 	
-	dbCodeTable		dd		0,936,932,65001,-1
+	dbCodeTable		dd		0,936,932,950,65001,-1

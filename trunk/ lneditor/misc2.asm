@@ -227,7 +227,6 @@ _RecodeFile proc uses esi ebx edi _lpFI
 				inc ebx
 			.endw
 		.endif
-		invoke VirtualFree,[esi].lpText,0,MEM_RELEASE
 		invoke VirtualFree,[esi].lpTextIndex,0,MEM_RELEASE
 		invoke VirtualFree,[esi].lpStreamIndex,0,MEM_RELEASE
 		lea eax,@ret
@@ -252,10 +251,12 @@ _GetCodeIndex proc _code
 		mov eax,1
 	.elseif ecx==CS_SJIS
 		mov eax,2
-	.elseif ecx==CS_UTF8
+	.elseif ecx==CS_BIG5
 		mov eax,3
-	.elseif ecx==CS_UNICODE
+	.elseif ecx==CS_UTF8
 		mov eax,4
+	.elseif ecx==CS_UNICODE
+		mov eax,5
 	.else
 		xor eax,eax
 	.endif
@@ -267,6 +268,7 @@ _AddCodeCombo proc _hCombo
 	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdDefault
 	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdGBK
 	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdSJIS
+	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdBig5
 	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdUTF8
 	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdUnicode
 	ret
