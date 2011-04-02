@@ -28,7 +28,7 @@ InitInfo endp
 ;ÅÐ¶ÏÎÄ¼þÍ·
 Match proc uses esi edi _lpszName
 	LOCAL @szMagic[10h]:byte
-	invoke CreateFileW,_lpszName,GENERIC_READ,0,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
+	invoke CreateFileW,_lpszName,GENERIC_READ,FILE_SHARE_READ OR FILE_SHARE_WRITE,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
 	cmp eax,-1
 	je _ErrMatch
 	push eax

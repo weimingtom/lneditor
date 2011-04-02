@@ -1,4 +1,4 @@
-WLT_LOADMELERR			EQU		1
+WLT_LOADMELERR			EQU		10001h
 
 .data
 TW0		'log.txt',		szLogFileName
@@ -30,6 +30,18 @@ _OpenLog proc
 	invoke SetFilePointer,hLogFile,0,0,FILE_END
 	ret
 _OpenLog endp
+
+_OutputMessage proc _nType,_lpszName,_lpsz1,_lpsz2
+	.if nUIStatus & UIS_CONSOLE
+	.else
+		.if nUIStatus & UIS_BUSY
+			invoke _WriteLog,_nType,_lpszName,_lpsz1,_lpsz2
+		.else
+			
+		.endif
+	.endif
+	ret
+_OutputMessage endp
 
 _WriteLog proc uses ebx _nType,_lpszName,_lpsz1,_lpsz2
 	LOCAL @nowtime:SYSTEMTIME

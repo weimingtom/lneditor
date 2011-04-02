@@ -190,9 +190,10 @@ _RecoverUI			proto
 ;assemble menu
 _ExportAll			proto
 _ExportAllToTxt		proto :dword,:dword,:dword,:dword,:dword,:dword
-
 _WndExpAllProc		proto :dword,:dword,:dword,:dword
 _ImportAll			proto
+_ImportAllToTxt		proto :dword,:dword,:dword,:dword,:dword,:dword
+_WndImpAllProc		proto :dword,:dword,:dword,:dword
 _SummaryFindAll		proto
 _Config				proto
 _WndConfigProc		proto :dword,:dword,:dword,:dword
@@ -200,6 +201,11 @@ _TxtFilter				proto
 _WndFilterProc			proto :dword,:dword,:dword,:dword
 _About				proto
 _WndAboutProc		proto :dword,:dword,:dword,:dword
+
+;log
+_WriteLog			proto :dword,:dword,:dword,:dword
+_OutputMessage		proto :dword,:dword,:dword,:dword
+_OpenLog			proto
 
 ;default edit
 _GetText				proto :dword,:dword
@@ -302,7 +308,7 @@ _FileRec ends
 	TW0			'Multiline Editor',	szDisplayName
 	TW0			'lnedit',			szInnerName
 	TW0			' v1.0',			szDisplayVer
-	TW0			' v1.0.0.397',		szFullVer
+	TW0			' v1.0.0.400',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0
