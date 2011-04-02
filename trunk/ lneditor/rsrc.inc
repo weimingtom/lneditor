@@ -161,8 +161,9 @@ IDC_IA_CANCEL           equ 2
 IDC_IA_OK               equ 1
 IDC_IA_DIRO             equ 2118
 IDC_IA_BROWSEO          equ 2119
-IDC_BROWSEN             equ 2120
+IDC_IA_BROWSEN          equ 2120
 IDC_IA_DIRN             equ 2121
+IDC_IA_MELIDX           equ 2116
 IDR_MMENU_CHS           equ 10000
 IDM_OPEN                equ 10001
 IDM_LOAD                equ 10002

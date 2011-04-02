@@ -65,7 +65,6 @@ _FileInfo struct
 	;以下域由插件负责填写
 	nMemoryType			dd		?						
 	;存储类型详细含义见文档。
-;	lpText				dd		?						;从文件中提取出的纯文本的内存指针。若采用MT_EVERYSTRING存储，此项可选。
 	lpTextIndex			dd		?						;纯文本字符串索引表指针。
 	lpStreamIndex		dd		?						;可选，原始脚本字符串索引表指针。若为POINTERONLY存储类型，此项必须。
 	nStringType			dd		?						;字符串类型。如C字符串、PASCAL字符串等。
@@ -74,7 +73,7 @@ _FileInfo struct
 ;	nLineLen				dd		?						;可选，若使用定长字符串存储，本项须指示字符串长度。独立内存字符串亦可使用。
 	
 	bReadOnly			dw		?						;指定该文件是否为只读（是否在列表框左侧）
-	nCharSet				dd		?						;指示将此文件中字符串解释为何种字符集，用户可以设定，否则插件可根据自己的判断填写。
+	nCharSet				dd		?						;指示将此文件中字符串解释为何种字符集，用户可以设定，否则插件可自行填写。
 	
 	lpCustom				dd		?						;插件自行使用。
 	Reserved				dd		2		dup(?)

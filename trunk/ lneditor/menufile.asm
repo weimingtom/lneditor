@@ -656,7 +656,7 @@ _ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
 		add esi,2
 	.endw
 	lea ebx,[ecx+1]
-	
+
 	mov esi,lpMarkTable
 	.if !esi
 		mov ecx,_lpFI
@@ -672,7 +672,7 @@ _ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
 			inc esi
 		loop @B
 	.endif
-	.if edx!=ebx
+	.if edx>ebx
 		mov eax,E_LINENOTMATCH
 		jmp _Ex
 	.endif
@@ -686,7 +686,7 @@ _ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
 		xor ebx,ebx
 		mov edi,_lpTxt
 		add edi,2
-		.while ebx<@nLine
+		.while ebx<FileInfo2.nLine
 			invoke _IsDisplay,ebx
 			or eax,eax
 			je _NextLine2
@@ -700,7 +700,6 @@ _ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
 			repne scasw
 			add edi,2
 			not ecx
-			inc ecx
 			shl ecx,1
 			invoke HeapAlloc,hGlobalHeap,0,ecx
 			.if !eax

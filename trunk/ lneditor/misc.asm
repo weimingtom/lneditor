@@ -188,7 +188,7 @@ _DirCmpW proc uses edi ebx _lpszPath,_lpszName
 _DirCmpW endp
 
 _DirModifyExtendName proc uses edi _lpOri,_lpExtendName
-	mov _lpOri,edi
+	mov edi,_lpOri
 	xor ax,ax
 	or ecx,-1
 	repne scasw
