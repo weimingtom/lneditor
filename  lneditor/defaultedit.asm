@@ -150,6 +150,7 @@ _ModifyLineA proc uses esi edi ebx _pFI,_nLine
 	mov ebx,eax
 	invoke lstrlenW,ebx
 	shl eax,2
+	mov @pNewLen,eax
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
 	.if !eax
 		mov eax,E_NOMEM
@@ -160,7 +161,7 @@ _ModifyLineA proc uses esi edi ebx _pFI,_nLine
 	mov eax,_nLine
 	mov esi,[esi+eax*4]
 	
-	invoke WideCharToMultiByte,[edi].nCharSet,0,ebx,-1,@pNewStr,100000,0,0
+	invoke WideCharToMultiByte,[edi].nCharSet,0,ebx,-1,@pNewStr,@pNewLen,0,0
 	.if !eax
 		invoke HeapFree,hGlobalHeap,0,@pNewStr
 		mov eax,E_NOTENOUGHBUFF
@@ -180,9 +181,10 @@ _ModifyLineA proc uses esi edi ebx _pFI,_nLine
 	sub esi,edx
 	mov @pOldLen,esi
 	invoke _ReplaceInMem,@pNewStr,@pNewLen,edx,esi,ecx
-	or eax,eax
-	jne _ExMLA
+	mov ebx,eax
 	invoke HeapFree,hGlobalHeap,0,@pNewStr
+	or ebx,ebx
+	jne _ExMLA
 	
 	mov esi,[edi].lpStreamIndex
 	mov eax,_nLine

@@ -1,10 +1,11 @@
-.486
+.586
 .model flat,stdcall
 option casemap:none
 
 
 include plugin.inc
 include lnedit.inc
+include macros.inc
 include config.inc
 include com.inc
 
