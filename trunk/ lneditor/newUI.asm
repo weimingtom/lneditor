@@ -289,7 +289,7 @@ _DrawListItem proc uses edi ebx _lpDIS
 	LOCAL @hmdc2,@hBmp2,@hOldBmp2
 	LOCAL @nRealLine
 	mov dword ptr @bf,0
-	
+
 	mov edi,_lpDIS
 	assume edi:ptr DRAWITEMSTRUCT
 	cmp [edi].itemID,-1
@@ -524,7 +524,7 @@ _NewEditProc proc uses ebx esi edi,hwnd,uMsg,wParam,lParam
 			invoke DeleteDC,@hmdc
 			invoke DeleteObject,@hbmp
 			invoke DeleteDC,@hmdc2
-			invoke DeleteDC,@hbmp2
+			invoke DeleteObject,@hbmp2
 			mov eax,1
 			ret
 		.endif

@@ -443,16 +443,16 @@ _Display proc uses edi _sztime
 	ret
 _Display endp
 _DisplayStatus proc _lpsz,_time
-	invoke HeapAlloc,hGlobalHeap,0,8
-	or eax,eax
-	je @F
-	mov ecx,_lpsz
-	mov [eax],ecx
-	mov ecx,_time
-	mov [eax+4],ecx
-	invoke CreateThread,0,0,offset _Display,eax,0,0
-	invoke CloseHandle,eax
-	@@:
+;	invoke HeapAlloc,hGlobalHeap,0,8
+;	or eax,eax
+;	je @F
+;	mov ecx,_lpsz
+;	mov [eax],ecx
+;	mov ecx,_time
+;	mov [eax+4],ecx
+;	invoke CreateThread,0,0,offset _Display,eax,0,0
+;	invoke CloseHandle,eax
+;	@@:
 	ret
 _DisplayStatus endp
 
