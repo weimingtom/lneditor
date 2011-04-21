@@ -22,7 +22,8 @@ _WildcharMatchW proc uses esi edi ebx _lpszPattern,_lpszStr
 		mov ax,[edi]
 		.if ax=='*'
 			add edi,2
-			.break .if !word ptr [edi]
+			cmp word ptr [edi],0
+			je matchSuccess
 			mov ebx,edi
 			.repeat
 				add edi,2
@@ -86,6 +87,8 @@ singleComp:
 		.endif
 nextMatch:
 	.endw
+	cmp word ptr [esi],0
+	jne matchFail
 matchSuccess:
 	mov eax,1
 	ret

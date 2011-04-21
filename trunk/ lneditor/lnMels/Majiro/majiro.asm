@@ -167,11 +167,13 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 			_SpecialGT:
 				.if al==-1
 _IsNotDispStr2GT:
+					xor eax,eax
 					lodsw
 					add esi,eax
 					.continue
 				.elseif al==-2
 _IsStr2GT:
+					xor eax,eax
 					lodsw
 					add esi,eax
 					mov @pLastString,esi
@@ -222,6 +224,9 @@ _IsStr2GT:
 	add ecx,3
 	shl ecx,2
 	invoke HeapReAlloc,hHeap,HEAP_REALLOC_IN_PLACE_ONLY,[edi].lpJumpTable,ecx
+	or eax,eax
+	je _NomemGT
+	mov [edi].lpJumpTable,eax
 	.if !@nJump2
 		inc @nJump2
 	.endif
@@ -229,14 +234,19 @@ _IsStr2GT:
 	add eax,3
 	shl eax,3
 	invoke HeapReAlloc,hHeap,HEAP_REALLOC_IN_PLACE_ONLY,[edi].lpJumpTable2,eax
+	or eax,eax
+	je _NomemGT
+	mov [edi].lpJumpTable2,eax
 	
 	;分配FileInfo中的内存
 	mov eax,@nLine
-	shl eax,2
-	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
-	or eax,eax
-	je _NomemGT
-	mov [ebx].lpStreamIndex,eax
+	.if eax
+		shl eax,2
+		invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
+		or eax,eax
+		je _NomemGT
+		mov [ebx].lpStreamIndex,eax
+	.endif
 	
 	;开始处理字节码
 	mov [ebx].nMemoryType,MT_POINTERONLY
@@ -280,11 +290,13 @@ _IsStr2GT:
 			_SpecialGT2:
 				.if al==-1
 _IsNotDispStrGT:
+					xor eax,eax
 					lodsw
 					add esi,eax
 					.continue
 				.elseif al==-2
 _IsStrGT:
+					xor eax,eax
 					lodsw
 					movzx ecx,ax
 					mov eax,@nLine
@@ -484,8 +496,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	sub edx,[esi].lpData
 	xor ecx,ecx
 	.while ecx<[esi].nEntryCount
-		.if dword ptr [edi+ecx*4+4]>edx
-			add dword ptr [edi+ecx*4+4],eax
+		.if dword ptr [edi+ecx*8+4]>edx
+			add dword ptr [edi+ecx*8+4],eax
 		.endif
 		inc ecx
 	.endw

@@ -17,6 +17,14 @@ DllMain proc _hInstance,_dwReason,_dwReserved
 	ret
 DllMain endp
 
+;
+InitInfo proc _lpMelInfo2
+	mov ecx,_lpMelInfo2
+	mov _MelInfo2.nInterfaceVer[ecx],00010001h
+	mov _MelInfo2.nCharacteristic[ecx],0
+	ret
+InitInfo endp
+
 ;ÅÐ¶ÏÎÄ¼þÍ·
 Match proc _lpszName
 	LOCAL @hFile,@buff[8]:byte
@@ -224,7 +232,6 @@ _i51GT:
 	sub eax,[ebx].lpTextIndex
 	shr eax,2
 	mov [ebx].nLine,eax
-	mov [ebx].nLineLen,MAX_STRINGLEN
 	assume ebx:nothing
 	
 	mov bIsSilent,0
@@ -705,11 +712,11 @@ _GetTextByIdx proc _idx,_lpGscInfo
 _GetTextByIdx endp
 
 _AddString proc _lpStr,_lppTIdx,_nCharSet
-	LOCAL @pStr
+	LOCAL @pStr,@nLen
 	invoke lstrlenA,_lpStr
-	.if eax<MAX_STRINGLEN
-		mov eax,MAX_STRINGLEN
-	.endif
+	inc eax
+	mov @nLen,eax
+	shl eax,1
 	invoke HeapAlloc,hHeap,0,eax
 	or eax,eax
 	je _NomemAS
@@ -718,7 +725,7 @@ _AddString proc _lpStr,_lppTIdx,_nCharSet
 	mov edx,[ecx]
 	mov [edx],eax
 	add dword ptr [ecx],4
-	invoke MultiByteToWideChar,_nCharSet,0,_lpStr,-1,@pStr,MAX_STRINGLEN/2
+	invoke MultiByteToWideChar,_nCharSet,0,_lpStr,-1,@pStr,@nLen
 	mov eax,1
 	ret
 _NomemAS:

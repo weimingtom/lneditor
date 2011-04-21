@@ -8,10 +8,14 @@ _MakeStringListFromStream proc uses edi esi ebx _lpFI
 	xor ebx,ebx
 	mov ecx,[edi].nStringType
 	mov eax,[edi].nLine
+	.if !eax
+		xor eax,eax
+		jmp _ExMSL
+	.endif
 	mov edx,[edi].nCharSet
 	mov @nStringType,ecx
 	mov @nCharSet,edx
-	mov @nLine,eax	
+	mov @nLine,eax
 	shl eax,2
 	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	.if !eax
@@ -157,6 +161,7 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 ;		.if ecx>eax
 ;			mov eax,ecx
 ;		.endif
+		inc ecx
 		shl ecx,1
 		invoke HeapAlloc,hGlobalHeap,0,ecx
 		.if !eax
@@ -166,9 +171,14 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 		mov ecx,_lppString
 		mov [ecx],eax
 		mov ecx,@nStrLen
+		mov edx,[edi].nStringType
 		mov edi,eax
 		rep movsw
+		.if edx==ST_PASCAL2 || EDX==ST_PASCAL4
+			mov word ptr [edi],0
+		.endif
 	.else
+		inc ecx
 		shl ecx,1
 		push ebx
 		mov ebx,ecx
@@ -187,6 +197,12 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 			invoke HeapFree,hGlobalHeap,0,[ecx]
 			mov eax,E_NOTENOUGHBUFF
 			jmp _ExGSFS
+		.endif
+		mov edx,[edi].nStringType
+		.if edx==ST_PASCAL2 || EDX==ST_PASCAL4
+			mov ecx,_lppString
+			mov edx,[ecx]
+			mov word ptr [edx+eax*2],0
 		.endif
 	.endif
 	assume edi:nothing
@@ -418,8 +434,8 @@ _MatchFilter proc uses esi edi ebx _lpStr,_lpFilter
 		mov edi,[esi].lpszInclude
 	assume esi:nothing
 		.if word ptr [edi]
-			mov eax,edi
 			.repeat
+				mov eax,edi
 				loop1:
 				.while word ptr [edi]!='\'
 					.if !word ptr [edi]
