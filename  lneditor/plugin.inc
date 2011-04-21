@@ -69,7 +69,7 @@ _FileInfo struct
 	nMemoryType			dd		?						
 	;存储类型详细含义见文档。
 	lpTextIndex			dd		?						;纯文本字符串索引表指针。
-	lpStreamIndex		dd		?						;可选，原始脚本字符串索引表指针。若为POINTERONLY存储类型，此项必须。
+	lpStreamIndex			dd		?						;可选，原始脚本字符串索引表指针。若为POINTERONLY存储类型，此项必须。
 	nStringType			dd		?						;字符串类型。如C字符串、PASCAL字符串等。
 	nStreamSize			dd		?						;文件长度。跟随脚本编辑随时更新。
 	nLine				dd		?						;文本行数。
@@ -87,6 +87,8 @@ MIC_CUSTOMEDIT			EQU		00000001H	;非标准插件，重载了_Functions中的函数
 MIC_CUSTOMTXTPROC		EQU		00000002H	;纯文本专用插件（重载了TXT过滤函数）
 MIC_NOPREREAD			EQU		00000004H	;不需要预先将文件读入内存
 MIC_CUSTOMGUI			EQU		00000008H	;更改了界面
+MIC_CUSTOMCONFIG		EQU		00000010H	;自定义选项
+
 MIC_NOBATCHEXP			EQU		00010000H	;不支持批量导出
 MIC_NOBATCHIMP			EQU		00020000H	;不支持批量导入
 MIC_NOHALFANGLE		EQU		00040000H	;不支持半角字符

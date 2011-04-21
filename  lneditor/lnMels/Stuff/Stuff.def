@@ -1,9 +1,8 @@
 EXPORTS
-InitInfo
 GetText
-ModifyLine
-Release
-Match
 PreProc
+ModifyLine
+InitInfo
+Match
 SaveText
 SetLine

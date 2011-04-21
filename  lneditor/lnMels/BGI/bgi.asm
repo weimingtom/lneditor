@@ -17,6 +17,14 @@ DllMain proc _hInstance,_dwReason,_dwReserved
 	ret
 DllMain endp
 
+;
+InitInfo proc _lpMelInfo2
+	mov ecx,_lpMelInfo2
+	mov _MelInfo2.nInterfaceVer[ecx],00010001h
+	mov _MelInfo2.nCharacteristic[ecx],0
+	ret
+InitInfo endp
+
 ;判断文件头
 Match proc uses esi edi _lpszName
 	LOCAL @szMagic[1ch]
@@ -75,7 +83,7 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	or eax,eax
 	mov @pRI,eax
 	je _NomemGT
-	mov [ebx].Reserved,eax
+	mov [ebx].lpCustom,eax
 	
 	mov [ebx].nMemoryType,MT_POINTERONLY
 	mov [ebx].nStringType,ST_ENDWITHZERO
@@ -123,10 +131,6 @@ _NomemGT:
 	ret
 GetText endp
 
-;预读一遍脚本中的控制流，保证没有异常，指令地址记入IndexCS
-
-
-
 ;
 ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	mov ebx,_lpFI
@@ -162,7 +166,7 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		mov eax,[ecx+1ch]
 		lea eax,[eax+ecx+1ch]
 		sub esi,eax
-		mov edx,[ebx].Reserved
+		mov edx,[ebx].lpCustom
 		mov ecx,_nLine
 		mov ecx,[edx+ecx*4]
 		mov [ecx],esi
@@ -205,7 +209,7 @@ SetLine endp
 
 Release proc uses esi edi ebx _lpFI
 	mov ecx,_lpFI
-	mov eax,_FileInfo.Reserved[ecx]
+	mov eax,_FileInfo.lpCustom[ecx]
 	.if eax
 		invoke VirtualFree,eax,0,MEM_RELEASE
 	.endif
