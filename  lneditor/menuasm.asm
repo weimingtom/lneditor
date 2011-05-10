@@ -321,8 +321,8 @@ _WndImpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			add eax,lpMels
 			mov ebx,eax
 			mov ecx,_MelInfo.lpMelInfo2[ebx]
-			.if _MelInfo2.nCharacteristic[ecx]&MIC_NOBATCHEXP
-				mov eax,IDS_NOTSUPPORTBATCHEXP
+			.if _MelInfo2.nCharacteristic[ecx]&MIC_NOBATCHIMP
+				mov eax,IDS_NOTSUPPORTBATCHIMP
 				invoke _GetConstString
 				invoke MessageBoxW,hwnd,eax,offset szDisplayName,MB_ICONINFORMATION
 				jmp _ExWEAP
@@ -445,6 +445,7 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 	LOCAL @stFileInfo:_FileInfo
 	LOCAL @err,@ri
 	LOCAL @lpFuncs,@lpOldMT,@lpFileT
+	LOCAL @pMelInfo
 	or nUIStatus,UIS_BUSY
 	invoke HeapAlloc,hGlobalHeap,0,sizeof _Functions+sizeof _SimpFunc+sizeof _TxtFunc
 	mov @lpFuncs,eax
@@ -462,6 +463,7 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 		mul dx
 		add eax,lpMels
 		mov ebx,eax
+		mov @pMelInfo,ebx
 		assume ebx:ptr _MelInfo
 		invoke _GetSimpFunc,[ebx].hModule,offset dbSimpFunc
 		invoke GetProcAddress,[ebx].hModule,offset szFPreProc
@@ -483,15 +485,16 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 			.endif
 			.if !_bForceMel
 				.if _nMelIdx!=-1
+					mov ebx,@pMelInfo
 					push edi
 					call [ebx].pMatch
 				.else
 					invoke _SelfMatch,edi
 				.endif
-				cmp eax,MR_NO
-				je _Next2IATT
-				cmp eax,MR_ERR
-				je _Next2IATT
+				.if eax==MR_NO || EAX==MR_ERR
+					invoke _OutputMessage,WLT_BATCHIMPERR,ebx,edi,offset szWltEImp1
+					jmp _Next2IATT
+				.endif
 			.endif
 			invoke lstrcpyW,addr @stFileInfo.szName,edi
 			.if _nMelIdx!=-1
@@ -500,8 +503,10 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 				lea ecx,offset dbMelInfo2
 			.endif
 			invoke _LoadFile,addr @stFileInfo,LM_NONE,ecx
-			or eax,eax
-			je _Next2IATT
+			.if !eax
+				invoke _OutputMessage,WLT_BATCHIMPERR,ebx,edi,offset szWltEFileLoad
+				jmp _Next2IATT
+			.endif
 			
 			invoke _DirModifyExtendName,edi,offset szTxt
 			invoke SetCurrentDirectoryW,_lpszTxt
@@ -509,17 +514,27 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 			mov @stFileInfo.nCharSet,ecx
 			lea edi,@stFindData.cFileName
 			invoke CreateFileW,edi,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
-			cmp eax,-1
-			je _Next2IATT
+			.if eax==-1
+				invoke _OutputMessage,WLT_BATCHIMPERR,ebx,edi,offset szWltEFileCreate
+				jmp _Next2IATT
+			.endif
 			mov @hFileT,eax
 			invoke GetFileSize,@hFileT,0
 			mov ebx,eax
 			add eax,4
 			invoke HeapAlloc,hGlobalHeap,0,eax
-			or eax,eax
-			je _Next3IATT
+			.if eax==-1
+				mov ecx,@pMelInfo
+				invoke _OutputMessage,WLT_BATCHIMPERR,ecx,edi,offset szWltEMem1
+				jmp _Next3IATT
+			.endif
 			mov @lpFileT,eax
 			invoke ReadFile,@hFileT,@lpFileT,ebx,offset dwTemp,0
+			.if !eax
+				mov ecx,@pMelInfo
+				invoke _OutputMessage,WLT_BATCHIMPERR,ecx,edi,offset szWltEFileRead
+				jmp _Next5IATT
+			.endif
 			
 			lea ecx,@ri
 			push ecx
@@ -528,53 +543,72 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 			call dbSimpFunc+_SimpFunc.GetText
 			.if eax
 				mov @err,1
+				mov ecx,@pMelInfo
+				invoke _OutputMessage,WLT_BATCHIMPERR,ecx,edi,offset szWltEGetText
 				jmp _Next5IATT
 			.endif
 			.if @stFileInfo.nMemoryType==MT_POINTERONLY
 				invoke _MakeStringListFromStream,addr @stFileInfo
 				.if eax
 					mov @err,1
+					mov ecx,@pMelInfo
+					invoke _OutputMessage,WLT_BATCHIMPERR,ecx,edi,offset szWltEMakeList
 					jmp _Next5IATT
 				.endif
 			.endif
 			.if _bFilterOn
 				invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,@stFileInfo.nLine
-				or eax,eax
-				je _FilterNext
+				.if !eax
+					jmp _Next5IATT
+					mov ecx,@pMelInfo
+					invoke _OutputMessage,WLT_BATCHIMPERR,ecx,edi,offset szWltEImp2
+				.endif
 				mov lpMarkTable,eax
 				invoke _UpdateHideTable,addr @stFileInfo
-				invoke _ImportSingleTxt,addr @stFileInfo,@lpFileT
+				invoke _ImportSingleTxt,addr @stFileInfo,@lpFileT,TRUE
 				.if eax
+			_IstE:
 					mov @err,1
+					invoke _GetGeneralErrorString,eax
+					mov ecx,@pMelInfo
+					invoke _OutputMessage,WLT_BATCHIMPERR,ecx,edi,eax
 				.endif
 				invoke HeapFree,hGlobalHeap,0,lpMarkTable
 			.else
 			_FilterNext:
-				invoke _ImportSingleTxt,addr @stFileInfo,@lpFileT
-				.if eax
-					mov @err,1
-				.endif
+				invoke _ImportSingleTxt,addr @stFileInfo,@lpFileT,FALSE
+				or eax,eax
+				jne _IstE
 			.endif
-			.if !@err
-				xor ebx,ebx
-				.while ebx<@stFileInfo.nLine
+			xor ebx,ebx
+			.while ebx<@stFileInfo.nLine
+				.if _bFilterOn
 					invoke _IsDisplay,ebx
 					or eax,eax
 					je _NextLineIATT
-					push ebx
-					lea eax,@stFileInfo
-					push eax
-					call dbSimpFunc+_SimpFunc.ModifyLine
-					.if eax
-						jmp _Next5IATT
-					.endif
-				_NextLineIATT:
-					inc ebx
-				.endw
-				invoke SetCurrentDirectoryW,_lpszScr
+				.endif
+				push ebx
 				lea eax,@stFileInfo
 				push eax
-				call dbSimpFunc+_SimpFunc.SaveText
+				call dbSimpFunc+_SimpFunc.ModifyLine
+				.if eax
+					lea ecx,[ebx+1]
+					invoke wsprintfW,offset gszTemp,offset szWltBImpErr2,ecx
+					invoke wsprintfW,offset gszTemp2,offset szWltBImpErr,edi,offset gszTemp
+					mov ecx,@pMelInfo
+					invoke _OutputMessage,WLT_CUSTOM,ecx,offset gszTemp2,0
+					jmp _Next5IATT
+				.endif
+			_NextLineIATT:
+				inc ebx
+			.endw
+			invoke SetCurrentDirectoryW,_lpszScr
+			lea eax,@stFileInfo
+			push eax
+			call dbSimpFunc+_SimpFunc.SaveText
+			.if eax
+				mov ecx,@pMelInfo
+				invoke _OutputMessage,WLT_BATCHIMPERR,ecx,edi,offset szWltESaveText
 			.endif
 			
 _Next5IATT:

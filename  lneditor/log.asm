@@ -1,5 +1,7 @@
 WLT_CUSTOM				EQU		10000H
 WLT_LOADMELERR			EQU		10001h
+WLT_BATCHEXPERR		EQU		10002H
+WLT_BATCHIMPERR		EQU		10003H
 
 .data
 TW0		'log.txt',		szLogFileName
@@ -9,6 +11,18 @@ TW0		"[%s]\t%d/%d/%d %02d:%02d:%02d\t",	szWltTime
 TW0		'Can\-t load %s. %s\n',	szWltLoadMelErr
 TW0		'This is not an available MEL.',szWltEMel1
 TW0		'Version too low.',szWltEMel2
+
+TW0		'An error has occurred while importing %s. %s\n',	szWltBImpErr
+TW0		'Line %d can\-t be committed to the plugin.',	szWltBImpErr2
+TW		'File do not match the plugin ',	szWltEImp1
+TW0		'or errors occurred when match.',		__fagaef
+TW0		'Can\-t make the new Mark Table cuz nomem.',	szWltEImp2
+
+TW0		'Can\-t load the file.',	szWltEFileLoad
+TW0		'Can\-t get text in the file.',	szWltEGetText
+TW0		'Can\-t save the file.',	szWltESaveText
+TW0		'Can\-t make the string list from the stream.',	szWltEMakeList
+
 
 TW0		'Not enough memory.',szWltEMem1
 TW0		'Mem access error.',	szWltEMem2
@@ -21,7 +35,7 @@ TW0		'Can\-t read file.',	szWltEFileRead
 TW0		'Can\-t write file.',	szWltEFileWrite
 
 TW0		'Invalid Parameter.',	szWltEPara
-TW0		'An error occured in the plugin.',	szWltEPlugin
+TW0		'An error has occurred in the plugin.',	szWltEPlugin
 
 TW0		'The line is not exist.',	szWltELineExist
 TW0		'The line is too long',	szWltELineLong
@@ -124,6 +138,9 @@ _WriteLog proc uses ebx _nType,_lpszName,para1,para2
 		.elseif eax==WLT_CUSTOM
 			invoke lstrcpyW,ebx,para1
 			invoke lstrlenW,para1
+			lea ebx,[ebx+eax*2]
+		.elseif eax==WLT_BATCHIMPERR
+			invoke wsprintfW,ebx,offset szWltBImpErr,para1,para2
 			lea ebx,[ebx+eax*2]
 		.elseif EAX==WLT_LOADMELERR
 			invoke wsprintfW,ebx,offset szWltLoadMelErr,para1,para2

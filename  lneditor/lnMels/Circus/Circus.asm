@@ -319,9 +319,11 @@ CircusCheckLine proc _lpStr
 			add esi,2
 			.continue
 		.endif
-		.if ax<100h
-			int 3
-		.endif
+;		.if ax<80h
+;			int 3
+;		.endif
+		cmp ax,80h
+		jbe _Err
 	.until 0
 	mov eax,1
 	ret
