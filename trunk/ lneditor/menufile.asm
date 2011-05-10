@@ -636,8 +636,8 @@ _ErrEST:
 	ret
 _ExportSingleTxt endp
 
-_ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
-	local @nLine
+_ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt,_bFilterOn
+	local @nLineTxt
 	mov esi,_lpTxt
 	.if word ptr [esi]!=0feffh
 		mov eax,E_WRONGFORMAT
@@ -658,7 +658,7 @@ _ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
 	lea ebx,[ecx+1]
 
 	mov esi,lpMarkTable
-	.if !esi
+	.if !_bFilterOn
 		mov ecx,_lpFI
 		mov edx,_FileInfo.nLine[ecx]
 	.else
@@ -677,7 +677,7 @@ _ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
 		jmp _Ex
 	.endif
 	
-	mov @nLine,ebx
+	mov @nLineTxt,ebx
 	
 	mov esi,_lpFI
 	assume esi:ptr _FileInfo
@@ -686,10 +686,12 @@ _ImportSingleTxt proc uses esi edi ebx _lpFI,_lpTxt
 		xor ebx,ebx
 		mov edi,_lpTxt
 		add edi,2
-		.while ebx<FileInfo2.nLine
-			invoke _IsDisplay,ebx
-			or eax,eax
-			je _NextLine2
+		.while ebx<[esi].nLine
+			.if _bFilterOn
+				invoke _IsDisplay,ebx
+				or eax,eax
+				je _NextLine2
+			.endif
 			mov eax,[esi].lpTextIndex
 			mov ecx,[eax+ebx*4]
 			mov dword ptr [eax+ebx*4],0
@@ -757,7 +759,7 @@ _NomemIT:
 		mov @lpBuff,eax
 		invoke ReadFile,@hTxtFile,@lpBuff,dword ptr @nFZ,offset dwTemp,0
 		
-		invoke _ImportSingleTxt,offset FileInfo2,@lpBuff
+		invoke _ImportSingleTxt,offset FileInfo2,@lpBuff,TRUE
 		.if !eax
 			xor ebx,ebx
 			.while ebx<FileInfo2.nLine

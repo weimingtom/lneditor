@@ -13,6 +13,7 @@ include _browsefolder.asm
 include _CreateDIBitmap.asm
 include config.asm
 include wildchar.asm
+include log.asm
 include choosemel.asm
 include menufile.asm
 include menuedit.asm
@@ -21,7 +22,6 @@ include menuasm.asm
 include menuopt.asm
 include defaultedit.asm
 include record.asm
-include log.asm
 
 
 include misc.asm
