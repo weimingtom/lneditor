@@ -1,4 +1,4 @@
-INTERFACE_VER			EQU		00010001h
+INTERFACE_VER			EQU		00020000h
 
 MAX_STRINGLEN			equ		1024
 ;错误代码
@@ -21,6 +21,10 @@ E_CODEFAILED				EQU		102H
 E_LINENOTMATCH			EQU		103H
 E_LINEDENIED				EQU		104H
 
+WLT_CUSTOM				EQU		10000H
+WLT_LOADMELERR			EQU		10001h
+WLT_BATCHEXPERR		EQU		10002H
+WLT_BATCHIMPERR		EQU		10003H
 
 ;Return Information of GetText
 RI_SUC_LINEONLY			EQU		1	;文本已提取到内存中，需要主程序将其添加到列表框中
@@ -76,7 +80,7 @@ _FileInfo struct
 	nLine				dd		?						;文本行数。
 ;	nLineLen				dd		?						;可选，若使用定长字符串存储，本项须指示字符串长度。独立内存字符串亦可使用。
 	
-	bReadOnly			dw		?						;指定该文件是否为只读（是否在列表框左侧）
+	bReadOnly			dd		?						;指定该文件是否为只读（是否在列表框左侧）
 	nCharSet				dd		?						;指示将此文件中字符串解释为何种字符集，用户可以设定，否则插件可自行填写。
 	
 	lpCustom				dd		?						;插件自行使用。

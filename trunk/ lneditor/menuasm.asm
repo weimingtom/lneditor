@@ -140,7 +140,7 @@ _WndExpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			.else
 				mov eax,IDS_FAILEXPORT
 				invoke _GetConstString
-				invoke MessageBoxW,hwnd,ecx,0,MB_OK or MB_ICONERROR
+				invoke MessageBoxW,hwnd,eax,0,MB_OK or MB_ICONERROR
 			.endif
 		.elseif ax==IDCANCEL
 			invoke EndDialog,hwnd,0
