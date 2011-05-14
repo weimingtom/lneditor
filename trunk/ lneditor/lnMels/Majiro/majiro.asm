@@ -20,7 +20,7 @@ DllMain endp
 
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00010000h
+	mov _MelInfo2.nInterfaceVer[ecx],00020000h
 	mov _MelInfo2.nCharacteristic[ecx],0
 	ret
 InitInfo endp
