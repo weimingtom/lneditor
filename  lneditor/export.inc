@@ -21,3 +21,4 @@ _WildcharMatchW		proto :dword,:dword
 
 ;
 _ReplaceInMem		proto :dword,:dword,:dword,:dword,:dword
+_OutputMessage		proto :dword,:dword,:dword,:dword

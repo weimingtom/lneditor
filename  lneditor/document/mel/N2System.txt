@@ -1,0 +1,10 @@
+名称:  N2System
+格式:  .nsb(.map)
+版本:  1.0.0
+测试通过:  Steins;Gate
+
+说明:
+Nitro+的格式。
+
+[Changelog]
+5/11/2011 v1.0.0 发布。

@@ -1,13 +1,11 @@
-WLT_CUSTOM				EQU		10000H
-WLT_LOADMELERR			EQU		10001h
-WLT_BATCHEXPERR		EQU		10002H
-WLT_BATCHIMPERR		EQU		10003H
 
 .data
 TW0		'log.txt',		szLogFileName
 dbUBOM		db		0ffh,0feh
 TW0		'[%s] %s',	szWltMB
 TW0		"[%s]\t%d/%d/%d %02d:%02d:%02d\t",	szWltTime
+TW0		'Unknown error.',	szWltUnkError
+
 TW0		'Can\-t load %s. %s\n',	szWltLoadMelErr
 TW0		'This is not an available MEL.',szWltEMel1
 TW0		'Version too low.',szWltEMel2
@@ -71,6 +69,10 @@ _OpenLog endp
 
 _GetGeneralErrorString proc _nType
 	mov ecx,_nType
+	.if ecx==-1
+		mov eax,offset szWltUnkError
+		ret
+	.endif
 	.if ecx<100h
 		lea edx,pWltError1
 		mov eax,[edx+ecx*4]

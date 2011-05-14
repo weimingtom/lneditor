@@ -8,9 +8,9 @@ _OpenScript proc
 	LOCAL @szstr[SHORT_STRINGLEN]:byte
 	
 	xor eax,eax
-	mov FileInfo2.bReadOnly,ax
+	mov FileInfo2.bReadOnly,eax
 	inc eax
-	mov FileInfo1.bReadOnly,ax
+	mov FileInfo1.bReadOnly,eax
 	.if dbConf+_Configs.nEditMode==EM_SINGLE
 		invoke _GenName2,offset FileInfo1.szName,offset FileInfo2.szName
 		or eax,eax
