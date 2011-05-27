@@ -34,6 +34,7 @@ TW0		'Can\-t write file.',	szWltEFileWrite
 
 TW0		'Invalid Parameter.',	szWltEPara
 TW0		'An error has occurred in the plugin.',	szWltEPlugin
+TW0		'Failed to analysis the script.',	szWltEAnaFailed
 
 TW0		'The line is not exist.',	szWltELineExist
 TW0		'The line is too long',	szWltELineLong
@@ -44,7 +45,7 @@ TW0		'Lines in left and right is not match.',	szWltELineMatch
 .data
 align 4
 pWltError1	dd	0,offset szWltEMem1,offset szWltEMem2,offset szWltEMem3,offset szWltEFileAccess,offset szWltEFatal,offset szWltEFormat
-			dd	offset szWltEFileCreate,offset szWltEFileRead,offset szWltEFileWrite,offset szWltEPara,offset szWltEPlugin
+			dd	offset szWltEFileCreate,offset szWltEFileRead,offset szWltEFileWrite,offset szWltEPara,offset szWltEPlugin,offset szWltEAnaFailed
 pWltError2	dd	offset szWltELineExist,offset szWltELineLong,offset szWltECode,offset szWltELineMatch
 
 .code
