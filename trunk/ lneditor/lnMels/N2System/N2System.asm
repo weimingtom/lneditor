@@ -154,14 +154,15 @@ N2GetLine proc uses esi edi _lpStr,_nCS
 		jmp _Ex
 	.endif
 	mov @pStr,eax
+	mov word ptr [eax],0
 
 	invoke MultiByteToWideChar,_nCS,0,@pStr2,-1,@pStr,@nChar
-	.if !eax
-		invoke HeapFree,hHeap,0,@pStr
-		invoke HeapFree,hHeap,0,@pStr2
-		xor eax,eax
-		jmp _Ex
-	.endif
+;	.if !eax
+;		invoke HeapFree,hHeap,0,@pStr
+;		invoke HeapFree,hHeap,0,@pStr2
+;		xor eax,eax
+;		jmp _Ex
+;	.endif
 	invoke HeapFree,hHeap,0,@pStr2
 	mov eax,@pStr
 _Ex:
@@ -424,12 +425,13 @@ N2SetLine proc uses esi edi _lpStr,_nCS
 		jmp _Err
 	.endif
 	mov @pStr,eax
+	mov word ptr [eax],55h
 	invoke WideCharToMultiByte,_nCS,0,@pStr2,-1,@pStr,edi,0,0
-	.if !eax
-		invoke HeapFree,hHeap,0,@pStr2
-		invoke HeapFree,hHeap,0,@pStr
-		jmp _Err
-	.endif
+;	.if !eax
+;		invoke HeapFree,hHeap,0,@pStr2
+;		invoke HeapFree,hHeap,0,@pStr
+;		jmp _Err
+;	.endif
 	invoke HeapFree,hHeap,0,@pStr2
 	mov eax,@pStr
 	ret

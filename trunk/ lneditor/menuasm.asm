@@ -405,7 +405,7 @@ _WndImpAllProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			.else
 				mov eax,IDS_FAILIMPORT
 				invoke _GetConstString
-				invoke MessageBoxW,hwnd,eax,0,MB_OK or MB_ICONERROR
+				invoke MessageBoxW,hwnd,eax,0,MB_OK or MB_ICONWARNING 
 			.endif
 		.elseif ax==IDCANCEL
 			invoke EndDialog,hwnd,0
@@ -529,6 +529,7 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 				jmp _Next3IATT
 			.endif
 			mov @lpFileT,eax
+			mov dword ptr [eax+ebx],0
 			invoke ReadFile,@hFileT,@lpFileT,ebx,offset dwTemp,0
 			.if !eax
 				mov ecx,@pMelInfo
@@ -547,6 +548,9 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 				invoke _OutputMessage,WLT_BATCHIMPERR,ecx,edi,offset szWltEGetText
 				jmp _Next5IATT
 			.endif
+			cmp @stFileInfo.nLine,0
+			je _Next2IATT
+			
 			.if @stFileInfo.nMemoryType==MT_POINTERONLY
 				invoke _MakeStringListFromStream,addr @stFileInfo
 				.if eax

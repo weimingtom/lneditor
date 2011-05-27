@@ -369,7 +369,7 @@ BEGIN
   IDS_SHUAI "摔14不解释"
   IDS_CANTOPENCONFIG "无法打开配置文件！"
   IDS_NOTDEFMEL "您指定的插件%s好像不能正确识别该脚本，要继续吗？"
-  IDS_FAILIMPORT "插件运行中发生错误！导入失败！"
+  IDS_FAILIMPORT "导入完成！某些文件未被成功导入，详情请查看log.txt文件"
   IDS_FAILEXPORT "导出过程发生错误！"
   IDS_INVALIDDIR "无效的目录！"
   IDS_FAILREPLACE "替换过程中发生错误！"
@@ -391,8 +391,8 @@ BEGIN
 END
 
 IDR_VERSION1 VERSIONINFO
-FILEVERSION 1,1,0,446
-PRODUCTVERSION 1,1,0,446
+FILEVERSION 1,1,0,455
+PRODUCTVERSION 1,1,0,455
 FILEOS 0x00000004
 FILETYPE 0x00000001
 BEGIN
@@ -400,8 +400,8 @@ BEGIN
   BEGIN
     BLOCK "080404B0"
     BEGIN
-      VALUE "FileVersion", "1.1.0.446\0"
-      VALUE "ProductVersion", "1.1.0.446\0"
+      VALUE "FileVersion", "1.1.0.455\0"
+      VALUE "ProductVersion", "1.1.0.455\0"
       VALUE "FileDescription", "A General Script Editor for Galgame.\0"
       VALUE "InternalName", "lnedit\0"
       VALUE "OriginalFilename", "lnedit.exe\0"
