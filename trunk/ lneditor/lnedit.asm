@@ -193,7 +193,7 @@ _BeginOpenMain:
 				.elseif ebx==-1
 					invoke _SelfPreProc
 					jmp _Open2Main
-				.endif 
+				.endif
 				xor eax,eax
 				mov ax,sizeof _MelInfo
 				mul bx

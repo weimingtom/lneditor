@@ -29,9 +29,9 @@ WLT_BATCHIMPERR		EQU		10003H
 
 ;Return Information of GetText
 RI_SUC_LINEONLY			EQU		1	;文本已提取到内存中，需要主程序将其添加到列表框中
-RI_SUC_LISTADDED			EQU		2	;文本已添加到列表框中
-RI_SUC_THLINE			EQU		3	;已创建线程负责将文本提取到内存中，请在主窗口中处理对应消息将其添加到列表框
-RI_SUC_THLIST			EQU		4	;已创建线程负责将文本添加到列表框中，请在主窗口中处理结束消息
+;RI_SUC_LISTADDED			EQU		2	;文本已添加到列表框中
+;RI_SUC_THLINE			EQU		3	;已创建线程负责将文本提取到内存中，请在主窗口中处理对应消息将其添加到列表框
+;RI_SUC_THLIST			EQU		4	;已创建线程负责将文本添加到列表框中，请在主窗口中处理结束消息
 
 RI_FAIL_FORMAT			EQU		100h	;脚本格式不符
 RI_FAIL_MEM				EQU		101h	;内存错误
@@ -44,9 +44,9 @@ MR_MAYBE				EQU		3
 MR_NO					EQU		0
 MR_ERR					EQU		-1
 
-;Memory type for strings
-MT_EVERYSTRING			EQU		3
-MT_POINTERONLY			EQU		4
+;Memory Type for strings
+MT_EVERYSTRING			EQU		3	;由插件全权负责字符串表的填写。
+MT_POINTERONLY			EQU		4	;仅指定字符串的存储方式和每个字符串的地址，由主程序负责生成字符串表。
 
 ;nCharSet域
 CS_UNKNOWN			EQU		0
@@ -66,25 +66,25 @@ ST_TXTENDW				EQU		11h
 
 ;文件信息
 _FileInfo struct
-	;以下域由主程序传入插件
 	szName				db		MAX_STRINGLEN	dup(?)	;文件名(含路径)
-	hFile				dd		?						;文件句柄
+	hFile				dd		?						;文件句柄，该句柄直到脚本关闭才会释放。
 	
-	lpStream				dd		?						;文件直接读入内存后的指针
-	;以下域由插件负责填写
-	nMemoryType			dd		?						
-	;存储类型详细含义见文档。
-	lpTextIndex			dd		?						;纯文本字符串索引表指针。
-	lpStreamIndex			dd		?						;可选，原始脚本字符串索引表指针。若为POINTERONLY存储类型，此项必须。
-	nStringType			dd		?						;字符串类型。如C字符串、PASCAL字符串等。
+	lpStream				dd		?						;文件直接读入内存后的指针，若插件有MIC_NOPREREAD属性，此指针不会被自动填写。
+
+	nMemoryType			dd		?					;字符串表的填写方式。具体参见MT_XXX的说明。
+
+	lpTextIndex			dd		?						;纯文本字符串索引表指针。本表中的字符串显示在列表框中。
+	lpStreamIndex			dd		?						;可选，原始脚本字符串索引表指针，指向每行所对应的脚本位置。若为POINTERONLY存储类型，此项必须。
+	;以上两个域执行的内存必须由VirtualAlloc(0,...)申请。
+	
+	nStringType			dd		?						;字符串类型。如C字符串、PASCAL字符串等。参见ST_XXX。
 	nStreamSize			dd		?						;文件长度。跟随脚本编辑随时更新。
 	nLine				dd		?						;文本行数。
-;	nLineLen				dd		?						;可选，若使用定长字符串存储，本项须指示字符串长度。独立内存字符串亦可使用。
 	
 	bReadOnly			dd		?						;指定该文件是否为只读（是否在列表框左侧）
 	nCharSet				dd		?						;指示将此文件中字符串解释为何种字符集，用户可以设定，否则插件可自行填写。
 	
-	lpCustom				dd		?						;插件自行使用。
+	lpCustom				dd		?						;插件自行使用。分配的内存可放在此处。
 	Reserved				dd		2		dup(?)
 _FileInfo ends
 
@@ -178,7 +178,7 @@ _Handles ends
 
 ;向插件中的预处理函数传递的结构
 _PreData struct
-	hGlobalHeap		dd		?	;全局堆，不推荐用来分配大内存
+	hGlobalHeap		dd		?	;全局堆
 	
 	lpszConfigFile		dd		?	;配置文件名，包含全路径
 	lpConfigs			dd		?	;配置
