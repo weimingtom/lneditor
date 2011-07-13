@@ -38,9 +38,15 @@ Match proc uses esi edi _lpszName
 	lea edi,szMagic
 	mov ecx,1ch
 	repe cmpsb
-	jne _NotMatch
-	mov eax,MR_YES
-	ret
+	.if ZERO?
+		mov eax,MR_YES
+		ret
+	.endif
+	lea esi,@szMagic
+	.if dword ptr [esi]==10h && dword ptr [esi+4]==0
+		mov eax,MR_MAYBE
+		ret
+	.endif
 _NotMatch:
 	mov eax,MR_NO
 	ret
@@ -58,13 +64,19 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	mov ebx,_lpFI
 	assume ebx:ptr _FileInfo
 	mov esi,[ebx].lpStream
-	mov ecx,[esi+1ch]
-	add ecx,1ch
-	mov @nHdrSize,ecx
-	add esi,ecx
-	mov edx,[ebx].nStreamSize
-	sub edx,ecx
-	lea edx,[esi+edx-4]
+	.if dword ptr [esi]!=10h
+		mov ecx,[esi+1ch]
+		add ecx,1ch
+		mov @nHdrSize,ecx
+		add esi,ecx
+		mov edx,[ebx].nStreamSize
+		sub edx,ecx
+		lea edx,[esi+edx-4]
+	.else
+		mov @nHdrSize,0
+		mov edx,[ebx].nStreamSize
+		lea edx,[esi+edx-4]
+	.endif
 	xor ecx,ecx
 	.while esi<edx
 		lodsd
@@ -163,9 +175,13 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		.endif
 		add [ebx].nStreamSize,eax
 		mov ecx,[ebx].lpStream
-		mov eax,[ecx+1ch]
-		lea eax,[eax+ecx+1ch]
-		sub esi,eax
+		.if dword ptr [ecx]!=10h
+			mov eax,[ecx+1ch]
+			lea eax,[eax+ecx+1ch]
+			sub esi,eax
+		.else
+			sub esi,ecx
+		.endif
 		mov edx,[ebx].lpCustom
 		mov ecx,_nLine
 		mov ecx,[edx+ecx*4]

@@ -11,10 +11,10 @@ _BrowseFolderCallBack proc hwnd,uMsg,lParam,lpData
 	local @szBuffer[MAX_STRINGLEN]:byte
 	mov eax,uMsg
 	.if eax==BFFM_INITIALIZED
-		invoke SendMessageW,hwnd,BFFM_SETSELECTION,TRUE,_BrowseFolderTmp
+		invoke SendMessageW,hwnd,BFFM_SETSELECTIONW,TRUE,_BrowseFolderTmp
 	.elseif eax==BFFM_SELCHANGED
 		invoke SHGetPathFromIDListW,lParam,addr @szBuffer
-		invoke SendMessageW,hwnd,BFFM_SETSTATUSTEXT,0,addr @szBuffer
+		invoke SendMessageW,hwnd,BFFM_SETSTATUSTEXTW,0,addr @szBuffer
 	.endif
 	xor eax,eax
 	ret
