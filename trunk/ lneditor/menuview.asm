@@ -107,7 +107,7 @@ _SetBackground proc
 	LOCAL @str[MAX_STRINGLEN]:byte
 	mov eax,IDS_SELECTBKGND
 	invoke _GetConstString
-	invoke _OpenFileDlg,offset szImageFilter,addr @str,offset szNULL,eax
+	invoke _OpenFileDlg,offset szImageFilter,addr @str,offset szNULL,eax,0
 	or eax,eax
 	je _ExSBG
 	invoke lstrcpyW,dbConf+_Configs.lpBackName,addr @str

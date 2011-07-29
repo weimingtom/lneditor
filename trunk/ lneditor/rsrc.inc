@@ -164,6 +164,9 @@ IDC_IA_BROWSEO          equ 2119
 IDC_IA_BROWSEN          equ 2120
 IDC_IA_DIRN             equ 2121
 IDC_IA_MELIDX           equ 2116
+IDD_OPENTML             equ 2200
+IDC_STC34               equ 2201
+IDC_OPEN_PLUGINS        equ 2202
 IDR_MMENU_CHS           equ 10000
 IDM_OPEN                equ 10001
 IDM_LOAD                equ 10002
@@ -254,6 +257,7 @@ IDS_LINEMODIFIED        equ 51
 IDS_LOGFILEOPENNOT      equ 52
 IDS_NOTSUPPORTBATCHEXP  equ 53
 IDS_NOTSUPPORTBATCHIMP  equ 54
+IDS_AUTOMATCH           equ 55
 IDR_ACCEL1              equ 1
 IDR_VERSION1            equ 1
 IDR_XPMANIFEST1         equ 1

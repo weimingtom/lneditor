@@ -280,13 +280,16 @@ _GetCodeIndex proc _code
 _GetCodeIndex endp
 
 ;
-_AddCodeCombo proc _hCombo
-	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdDefault
-	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdGBK
-	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdSJIS
-	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdBig5
-	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdUTF8
-	invoke SendMessageW,_hCombo,CB_ADDSTRING,0,offset szcdUnicode
+_AddCodeCombo proc uses esi _hCombo
+	mov esi,SendMessageW
+	assume esi:ptr arg4
+	invoke esi,_hCombo,CB_ADDSTRING,0,offset szcdDefault
+	invoke esi,_hCombo,CB_ADDSTRING,0,offset szcdGBK
+	invoke esi,_hCombo,CB_ADDSTRING,0,offset szcdSJIS
+	invoke esi,_hCombo,CB_ADDSTRING,0,offset szcdBig5
+	invoke esi,_hCombo,CB_ADDSTRING,0,offset szcdUTF8
+	invoke esi,_hCombo,CB_ADDSTRING,0,offset szcdUnicode
+	assume esi:nothing
 	ret
 _AddCodeCombo endp
 

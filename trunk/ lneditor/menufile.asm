@@ -196,7 +196,7 @@ _HandlerOS:
 	mov eax,[esp+0ch]
 	mov [eax+0b8h],offset _ErrDllOS
 	xor eax,eax
-	ret
+	retn 0ch
 _OpenScript endp
 
 ;
@@ -737,7 +737,7 @@ _ImportTxt proc
 	mov word ptr [eax],0	
 	mov eax,IDS_IMPORTTXT
 	invoke _GetConstString
-	invoke _OpenFileDlg,offset szTxtFilter,addr @szStr,dbConf+_Configs.lpInitDir2,eax
+	invoke _OpenFileDlg,offset szTxtFilter,addr @szStr,dbConf+_Configs.lpInitDir2,eax,0
 	.if eax
 		invoke CreateFileW,addr @szStr,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
 		.if eax==-1

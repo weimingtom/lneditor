@@ -73,6 +73,8 @@ GWT_FILENAME2		EQU		2
 GWT_VERSION			EQU		3
 GWT_MODIFIED		EQU		4
 
+arg4 typedef proto :dword,:dword,:dword,:dword
+
 ;main file
 _WinMain 			proto
 _WndMainProc 		proto :dword,:dword,:dword,:dword
@@ -98,7 +100,7 @@ _GetConstString 		proto
 _LoadConfig			proto
 _SaveConfig			proto
 _Int2Str				proto :dword,:dword,:dword
-_OpenFileDlg			proto :dword,:dword,:dword,:dword
+_OpenFileDlg			proto :dword,:dword,:dword,:dword,:dword
 _SaveFileDlg			proto :dword,:dword,:dword,:dword
 _memcpy				proto
 _DirBackW			proto :dword
@@ -221,6 +223,13 @@ _ZoomRect			proto :dword,:dword
 _LightenColor			proto :dword
 _DarkenColor			proto :dword
 
+;System Struct
+OFNOTIFY STRUCT
+	hdr				NMHDR		<>
+	lpOFN			dd		?
+	pszFile			dd		?
+OFNOTIFY ends
+
 ;≤È’“ÃÊªª–≈œ¢
 _FindInfo struct
 	szFind				db		SHORT_STRINGLEN	dup(?)
@@ -312,7 +321,7 @@ _FileRec ends
 	TW0			'lnedit',			szInnerName
 	TW0			'defaultedit',		szDefaultPluginName
 	TW0			' v1.1',			szDisplayVer
-	TW0			'1.1.0.446',		szFullVer
+	TW0			'1.1.1.471',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0

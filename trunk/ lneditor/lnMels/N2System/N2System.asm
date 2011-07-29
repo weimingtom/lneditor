@@ -125,6 +125,10 @@ N2GetLine proc uses esi edi _lpStr,_nCS,_nCode
 ;	mov @nChar,0
 	mov @nChar,eax
 	xor edx,edx
+	.if !ecx
+		mov @pStr,0
+		jmp _Ex2
+	.endif
 	@@:
 		lodsb
 		.if al>80h && ecx
