@@ -148,7 +148,7 @@ _WinMain endp
 _WndMainProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 	local @stPs:PAINTSTRUCT
 	local @stRect:RECT
-	local @hdc,@hFile
+	local @hdc,@hFile,@nPlugin
 	LOCAL @szStr[SHORT_STRINGLEN]:byte
 ;	LOCAL @dt:DRAWTEXTPARAMS
 
@@ -169,15 +169,21 @@ _WndMainProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 				.endif
 				mov eax,IDS_OPENTITLE1
 				invoke _GetConstString
-				invoke _OpenFileDlg,offset szOpenFilter,offset FileInfo1.szName,dbConf+_Configs.lpInitDir1,eax
+				lea ecx,@nPlugin
+				mov dword ptr [ecx],-2
+				invoke _OpenFileDlg,offset szOpenFilter,offset FileInfo1.szName,dbConf+_Configs.lpInitDir1,eax,ecx
 				or eax,eax
 				je _ExMain
+				mov ebx,@nPlugin
+				cmp ebx,-2
+				jne _ForcePluginMain
 _BeginOpenMain:
 				invoke lstrcpyW,dbConf+_Configs.lpInitDir1,offset FileInfo1.szName
 				invoke _DirBackW,dbConf+_Configs.lpInitDir1
 
 				invoke _TryMatch,offset FileInfo1.szName
 				mov ebx,eax
+_ForcePluginMain:
 				.if ebx==-3
 					mov eax,IDS_ERRMATCH
 					invoke _GetConstString
@@ -224,7 +230,7 @@ _Open2Main:
 				mov esi,eax
 				mov eax,IDS_OPENTITLE2
 				invoke _GetConstString
-				invoke _OpenFileDlg,offset szOpenFilter,offset FileInfo2.szName,dbConf+_Configs.lpInitDir2,eax
+				invoke _OpenFileDlg,offset szOpenFilter,offset FileInfo2.szName,dbConf+_Configs.lpInitDir2,eax,0
 				or eax,eax
 				je _ExMain
 _LoadMain:
@@ -651,11 +657,12 @@ _TryMatch proc uses edi esi ebx _lpszName
 	lea esi,@pFunc
 	cmp dword ptr [esi],-1
 	je _SelfMatchTM
-		.if dword ptr [esi+4]==-1
-			mov eax,[esi]
-			jmp _ExTM
-		.endif
-		invoke DialogBoxParamW,hInstance,IDD_CHOOSEMEL,hWinMain,offset _WndCMProc,esi
+_ChooseTM:
+;		.if dword ptr [esi+4]==-1
+;			mov eax,[esi]
+;			jmp _ExTM
+;		.endif
+		invoke DialogBoxParamW,hInstance,IDD_CHOOSEMEL,hWinMain,offset _WndCMProc,0;此参数存储显示在列表中的插件序号，为0则全部显示
 		cmp eax,-2
 		jne _ExTM
 	;else
@@ -664,6 +671,7 @@ _SelfMatchTM:
 		.if eax==MR_YES
 			or eax,-1
 		.else
+			jmp _ChooseTM
 			mov eax,-2
 		.endif
 _ExTM:
@@ -675,7 +683,7 @@ _HandlerTM:
 	mov [eax+0b8h],offset _ExTM
 	mov dword ptr [eax+0b0h],-3
 	xor eax,eax
-	ret
+	retn 0ch
 _TryMatch endp
 
 ;内置匹配函数

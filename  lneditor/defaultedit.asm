@@ -217,6 +217,14 @@ _ModifyLineW proc uses esi edi ebx _pFI,_nLine
 	.endif
 	mov ebx,eax
 	invoke lstrlenW,ebx
+	xor ecx,ecx
+	.while ecx<eax
+		.if word ptr [ebx+ecx*2]==0dh || word ptr [ebx+ecx*2]==0ah
+			mov eax,E_LINEDENIED
+			Jmp _ExMLW
+		.endif
+		inc ecx
+	.endw
 	shl eax,1
 	mov @pNewLen,eax
 	mov esi,[edi].lpStreamIndex

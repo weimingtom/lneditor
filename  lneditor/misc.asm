@@ -7,9 +7,49 @@ _GetConstString proc
 	ret
 _GetConstString endp
 
+_ofnOpenHook proc uses esi edi ebx hwnd,uMsg,wParam,lParam
+	LOCAL @szName[512]:byte
+	LOCAL @i
+	mov eax,uMsg
+	.if eax==WM_NOTIFY
+		mov esi,lParam
+		assume esi:ptr OFNOTIFY
+		.if [esi].hdr.code==CDN_FIRST-CDN_FILEOK
+			invoke SendDlgItemMessageW,hwnd,IDC_OPEN_PLUGINS,CB_GETCURSEL,0,0
+			sub eax,2
+			mov ecx,[esi].lpOFN
+			mov OPENFILENAME.lCustData[ecx],eax
+		.endif
+		assume esi:nothing
+	.elseif eax==WM_INITDIALOG
+		invoke GetDlgItem,hwnd,IDC_OPEN_PLUGINS
+		mov edi,eax
+		mov ebx,SendMessageW
+		assume ebx:ptr arg4
+		mov eax,IDS_AUTOMATCH
+		invoke _GetConstString
+		invoke ebx,edi,CB_ADDSTRING,0,eax
+		invoke _GetMelInfo,-1,addr @szName,VT_PRODUCTNAME
+		invoke ebx,edi,CB_ADDSTRING,0,addr @szName
+		mov esi,lpMels
+		xor ecx,ecx
+		mov @i,ecx
+		.while ecx<nMels
+			invoke _GetMelInfo,esi,addr @szName,VT_PRODUCTNAME
+			invoke ebx,edi,CB_ADDSTRING,0,addr @szName
+			inc @i
+			mov ecx,@i
+			add esi,sizeof _MelInfo
+		.endw
+		invoke ebx,edi,CB_SETCURSEL,0,0
+		assume ebx:nothing
+	.endif
+	xor eax,eax
+	ret
+_ofnOpenHook endp
 
 ;
-_OpenFileDlg proc uses edi ebx _lpszFilter,_lpszFN,_lpszInit,_lpszTitle
+_OpenFileDlg proc uses edi ebx _lpszFilter,_lpszFN,_lpszInit,_lpszTitle,_lpdwPlugin
 	LOCAL @opFileName:OPENFILENAME
 	LOCAL @szErrMsg[128]:byte
 	
@@ -20,6 +60,8 @@ _OpenFileDlg proc uses edi ebx _lpszFilter,_lpszFN,_lpszInit,_lpszTitle
 	mov @opFileName.lStructSize,sizeof @opFileName
 	push hWinMain
 	pop @opFileName.hwndOwner
+	push hInstance
+	pop @opFileName.hInstance
 	push _lpszFilter
 	pop @opFileName.lpstrFilter
 	mov eax,_lpszFN
@@ -30,7 +72,15 @@ _OpenFileDlg proc uses edi ebx _lpszFilter,_lpszFN,_lpszInit,_lpszTitle
 	pop @opFileName.lpstrInitialDir
 	push _lpszTitle
 	pop @opFileName.lpstrTitle
-	mov @opFileName.Flags,OFN_FILEMUSTEXIST OR OFN_PATHMUSTEXIST or OFN_EXPLORER or OFN_HIDEREADONLY
+	mov @opFileName.lpTemplateName,IDD_OPENTML
+	mov @opFileName.lpfnHook,offset _ofnOpenHook
+	.if _lpdwPlugin
+		mov @opFileName.Flags,OFN_FILEMUSTEXIST OR OFN_PATHMUSTEXIST or OFN_EXPLORER or \
+			OFN_HIDEREADONLY or OFN_ENABLETEMPLATE OR OFN_ENABLEHOOK OR OFN_ENABLESIZING
+	.else
+		mov @opFileName.Flags,OFN_FILEMUSTEXIST OR OFN_PATHMUSTEXIST or OFN_EXPLORER or \
+			OFN_HIDEREADONLY or OFN_ENABLESIZING
+	.endif
 	lea eax,@opFileName
 	invoke GetOpenFileNameW,eax
 	.if !eax
@@ -45,6 +95,11 @@ _OpenFileDlg proc uses edi ebx _lpszFilter,_lpszFN,_lpszInit,_lpszTitle
 		invoke MessageBoxW,hWinMain,addr @szErrMsg,0,MB_OK or MB_ICONERROR
 		xor eax,eax
 		ret
+	.endif
+	mov ecx,_lpdwPlugin
+	.if ecx
+		mov eax,@opFileName.lCustData
+		mov [ecx],eax
 	.endif
 	mov eax,1
 	ret
