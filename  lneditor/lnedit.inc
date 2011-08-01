@@ -255,7 +255,8 @@ _FileRec struct
 	Reserverd		dd		?
 	nOffsetMT		dd		?	;MarkTable的文件偏移
 	nLenMT			dd		?	;MarkTable大小，等同于行数
-	nOffsetResv		dd		6	dup(?)
+	nOffsetMelName	dd		?	;所使用的插件的名字的偏移，未实装
+	nOffsetResv		dd		5	dup(?)
 _FileRec ends
 
 .data?
@@ -321,7 +322,7 @@ _FileRec ends
 	TW0			'lnedit',			szInnerName
 	TW0			'defaultedit',		szDefaultPluginName
 	TW0			' v1.1',			szDisplayVer
-	TW0			'1.1.1.471',		szFullVer
+	TW0			'1.1.2.475',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0
