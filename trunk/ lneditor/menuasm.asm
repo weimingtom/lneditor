@@ -209,13 +209,12 @@ _ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 	invoke FindFirstFileW,offset szAllFiles,addr @stFindData
 	.if eax!=INVALID_HANDLE_VALUE
 		mov @hFindFile,eax
-		invoke RtlZeroMemory,addr @stFileInfo,sizeof _FileInfo
 		mov @err,0
 		.repeat
+			invoke RtlZeroMemory,addr @stFileInfo,sizeof _FileInfo
 			lea edi,@stFindData.cFileName
-			.if dword ptr [edi]=='.' || dword ptr [edi]==2e002eh && word ptr [edi+4]==0
-				jmp _Next4EATT
-			.endif
+			cmp @stFindData.dwFileAttributes,FILE_ATTRIBUTE_DIRECTORY
+			je _Next4EATT
 			.if !_bForceMel
 				.if _nMelIdx!=-1
 					push edi
@@ -248,8 +247,8 @@ _ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 			je _Next2EATT
 			mov @hFileT,eax
 			lea ecx,@ri
-			push ecx
 			lea eax,@stFileInfo
+			push ecx
 			push eax
 			call dbSimpFunc+_SimpFunc.GetText
 			.if eax
@@ -274,6 +273,7 @@ _ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 					mov @err,1
 				.endif
 				invoke HeapFree,hGlobalHeap,0,lpMarkTable
+				mov lpMarkTable,0
 			.else
 				_FilterNext:
 				invoke _ExportSingleTxt,addr @stFileInfo,@hFileT

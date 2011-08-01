@@ -585,7 +585,9 @@ _ExportSingleTxt proc uses esi edi ebx _lpFI,_hTxt
 	LOCAL @lpBuff,@nLine
 	mov ecx,_lpFI
 	assume ecx:ptr _FileInfo
-	invoke VirtualAlloc,0,[ecx].nStreamSize,MEM_COMMIT,PAGE_READWRITE
+	mov eax,[ecx].nStreamSize
+	shl eax,1
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	.if !eax
 		mov eax,E_NOMEM
 		jmp _ExEST
