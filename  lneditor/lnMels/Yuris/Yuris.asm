@@ -59,9 +59,20 @@ Match proc uses esi _lpszName
 		call CloseHandle
 		cmp dword ptr [esi],'BTSY'
 		jne _NotMatch
-		cmp dword ptr [esi+4],1c2h
-		je _Match
-		mov eax,MR_MAYBE
+		xor ecx,ecx
+		mov eax,[esi+4]
+		lea esi,VerTable
+		assume esi:ptr YurisVerInfo
+		.while ecx<nVerInfos
+			.if eax>=[esi].nVerMin && eax<=[esi].nVerMax
+				mov eax,MR_YES
+				RET
+			.endif
+			add esi,sizeof YurisVerInfo
+			inc ecx
+		.endw
+		assume esi:nothing
+		mov eax,MR_NO
 		ret
 		_Match:
 		mov eax,MR_YES
@@ -109,8 +120,52 @@ _Ex:
 YurisGetLine endp
 
 ;
+YurisCmpFuncName proc uses esi edi _lpRes,_nLen
+	mov esi,_lpRes
+	mov ecx,_nLen
+	.if ecx==sizeof dbFSel
+		lea edi,dbFSel
+		repe cmpsb
+		.if ZERO?
+			mov eax,FUNC_SEL
+			jmp _Ex
+		.endif
+	.endif
+	mov ecx,_nLen
+	.if ecx==sizeof dbFMarkSet
+		lea edi,dbFMarkSet
+		repe cmpsb
+		.if ZERO?
+			mov eax,FUNC_MARKSET
+			jmp _Ex
+		.endif
+	.endif
+	mov ecx,_nLen
+	.if ecx==sizeof dbFCharName
+		lea edi,dbFCharName
+		repe cmpsb
+		.if ZERO?
+			mov eax,FUNC_CHARNAME
+			jmp _Ex
+		.endif
+	.endif
+	mov ecx,_nLen
+	.if ecx==sizeof dbFInputStr
+		lea edi,dbFInputStr
+		repe cmpsb
+		.if ZERO?
+			mov eax,FUNC_INPUTSTR
+			jmp _Ex
+		.endif
+	.endif
+	xor eax,eax
+_Ex:
+	ret
+YurisCmpFuncName endp
+
+;
 GetText proc uses esi ebx edi _lpFI,_lpRI
-	LOCAL @nTemp
+	LOCAL @nTemp,@opMsg,@opCall
 	LOCAL @pCode,@pArg,@lpRes
 	LOCAL @nInst
 	LOCAL @nLine
@@ -122,6 +177,28 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov ecx,sizeof YurisHdr/4
 	rep movsd
 	mov edi,_lpFI
+
+	lea esi,VerTable
+	mov eax,@hdr.nVersion
+	xor ebx,ebx
+	assume esi:ptr YurisVerInfo
+	.while ecx<nVerInfos
+		.if eax>=[esi].nVerMin && eax<=[esi].nVerMax
+			mov ax,[esi].opMsg
+			mov cx,[esi].opCall
+			mov word ptr @opMsg,ax
+			mov byte ptr @opCall,cl
+			inc ebx
+			.break
+		.endif
+		add esi,sizeof YurisVerInfo
+		inc ecx
+	.endw
+	.if !ebx
+		mov eax,E_WRONGFORMAT
+		ret
+	.endif
+	assume esi:nothing
 	
 	mov eax,@hdr.nArgSize
 	shr eax,1
@@ -135,6 +212,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	je _Nomem
 	mov [edi].lpTextIndex,eax
 	
+	mov esi,[edi].lpStream
+	add esi,sizeof YurisHdr
 	mov @pCode,esi
 	mov eax,esi
 	add eax,@hdr.nCodeSize
@@ -146,7 +225,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov @nLine,ebx
 	.while ebx<@hdr.nCount
 		lodsd
-		.if ax==015bh
+		.if ax==word ptr @opMsg
 			mov edx,@pArg
 			assume edx:ptr YurisArg
 			cmp [edx].len1,0
@@ -168,23 +247,19 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			mov [edx+ecx*4],eax
 			inc @nLine
 			add @pArg,12
-		.elseif al==1dh && ah!=0
+		.elseif al==byte ptr @opCall && ah!=0
 			mov edx,@pArg
 			mov ecx,YurisArg.offset1[edx]
 			add ecx,@lpRes
-			push esi
-			push edi
-			mov esi,ecx
-			lea edi,dbSel
-			mov ecx,15
-			repe cmpsb
-			pop edi
-			pop esi
-			jne _Default
-			.if ah!=11
-				int 3
+			movzx eax,ah
+			mov @nTemp,eax
+			invoke YurisCmpFuncName,ecx,YurisArg.len1[edx]
+			.if !eax
+				mov al,byte ptr @nTemp
+				shl ax,8
+				jmp _Default
 			.endif
-			mov @nTemp,10
+			dec @nTemp
 			add @pArg,12
 			.repeat
 				assume edx:ptr YurisArg
@@ -203,20 +278,20 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 					add eax,3
 					cmp word ptr [eax],"''"
 					je _Ctn2
+					cmp word ptr [eax],'""'
+					je _Ctn2
 					invoke YurisGetLine,eax,ecx,[edi].nCharSet
-				.else
-					int 3
+					or eax,eax
+					je _Nomem
+					assume edx:nothing
+					mov ecx,@nLine
+					mov edx,[edi].lpTextIndex
+					mov [edx+ecx*4],eax
+					mov edx,[edi].lpStreamIndex
+					mov eax,@pArg
+					mov [edx+ecx*4],eax
+					inc @nLine
 				.endif
-				or eax,eax
-				je _Nomem
-				assume edx:nothing
-				mov ecx,@nLine
-				mov edx,[edi].lpTextIndex
-				mov [edx+ecx*4],eax
-				mov edx,[edi].lpStreamIndex
-				mov eax,@pArg
-				mov [edx+ecx*4],eax
-				inc @nLine
 			_Ctn2:
 				dec @nTemp
 				add @pArg,12
