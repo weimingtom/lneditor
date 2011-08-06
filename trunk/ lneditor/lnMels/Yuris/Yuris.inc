@@ -47,13 +47,35 @@ YurisArg struct
 	offset1		dd		?
 YurisArg ends
 
+YurisVerInfo struct
+	nVerMin		dd		?
+	nVerMax		dd		?
+	opMsg		dw		?
+	opCall		dw		?
+YurisVerInfo ends
+
+FUNC_SEL		EQU		1
+FUNC_MARKSET	EQU		2
+FUNC_CHARNAME	EQU		3
+FUNC_INPUTSTR	EQU		4
+
 .data?
 	hInstance		dd		?
 	hHeap		dd		?
 
 	dwTemp		dd		?
 .const
-	dbSel		db		4Dh,00Ch,000h,022h,045h,053h,02Eh,053h,045h,04Ch,02Eh,053h,045h,054h,022h
+	dbFSel			db		4Dh,0Ch,0,'"ES.SEL.SET"'
+align 4
+	dbFMarkSet		db		4dh,17h,0,'"es.CHAR.NAME.MARK.SET"'
+align 4
+	dbFCharName	db		4dh,0eh,0,'"es.CHAR.NAME"'
+align 4
+	dbFInputStr		db		4dh,12h,0,'"es.INPUT.STR.SET"'
 	
 	
+	VerTable\
+				YurisVerInfo		<199h,199h,015ah,1dh>
+				YurisVerInfo		<1c2h,1c2h,015bh,1dh>
+	nVerInfos	dd		(offset nVerInfos-offset VerTable)/sizeof(YurisVerInfo)
 		
