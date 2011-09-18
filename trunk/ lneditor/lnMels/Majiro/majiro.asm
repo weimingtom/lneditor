@@ -75,6 +75,7 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 		invoke HeapAlloc,hHeap,0,1024
 		or eax,eax
 		je _NomemGT
+		mov lpTable1,eax
 		invoke _InitHashTable
 	.endif
 	mov ebx,_lpFI
@@ -532,11 +533,18 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	assume ebx:nothing
 	mov edi,[esi].lpJumpTable
 	mov ecx,[edi]
+	push ebp
 	.while ecx
-		mov ebx,[ecx]
-		lea ebx,[ebx+ecx+4]
+		mov ebp,[ecx]
+		lea ebx,[ebp+ecx+4]
 		.if ebx<=edx && ecx>edx || ebx>edx && ecx<edx
-			add dword ptr [ecx],eax
+			test ebp,ebp
+			jl _neg1
+				add dword ptr [ecx],eax
+				jmp _neg10
+			_neg1:
+				sub dword ptr [ecx],eax
+			_neg10:
 		.endif
 		add edi,4
 		mov ecx,[edi]
@@ -551,16 +559,25 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 			mov ecx,[edi]
 			shl ecx,2
 			add ecx,dword ptr [edi+4]
-			add ecx,dword ptr [ebx]
-			.if ebx<=edx && ecx>edx || ebx>edx && ecx<edx
-				add dword ptr [ebx],eax
+			mov ebp,[ebx]
+			add ecx,ebp
+			.if ebx<edx && ecx>edx || ebx>edx && ecx<=edx
+				test ebp,ebp
+				jl _neg2
+					add dword ptr [ebx],eax
+					jmp _neg20
+				_neg2:
+					sub dword ptr [ebx],eax
+				_neg20:
 			.endif
 			add ebx,4
 			pop ecx
-		loop @B
+		dec ecx
+		jnz @B
 		add edi,8
 		mov ebx,[edi+4]
 	.endw
+	pop ebp
 	
 	add [esi].nDataSize,eax
 	mov ebx,_lpFI
