@@ -38,8 +38,8 @@ _MjoInfo struct
 	lpEntries			dd		?
 	nDataSize			dd		?
 	lpData			dd		?
-	lpJumpTable		dd		?
-	lpJumpTable2		dd		?
+	lpJumpTable		dd		?	;单一跳转指令
+	lpJumpTable2		dd		?	;跳转表指令
 _MjoInfo ends
 
 ModifyLine proto :dword,:dword
