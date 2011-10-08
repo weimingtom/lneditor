@@ -60,7 +60,10 @@ _Modify proc
 		invoke MessageBoxW,hWinMain,eax,NULL,MB_OK OR MB_ICONERROR
 		jmp _ExML
 	.endif
-	invoke SendMessageW,hWinMain,WM_COMMAND,IDM_NEXTTEXT,0
+	
+	;使下一行置中
+	invoke _NextLineWithCenter
+
 	invoke _SetModified,1
 	mov edi,lpModifyTable
 	.if edi
@@ -146,6 +149,31 @@ _NextLine proc
 	.endif
 	ret
 _NextLine endp
+
+_NextLineWithCenter proc uses esi
+	mov esi,SendMessageW
+	assume esi:ptr arg4
+	invoke esi,hList2,LB_GETCURSEL,0,0
+	mov ebx,eax
+	invoke esi,hList2,LB_GETCOUNT,0,0
+	inc ebx
+	.if ebx<eax
+		invoke esi,hList1,WM_SETREDRAW,FALSE,0
+		invoke esi,hList2,WM_SETREDRAW,FALSE,0
+		invoke esi,hList1,LB_SETCURSEL,ebx,0
+		invoke esi,hList2,LB_SETCURSEL,ebx,0
+		invoke esi,hList2,LB_GETTOPINDEX,0,0
+		mov ecx,ebx
+		sub ecx,eax
+		.if ecx>7
+			lea ecx,[ebx-7]
+			invoke _SetListTopIndex,ecx
+		.endif
+		invoke esi,hWinMain,WM_COMMAND,LBN_SELCHANGE*65536+IDC_LIST2,hList2
+		assume esi:nothing
+	.endif
+	ret
+_NextLineWithCenter endp
 
 ;
 _MarkLine proc
@@ -839,17 +867,20 @@ _WndGTProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 	ret
 _WndGTProc endp
 
-_SetLineInListbox proc _nLine,_bIsReal
-	invoke SendMessageW,hList1,WM_SETREDRAW,FALSE,0
-	invoke SendMessageW,hList2,WM_SETREDRAW,FALSE,0
-	invoke SendMessageW,hList1,LB_SETCURSEL,_nLine,_bIsReal
-	invoke SendMessageW,hList2,LB_SETCURSEL,_nLine,_bIsReal
-	invoke SendMessageW,hWinMain,WM_COMMAND,LBN_SELCHANGE*65536+IDC_LIST2,hList2
+_SetLineInListbox proc uses ebx _nLine,_bIsReal
+	mov ebx,SendMessageW
+	assume ebx:ptr arg4
+	invoke ebx,hList1,WM_SETREDRAW,FALSE,0
+	invoke ebx,hList2,WM_SETREDRAW,FALSE,0
+	invoke ebx,hList1,LB_SETCURSEL,_nLine,_bIsReal
+	invoke ebx,hList2,LB_SETCURSEL,_nLine,_bIsReal
+	invoke ebx,hWinMain,WM_COMMAND,LBN_SELCHANGE*65536+IDC_LIST2,hList2
+	assume ebx:nothing
 	ret
 _SetLineInListbox endp
 
 _Progress proc
-	LOCAL @str[32]:byte
+	LOCAL @str[100]:byte
 	mov edi,lpModifyTable
 	.if edi
 		mov ecx,FileInfo1.nLine
@@ -862,9 +893,28 @@ _Progress proc
 			loop @B
 		.endif
 	.endif
+	mov esi,edx
+	invoke GetTickCount
+	mov ebx,eax
+	sub eax,nStartTime
+	xor edx,edx
+	mov ecx,60000
+	div ecx
+	mov ecx,eax
+	.if nFileOpenTime
+		mov eax,ebx
+		sub eax,nFileOpenTime
+		xor edx,edx
+		mov ebx,60000
+		div ebx
+		mov ebx,eax
+	.else
+		xor ebx,ebx
+	.endif
+	
 	mov eax,IDS_LINEMODIFIED
 	invoke _GetConstString
-	invoke wsprintfW,addr @str,eax,edx
-	invoke MessageBoxW,hWinMain,addr @str,offset szDisplayName,MB_OK or MB_ICONEXCLAMATION
+	invoke wsprintfW,addr @str,eax,ecx,ebx,esi
+	invoke MessageBoxW,hWinMain,addr @str,offset szDisplayName,MB_OK or MB_ICONINFORMATION
 	ret
 _Progress endp

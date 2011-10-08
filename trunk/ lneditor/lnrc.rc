@@ -388,7 +388,7 @@ BEGIN
   IDS_ERRORCODE "发生错误！错误代码：%d"
   IDS_CODEFAILED "编码应用失败！请重新打开文件！"
   IDS_CODECVTFAILED "转换为指定编码时发生错误！"
-  IDS_LINEMODIFIED "你已经修改过%d行！"
+  IDS_LINEMODIFIED "编辑器已打开：%d分\n当前文件打开时间：%d分\n你已经修改过：%d行"
   IDS_LOGFILEOPENNOT "无法创建或访问日志文件！"
   IDS_NOTSUPPORTBATCHEXP "该插件不支持批量导出！"
   IDS_NOTSUPPORTBATCHIMP "该插件不支持批量导入！"
@@ -396,8 +396,8 @@ BEGIN
 END
 
 IDR_VERSION1 VERSIONINFO
-FILEVERSION 1,1,2,475
-PRODUCTVERSION 1,1,2,475
+FILEVERSION 1,1,3,492
+PRODUCTVERSION 1,1,3,492
 FILEOS 0x00000004
 FILETYPE 0x00000001
 BEGIN
@@ -405,8 +405,8 @@ BEGIN
   BEGIN
     BLOCK "080404B0"
     BEGIN
-      VALUE "FileVersion", "1.1.2.475\0"
-      VALUE "ProductVersion", "1.1.2.475\0"
+      VALUE "FileVersion", "1.1.3.492\0"
+      VALUE "ProductVersion", "1.1.3.492\0"
       VALUE "FileDescription", "A General Script Editor for Galgame.\0"
       VALUE "InternalName", "lnedit\0"
       VALUE "OriginalFilename", "lnedit.exe\0"
