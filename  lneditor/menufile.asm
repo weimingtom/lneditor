@@ -80,11 +80,7 @@ _OpenScript proc
 			invoke _AddLinesToList,offset FileInfo1,hList1
 		.endif
 	.else
-		invoke _ClearAll,offset FileInfo1
-		mov eax,IDS_DLLERR
-		invoke _GetConstString
-		invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
-		jmp _Ex2OS
+		jmp _ErrDllOS
 	.endif
 	.if dbConf+_Configs.nEditMode==EM_SINGLE
 		lea eax,@nReturnInfo
@@ -141,18 +137,13 @@ _OpenScript proc
 						invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
 					.endif
 				.endif 
-				invoke _SetOpen,1
+				invoke _SetOpenState,1
 			.endif
 		.else
-			invoke _ClearAll,offset FileInfo1
-			invoke _ClearAll,offset FileInfo2
 			.if lpMarkTable
 				invoke HeapFree,hGlobalHeap,0,lpMarkTable
 			.endif
-			mov eax,IDS_DLLERR
-			invoke _GetConstString
-			invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
-			jmp _Ex2OS
+			jmp _ErrDllOS
 		.endif
 		
 		invoke EnableMenuItem,hMenu,IDM_LOAD,MF_GRAYED
@@ -268,7 +259,7 @@ _LoadScript proc
 ;					invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
 ;				.endif
 ;			.endif
-			invoke _SetOpen,1
+			invoke _SetOpenState,1
 		.endif
 	.else
 		invoke _ClearAll,offset FileInfo2
@@ -406,13 +397,14 @@ _CloseScript proc
 	.endif
 	invoke SendMessageW,hList1,LB_RESETCONTENT,0,0
 	invoke SendMessageW,hList2,LB_RESETCONTENT,0,0
+	invoke InvalidateRect,hWinMain,0,TRUE
 	invoke _ClearAll,offset FileInfo1
 	invoke _ClearAll,offset FileInfo2
 	invoke SendMessageW,hEdit1,WM_SETTEXT,0,offset szNULL
 	invoke SendMessageW,hEdit2,WM_SETTEXT,0,offset szNULL
 	invoke SetFocus,hList1
 	invoke _SetModified,0
-	invoke _SetOpen,0
+	invoke _SetOpenState,0
 	mov nCurIdx,-1
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,64
 	or eax,eax

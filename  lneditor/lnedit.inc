@@ -117,7 +117,7 @@ _GenName2			proto :dword,:dword
 _DisplayStatus		proto :dword,:dword
 _SaveFile				proto :dword
 _SetModified			proto :dword
-_SetOpen			proto :dword
+_SetOpenState		proto :dword
 _ShowPic				proto :dword,:dword
 _GetStringInList		proto :dword,:dword
 _GenWindowTitle		proto :dword,:dword
@@ -163,6 +163,7 @@ _Modify				proto
 _ModifyStringInList	proto :dword,:dword,:dword
 _PrevLine				proto
 _NextLine			proto
+_NextLineWithCenter	proto
 _MarkLine			proto
 _ToFull				proto
 _ToHalf				proto
@@ -222,6 +223,7 @@ _ReplaceInMem		proto :dword,:dword,:dword,:dword,:dword
 _ZoomRect			proto :dword,:dword
 _LightenColor			proto :dword
 _DarkenColor			proto :dword
+_SetListTopIndex		proto :dword
 
 ;System Struct
 OFNOTIFY STRUCT
@@ -276,8 +278,10 @@ _FileRec ends
 	lpOriFuncTable	dd		?	;原始的菜单函数地址表，包括_Functions和_SimpFunc
 	
 	lpMarkTable		dd		?	;对每行的标记表，存储在record文件中
-	lpModifyTable		dd		?	;本次编辑修改过的行的标记表
 	lpDisp2Real		dd		?	;显示出来的行与实际行数的对应表
+	lpModifyTable		dd		?	;本次编辑修改过的行的标记表
+	nStartTime		dd		?	;启动编辑器以来的时间
+	nFileOpenTime	dd		?	;本文件打开以来的时间
 	
 	nMels			dd		?	;共载入了多少个插件
 	nCurMel			dd		?	;当前使用的插件编号（在lpMels中的位置）

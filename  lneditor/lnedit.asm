@@ -123,6 +123,8 @@ _WinMain proc
 	mov edi,eax
 	invoke _GenWindowTitle,edi,GWT_VERSION
 	@@:
+	invoke GetTickCount
+	mov nStartTime,eax
 	invoke CreateWindowExW,WS_EX_CLIENTEDGE or WS_EX_ACCEPTFILES,ebx,edi,\
 		WS_OVERLAPPED or WS_CAPTION or WS_SYSMENU or WS_MINIMIZEBOX,\
 		dbConf+_Configs.windowRect[WRI_MAIN]+RECT.left,dbConf+_Configs.windowRect[WRI_MAIN]+RECT.top,\
@@ -664,8 +666,7 @@ _ChooseTM:
 ;			jmp _ExTM
 ;		.endif
 		invoke DialogBoxParamW,hInstance,IDD_CHOOSEMEL,hWinMain,offset _WndCMProc,0;此参数存储显示在列表中的插件序号，为0则全部显示
-		cmp eax,-2
-		jne _ExTM
+		jmp _ExTM
 	;else
 _SelfMatchTM:
 		invoke _SelfMatch,_lpszName

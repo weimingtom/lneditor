@@ -584,7 +584,7 @@ _SetModified proc uses ebx _bFlag
 _SetModified endp
 
 ;
-_SetOpen proc uses esi edi ebx _bFlag
+_SetOpenState proc uses esi edi ebx _bFlag
 	.if _bFlag
 		mov ecx,sizeof _MelInfo
 		mov eax,nCurMel
@@ -606,12 +606,15 @@ _SetOpen proc uses esi edi ebx _bFlag
 		push IDM_CVTHALF
 		push hMenu
 		call EnableMenuItem
+		invoke GetTickCount
+		mov nFileOpenTime,eax
 	.else
 		mov bOpen,0
 		mov edi,MF_ENABLED
 		mov esi,MF_GRAYED
 		invoke EnableMenuItem,hMenu,IDM_SAVE,esi
 		invoke EnableMenuItem,hMenu,IDM_CVTHALF,ESI
+		mov nFileOpenTime,0
 	.endif
 	invoke EnableMenuItem,hMenu,IDM_CLOSE,esi
 	invoke EnableMenuItem,hMenu,IDM_SAVEAS,esi
@@ -627,7 +630,7 @@ _SetOpen proc uses esi edi ebx _bFlag
 	invoke EnableMenuItem,hMenu,IDM_UNMARKALL,esi
 	invoke EnableMenuItem,hMenu,IDM_PROGRESS,esi
 	ret
-_SetOpen endp
+_SetOpenState endp
 
 ;获取StringList中的指定行的文本
 _GetStringInList proc uses edi _pFI,_nLine

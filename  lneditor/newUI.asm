@@ -15,12 +15,26 @@ DST_NOTHING EQU 3
 .data?
 	lpOldListProc			dd		?
 	lpOldEditProc			dd		?
+	hLineNumberFont		dd		?
 
 .code
 ;创建新的列表框类
-_CreateMyList proc _hInstance
+_CreateMyList proc uses edi _hInstance
 ;使用lpOldListProc与_NewListProc两个全局变量
 	local @wce:WNDCLASSEX
+	LOCAL @lf:LOGFONTW
+	lea edi,@lf
+	xor al,al
+	mov ecx,sizeof @lf
+	rep stosb
+	invoke lstrcpyW,addr @lf.lfFaceName,$CTW0("Consolas")
+	mov @lf.lfHeight,0
+	mov @lf.lfWidth,-11
+	mov @lf.lfWeight,190h
+	mov @lf.lfPitchAndFamily,22h
+	
+	invoke CreateFontIndirectW,addr @lf
+	mov hLineNumberFont,eax
 
 	invoke GetClassInfoExW,NULL,offset szCList,addr @wce
 	push @wce.lpfnWndProc
@@ -60,6 +74,21 @@ _CreateMyEdit proc _hInstance
 
 	ret
 _CreateMyEdit endp
+
+_SetListTopIndex proc uses esi _nLine
+	mov esi,SendMessageW
+	assume esi:ptr arg4
+	invoke esi,hList1,WM_SETREDRAW,FALSE,0
+	invoke esi,hList2,WM_SETREDRAW,FALSE,0
+	invoke esi,hList1,LB_SETTOPINDEX,_nLine,0
+	invoke esi,hList2,LB_SETTOPINDEX,_nLine,0
+	invoke esi,hList1,WM_SETREDRAW,TRUE,0
+	invoke esi,hList2,WM_SETREDRAW,TRUE,0
+	assume esi:nothing
+	invoke RedrawWindow,hList1,0,0,RDW_FRAME or RDW_INVALIDATE or RDW_UPDATENOW
+	invoke RedrawWindow,hList2,0,0,RDW_FRAME or RDW_INVALIDATE or RDW_UPDATENOW
+	ret
+_SetListTopIndex endp
 
 _NewListProc proc uses ebx esi edi,hwnd,uMsg,wParam,lParam
 	local @hbmp,@hcdc,@rect:RECT,@cx,@cy,@hmdc
@@ -162,14 +191,7 @@ _NewListProc proc uses ebx esi edi,hwnd,uMsg,wParam,lParam
 		.else
 			add ebx,3
 		.endif
-		invoke SendMessageW,hList1,WM_SETREDRAW,FALSE,0
-		invoke SendMessageW,hList2,WM_SETREDRAW,FALSE,0
-		invoke SendMessageW,hList1,LB_SETTOPINDEX,ebx,0
-		invoke SendMessageW,hList2,LB_SETTOPINDEX,ebx,0
-		invoke SendMessageW,hList1,WM_SETREDRAW,TRUE,0
-		invoke SendMessageW,hList2,WM_SETREDRAW,TRUE,0
-		invoke RedrawWindow,hList1,0,0,RDW_FRAME or RDW_INVALIDATE or RDW_UPDATENOW
-		invoke RedrawWindow,hList2,0,0,RDW_FRAME or RDW_INVALIDATE or RDW_UPDATENOW
+		invoke _SetListTopIndex,ebx
 		xor eax,eax
 		ret
 	.elseif eax==WM_VSCROLL
@@ -280,6 +302,56 @@ _ExNLP:
 	ret
 _NewListProc endp
 
+_GetDecimalBit proc
+	cmp eax,10
+	jb _b1
+	cmp eax,100
+	jb _b2
+	cmp eax,1000
+	jb _b3
+	cmp eax,10000
+	jb _b4
+	cmp eax,100000
+	jb _b5
+	cmp eax,1000000
+	jb _b6
+	cmp eax,10000000
+	jb _b7
+	cmp eax,100000000
+	jb _b8
+	cmp eax,1000000000
+	jb _b9
+	mov eax,10
+	ret
+_b1:
+	mov eax,1
+	ret
+_b2:
+	mov eax,2
+	ret
+_b3:
+	mov eax,3
+	ret
+_b4:
+	mov eax,4
+	ret
+_b5:
+	mov eax,5
+	ret
+_b6:
+	mov eax,6
+	ret
+_b7:
+	mov eax,7
+	ret
+_b8:
+	mov eax,8
+	ret
+_b9:
+	mov eax,9
+	ret
+_GetDecimalBit endp
+
 ;画列表框
 _DrawListItem proc uses edi ebx _lpDIS
 	LOCAL @cx,@cy
@@ -288,6 +360,7 @@ _DrawListItem proc uses edi ebx _lpDIS
 	LOCAL @hmdc,@hBmp,@hOldBmp
 	LOCAL @hmdc2,@hBmp2,@hOldBmp2
 	LOCAL @nRealLine
+	LOCAL @szStr[12]:word
 	mov dword ptr @bf,0
 
 	mov edi,_lpDIS
@@ -333,7 +406,7 @@ _DrawListItem proc uses edi ebx _lpDIS
 	mov eax,lpMarkTable
 	.if eax
 		add eax,@nRealLine
-		.if byte ptr [eax] &1
+		.if byte ptr [eax] &1 ;标记状态
 			invoke CreateSolidBrush,dbConf+_Configs.HiColorMarked
 			push eax
 			invoke FillRect,@hmdc2,addr @rect,eax
@@ -343,7 +416,7 @@ _DrawListItem proc uses edi ebx _lpDIS
 		.endif
 	.endif
 	mov eax,[ebx].nCurIdx
-	.if eax==[edi].itemID
+	.if eax==[edi].itemID ;悬停状态
 		mov ecx,[edi].itemState
 		and ecx,ODS_SELECTED
 		mov eax,dbConf+_Configs.HiColorDefault
@@ -355,9 +428,31 @@ _DrawListItem proc uses edi ebx _lpDIS
 		push eax
 		invoke FillRect,@hmdc2,addr @rect,eax
 		call DeleteObject
+		invoke SelectObject,@hmdc2,hLineNumberFont
+		mov eax,[edi].itemID
+		inc eax
+		invoke wsprintfW,addr @szStr,offset szToStr,eax
+		invoke SetBkMode,@hmdc2,TRANSPARENT
+		invoke lstrlenW,addr @szStr
+		mov edx,11
+		push eax
+		mul edx
+		add eax,LI_MARGIN_WIDTH
+		mov edx,@rect.right
+		sub edx,eax
+		lea ecx,@szStr
+		push ecx
+		mov eax,@rect.bottom
+		sub eax,18
+		push eax
+		push edx
+		push @hmdc2
+		call TextOutW
+;		invoke TextOutW,@hmdc2,edx,eax,addr @szStr,ecx
+		
 		mov @bf.SourceConstantAlpha,130
 		invoke AlphaBlend,@hmdc,0,0,@cx,@cy,@hmdc2,0,0,@cx,@cy,dword ptr @bf
-	.else
+	.else ;非悬停
 		mov ecx,[edi].itemState
 		and ecx,ODS_SELECTED
 		.if !ZERO?
@@ -367,7 +462,7 @@ _DrawListItem proc uses edi ebx _lpDIS
 		mov eax,lpMarkTable
 		.if eax
 			add eax,@nRealLine
-			.if !(byte ptr [eax]&1)
+			.if !(byte ptr [eax]&1) ;是否被过滤掉
 				invoke GetStockObject,WHITE_BRUSH
 				invoke FillRect,@hmdc2,addr @rect,eax
 				mov @bf.SourceConstantAlpha,100
