@@ -37,7 +37,6 @@ ModifyLine proto :dword,:dword
 	hHeap		dd		?
 
 	dwTemp		dd		?
-	bIsCrypted	dd		?
 .const
 
 	ddTable\ ;00

@@ -17,6 +17,13 @@ DllMain proc _hInstance,_dwReason,_dwReserved
 	ret
 DllMain endp
 
+InitInfo proc _lpMelInfo2
+	mov ecx,_lpMelInfo2
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
+	mov _MelInfo2.nCharacteristic[ecx],0
+	ret
+InitInfo endp
+
 ;判断文件头
 Match proc _lpszName
 	LOCAL @hFile,@dwTemp
@@ -58,7 +65,7 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	LOCAL @nLine
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
-	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,24
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,sizeof YukaStruct
 	or eax,eax
 	je _NoMemGT
 	mov [edi].Reserved,eax
@@ -96,7 +103,9 @@ _GotorelGT:
 	je _GotorelGT
 	mov [ebx+10h],eax
 	
-	invoke VirtualAlloc,0,[ebx+4],MEM_COMMIT,PAGE_READWRITE
+	mov eax,[ebx+4]
+	lea eax,[eax+eax*2]
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _GotorelGT
 	mov [edi].lpStreamIndex,eax
@@ -106,11 +115,11 @@ _GotorelGT:
 	je _GotorelGT
 	mov [edi].lpTextIndex,eax
 	mov @pTextList,eax
-	invoke VirtualAlloc,0,[ebx+14h],MEM_COMMIT,PAGE_READWRITE
-	or eax,eax
-	je _GotorelGT
-	mov [edi].lpText,eax
-	mov @pStrInList,eax
+;	invoke VirtualAlloc,0,[ebx+14h],MEM_COMMIT,PAGE_READWRITE
+;	or eax,eax
+;	je _GotorelGT
+;	mov [edi].lpText,eax
+;	mov @pStrInList,eax
 
 	mov @ddn,0
 	mov edx,edi
@@ -121,21 +130,17 @@ _GotorelGT:
 		add esi,dword ptr [esi+eax*8+10h]
 		mov edi,[ebx+eax*8]
 		mov ecx,[ebx+eax*8+4]
-		invoke _memcpy		
+		invoke _memcpy
 		inc @ddn
 	.endw
 	mov edi,edx
 	
-	xor eax,eax
-	mov ax,[edi].bFirstCreate
-	mov @bFirstCreate,eax
-	
 	invoke _IsEncode,ebx
 	.if eax
 		invoke _Encode,[ebx+10h],[ebx+14h]
-		mov [edi].Reserved[4],1
+		mov YukaStruct.bIsCrypted[ebx],1
 	.else
-		mov [edi].Reserved[4],0
+		mov YukaStruct.bIsCrypted[ebx],0
 	.endif
 	
 	assume edi:nothing
@@ -184,60 +189,43 @@ _GetStringGT:
 			int 3
 		.endif
 		mov eax,@pStreamList
-		mov [eax],edi
-		add @pStreamList,4
+		mov _StreamEntry.lpStart[eax],edi
+		add @pStreamList,sizeof _StreamEntry
 		mov ecx,[edi+8]
 		mov edi,[ebx+10h]
 		add edi,ecx
-		mov eax,@pTextList
-		mov ecx,@pStrInList
-		mov [eax],ecx
-		add @pTextList,4
-;		invoke MultiByteToWideChar,932,MB_PRECOMPOSED,edi,-1,@pStrInList,10000
-		push 10000
-		push @pStrInList
-		push -1
-		push edi
-		push MB_PRECOMPOSED
-		.if @bInLeft || @bFirstCreate
-			push 932
-		.elseif
-			push 936
-		.endif
-		call MultiByteToWideChar
-		.if !eax
-			mov eax,@pStrInList
-			mov word ptr [eax],0
-			add @pStrInList,2
-			inc @nLine
-			.continue
-		.endif
+		invoke lstrlenA,edi
+		inc eax
+		push eax
 		shl eax,1
-		add @pStrInList,eax
+		invoke HeapAlloc,hGlobalHeap,0,eax
+		pop edx
+		test eax,eax
+		jz _NoMemGT
+		mov ecx,@pTextList
+		mov [ecx],eax
+		add @pTextList,4
+		mov ecx,_lpFI
+		invoke MultiByteToWideChar,_FileInfo.nCharSet[ecx],0,edi,-1,eax,edx
+		.if !eax
+			jmp _NoMemGT ;不准确
+		.endif
 		inc @nLine
 	.endw
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
 	mov eax,@nLine
 	mov [edi].nLine,eax
-	.if !@bInLeft && @bFirstCreate
-		xor ebx,ebx
-		.while ebx<[edi].nLine
-			invoke ModifyLine,edi,ebx
-			inc ebx
-		.endw
-		invoke SaveText,edi
-	.endif
-	mov [edi].nMemoryType,MT_VARIABLESTRING
+	
+	mov [edi].nMemoryType,MT_EVERYSTRING
 	assume edi:nothing
 	mov eax,_lpRI
 	mov dword ptr [eax],RI_SUC_LINEONLY
-	mov eax,1
+	
+	xor eax,eax
 	ret
 _NoMemGT:
-	mov eax,_lpRI
-	mov dword ptr [eax],RI_FAIL_MEM
-	xor eax,eax
+	mov eax,E_NOMEM
 	ret
 GetText endp
 
@@ -246,21 +234,21 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	LOCAL @pStr,@pToNewStr,@nNewLen,@bNeedExpand
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
-	mov ebx,[edi].Reserved
+	mov ebx,[edi].lpCustom
 	or ebx,ebx
 	je _ErrML
-	mov eax,[edi].lpTextIndex
-	mov ecx,_nLine
-	mov eax,[eax+ecx*4]
+	invoke _GetStringInList,_lpFI,_nLine
 	mov @pStr,eax
 	mov eax,[edi].lpStreamIndex
-	mov esi,[eax+ecx*4]
+	mov ecx,_nLine
+	lea ecx,[ecx+ecx*2]
+	mov esi,_StreamEntry.lpStart[eax+ecx*4]
 	cmp dword ptr [esi],5
 	jne _ErrML
 	mov eax,[ebx+10h]
 	add eax,dword ptr [ebx+14h]
 	mov @pToNewStr,eax
-	invoke WideCharToMultiByte,936,0,@pStr,-1,eax,0,0,0
+	invoke WideCharToMultiByte,[edi].nCharSet,0,@pStr,-1,eax,0,0,0
 	mov @nNewLen,eax
 	mov eax,[esi+8]
 	add eax,dword ptr [ebx+10h]
@@ -279,7 +267,7 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		mov ecx,eax
 		mov @bNeedExpand,FALSE
 	.endif
-	invoke WideCharToMultiByte,936,0,@pStr,-1,@pToNewStr,ecx,0,0
+	invoke WideCharToMultiByte,[edi].nCharSet,0,@pStr,-1,@pToNewStr,ecx,0,0
 	or eax,eax
 	je _ErrML
 	.if @bNeedExpand
@@ -302,13 +290,15 @@ SaveText proc uses edi ebx esi _lpFI
 	LOCAL @dbHdr[30h]:byte,@dwTemp
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
+	cmp [edi].bReadOnly,1
+	je _ErrST
 	mov esi,[edi].lpStream
 	mov edx,edi
 	lea edi,@dbHdr
 	mov ecx,30h
 	invoke _memcpy
 	mov edi,edx
-	mov ebx,[edi].Reserved
+	mov ebx,[edi].lpCustom
 	mov ecx,[ebx+14h]
 	mov dword ptr [@dbHdr+24h],ecx
 	invoke SetFilePointer,[edi].hFile,0,0,FILE_BEGIN
@@ -339,8 +329,8 @@ SetLine endp
 Release proc uses ebx _lpFI
 	mov eax,_lpFI
 	assume eax:ptr _FileInfo
-	mov ebx,[eax].Reserved
-	mov [eax].Reserved,0
+	mov ebx,[eax].lpCustom
+	mov [eax].lpCustom,0
 	assume eax:nothing
 	.if ebx
 		mov ecx,3

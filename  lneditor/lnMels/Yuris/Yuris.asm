@@ -20,7 +20,7 @@ DllMain endp
 ;
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],0
 	ret
 InitInfo endp
@@ -203,7 +203,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov eax,@hdr.nArgSize
 	shr eax,1
 	mov ebx,eax
-	invoke VirtualAlloc,0,ebx,MEM_COMMIT,PAGE_READWRITE
+	lea eax,[eax+eax*2]
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _Nomem
 	mov [edi].lpStreamIndex,eax
@@ -244,7 +245,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			mov [edx+ecx*4],eax
 			mov edx,[edi].lpStreamIndex
 			mov eax,@pArg
-			mov [edx+ecx*4],eax
+			lea ecx,[ecx+ecx*2]
+			mov _StreamEntry.lpStart[edx+ecx*4],eax
 			inc @nLine
 			add @pArg,12
 		.elseif al==byte ptr @opCall && ah!=0
@@ -289,7 +291,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 					mov [edx+ecx*4],eax
 					mov edx,[edi].lpStreamIndex
 					mov eax,@pArg
-					mov [edx+ecx*4],eax
+					lea ecx,[ecx+ecx*2]
+					mov _StreamEntry.lpStart[edx+ecx*4],eax
 					inc @nLine
 				.endif
 			_Ctn2:
@@ -399,7 +402,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	
 	mov ecx,[edi].lpStreamIndex
 	mov eax,_nLine
-	mov esi,[ecx+eax*4]
+	lea eax,[eax+eax*2]
+	mov esi,_StreamEntry.lpStart[ecx+eax*4]
 	assume esi:ptr YurisArg
 	
 	invoke _GetStringInList,edi,_nLine

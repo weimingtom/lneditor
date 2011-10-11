@@ -77,7 +77,7 @@ _WndCMProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 		invoke SendDlgItemMessageW,hwnd,IDC_CM_MELLIST,LB_SETITEMDATA,eax,-1
 		.if lParam
 			mov esi,lParam
-			.while dword ptr [esi]
+			.while dword ptr [esi]!=-1
 				lodsd
 				mov edx,sizeof _MelInfo
 				mul dx

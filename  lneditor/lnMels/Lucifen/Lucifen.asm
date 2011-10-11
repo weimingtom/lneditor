@@ -20,7 +20,7 @@ DllMain endp
 ;
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],0
 	ret
 InitInfo endp
@@ -194,7 +194,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	
 	shl ecx,3
 	mov ebx,ecx
-	invoke VirtualAlloc,0,ebx,MEM_COMMIT,PAGE_READWRITE
+	lea ecx,[ecx+ecx*2]
+	invoke VirtualAlloc,0,ecx,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _Nomem
 	mov [edi].lpStreamIndex,eax
@@ -268,8 +269,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 								mov [ecx],eax
 								mov edx,@pSIdx
 								lea ecx,[esi-2]
-								mov [edx],ecx
-								add @pSIdx,4
+								mov _StreamEntry.lpStart[edx],ecx
+								add @pSIdx,sizeof _StreamEntry
 								add @pTIdx,4
 								xor eax,eax
 								mov ax,[esi-2]
@@ -312,8 +313,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			test eax,eax
 			jz _Nomem ;²»×¼È·
 			mov edx,@pSIdx
-			mov [edx],esi
-			add @pSIdx,4
+			mov _StreamEntry.lpStart[edx],esi
+			add @pSIdx,sizeof _StreamEntry
 			mov esi,ecx
 			mov ecx,@pTIdx
 			mov [ecx],eax

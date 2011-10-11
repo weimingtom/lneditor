@@ -1,6 +1,6 @@
-INTERFACE_VER			EQU		00020000h
+INTERFACE_VER			EQU		00030000h
 
-MAX_STRINGLEN			equ		1024
+MAX_STRINGLEN			equ		4096
 ;错误代码
 E_ERROR					EQU		-1
 E_NOMEM				EQU		1
@@ -61,12 +61,19 @@ ST_CUSTOM				EQU		0
 ST_ENDWITHZERO			EQU		1
 ST_PASCAL2				EQU		2
 ST_PASCAL4				EQU		3
+ST_SPECLEN				EQU		4	;由lpStreamIndex.nStringLen决定长度
 ST_TXTENDA				EQU		10h
 ST_TXTENDW				EQU		11h
 
+_StreamEntry struct
+	lpStart				dd		?	;字符串起始
+	nStringLen			dd		?	;字符串长度，可选
+	lpInformation			dd		?	;字符串附加信息，可选，如不使用必须为NULL
+_StreamEntry ends
+
 ;文件信息
 _FileInfo struct
-	szName				db		MAX_STRINGLEN	dup(?)	;文件名(含路径)
+	lpszName			dd		?						;文件名(含路径)
 	hFile				dd		?						;文件句柄，该句柄直到脚本关闭才会释放。
 	
 	lpStream				dd		?						;文件直接读入内存后的指针，若插件有MIC_NOPREREAD属性，此指针不会被自动填写。
@@ -74,11 +81,11 @@ _FileInfo struct
 	nMemoryType			dd		?					;字符串表的填写方式。具体参见MT_XXX的说明。
 
 	lpTextIndex			dd		?						;纯文本字符串索引表指针。本表中的字符串显示在列表框中。
-	lpStreamIndex			dd		?						;可选，原始脚本字符串索引表指针，指向每行所对应的脚本位置。若为POINTERONLY存储类型，此项必须。
-	;以上两个域执行的内存必须由VirtualAlloc(0,...)申请。
+	lpStreamIndex			dd		?						;可选，原始脚本字符串索引表指针，指向_StreamEntry数组。若为POINTERONLY存储类型，此项必须。
+	;以上两个域使用的内存必须由VirtualAlloc(0,...)申请。
 	
 	nStringType			dd		?						;字符串类型。如C字符串、PASCAL字符串等。参见ST_XXX。
-	nStreamSize			dd		?						;文件长度。跟随脚本编辑随时更新。
+	nStreamSize			dd		?						;文件长度。
 	nLine				dd		?						;文本行数。
 	
 	bReadOnly			dd		?						;指定该文件是否为只读（是否在列表框左侧）

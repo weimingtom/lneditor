@@ -20,7 +20,7 @@ DllMain endp
 
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],0
 	ret
 InitInfo endp
@@ -243,6 +243,7 @@ _IsStr2GT:
 	mov eax,@nLine
 	.if eax
 		shl eax,2
+		lea eax,[eax+eax*2]
 		invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 		or eax,eax
 		je _NomemGT
@@ -252,9 +253,7 @@ _IsStr2GT:
 	;开始处理字节码
 	mov [ebx].nMemoryType,MT_POINTERONLY
 	mov [ebx].nStringType,ST_PASCAL2
-	.if [ebx].bReadOnly && ![ebx].nCharSet
-		mov [ebx].nCharSet,CS_SJIS
-	.endif
+	
 	.if [ebx].nCharSet==CS_UNICODE
 		invoke Release,_lpFI
 		mov ecx,_lpRI
@@ -302,21 +301,22 @@ _IsStrGT:
 					movzx ecx,ax
 					mov eax,@nLine
 					mov edx,[ebx].lpStreamIndex
-					mov [edx+eax*4],esi
-					sub dword ptr [edx+eax*4],2
+					lea eax,[eax+eax*2]
+					mov _StreamEntry.lpStart[edx+eax*4],esi
+					sub _StreamEntry.lpStart[edx+eax*4],2
 					inc @nLine
 					add esi,ecx
 					.if word ptr [esi]==83ah && word ptr [esi+4]==840h
 						add esi,6
 						xor eax,eax
-						lodsw
-						add esi,eax
+						mov ax,[esi]
+						lea esi,[esi+eax+2]
 					.endif
 					.while byte ptr [esi+6]==6eh && dword ptr [esi]==08420841h && word ptr [esi+0ch]==840h
 						add esi,0eh
 						xor eax,eax
-						lodsw
-						add esi,eax
+						mov ax,[esi]
+						lea esi,[esi+eax+2]
 					.endw
 					.continue
 				.elseif al==-3
@@ -365,7 +365,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	assume ebx:ptr _FileInfo
 	mov edx,[ebx].lpStreamIndex
 	mov ecx,_nLine
-	mov edx,[edx+ecx*4]
+	lea ecx,[ecx+ecx*2]
+	mov edx,_StreamEntry.lpStart[edx+ecx*4]
 	.if word ptr [edx-6]==83ah
 		xor eax,eax
 		mov ax,[edx-4]
@@ -469,7 +470,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	add eax,[esi].nDataSize
 	mov edi,[ebx].lpStreamIndex
 	mov ecx,_nLine
-	mov edx,[edi+ecx*4]
+	lea ecx,[ecx+ecx*2]
+	mov edx,_StreamEntry.lpStart[edi+ecx*4]
 	sub eax,edx
 	sub eax,@nOldLen
 	invoke _ReplaceInMem,@pNewBuff,@nNewLen,edx,@nOldLen,eax
@@ -486,14 +488,16 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	mov ecx,_nLine
 	inc ecx
 	.while ecx<[ebx].nLine
-		add dword ptr [edi+ecx*4],eax
+		lea edx,[ecx+ecx*2]
+		add _StreamEntry.lpStart[edi+edx*4],eax
 		inc ecx
 	.endw
 	
 	mov edi,[esi].lpEntries
 	mov ecx,_nLine
 	mov edx,[ebx].lpStreamIndex
-	mov edx,[edx+ecx*4]
+	lea ecx,[ecx+ecx*2]
+	mov edx,_StreamEntry.lpStart[edx+ecx*4]
 	sub edx,[esi].lpData
 	xor ecx,ecx
 	.while ecx<[esi].nEntryCount
@@ -510,7 +514,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	mov edi,[esi].lpJumpTable
 	mov ecx,_nLine
 	mov edx,[ebx].lpStreamIndex
-	mov edx,[edx+ecx*4]
+	lea ecx,[ecx+ecx*2]
+	mov edx,_StreamEntry.lpStart[edx+ecx*4]
 	mov ecx,[edi]
 	.while ecx
 		.if ecx>edx
@@ -648,7 +653,7 @@ SaveText proc uses edi ebx esi _lpFI
 	ret
 SaveText endp
 
-GetStr proc uses esi edi ebx _lpFI,_lppString,_lpBuff
+GetStr proc uses esi edi ebx _lpFI,_lppString,_lpStreamEntry
 	LOCAL @nCharSet,@pStr,@nLeftBuff
 	mov ecx,_lpFI
 	mov eax,dword ptr [ecx+_FileInfo.nCharSet]
@@ -664,9 +669,11 @@ GetStr proc uses esi edi ebx _lpFI,_lppString,_lpBuff
 	mov ecx,_lppString
 	mov [ecx],eax
 	
-	mov esi,_lpBuff
-	lodsw
-	movzx ebx,ax
+	mov eax,_lpStreamEntry
+	mov esi,_StreamEntry.lpStart[eax]
+	xor ebx,ebx
+	mov bx,[esi]
+	add esi,2
 	cmp ebx,@nLeftBuff
 	ja _NobuffGS
 	invoke MultiByteToWideChar,@nCharSet,0,esi,ebx,@pStr,@nLeftBuff

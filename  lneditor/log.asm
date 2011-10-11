@@ -88,10 +88,10 @@ _GetGeneralErrorString endp
 _OutputMessage proc _nType,_lpszName,para1,para2
 	.if nUIStatus & UIS_CONSOLE
 		
-	.else
+	.else ;UIS_WINDOW
 		.if nUIStatus & UIS_BUSY
 			invoke _WriteLog,_nType,_lpszName,para1,para2
-		.else
+		.else ;UIS_IDLE
 			mov eax,_nType
 			.if eax<10000h
 				invoke _GetGeneralErrorString,_nType

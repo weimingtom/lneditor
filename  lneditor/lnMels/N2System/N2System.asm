@@ -20,7 +20,7 @@ DllMain endp
 ;
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],0
 	ret
 InitInfo endp
@@ -117,13 +117,13 @@ N2GetLine proc uses esi edi _lpStr,_nCS,_nCode
 	or eax,eax
 	je _Ex
 	mov @pStr2,eax
-;	mov edi,eax
-	invoke wsprintf,eax,$CTA0("%02X: "),_nCode
-	mov ecx,@pStr2
-	lea edi,[ecx+eax]
+	mov edi,eax
+;	invoke wsprintf,eax,$CTA0("%02X: "),_nCode
+;	mov ecx,@pStr2
+;	lea edi,[ecx+eax]
 	mov ecx,@nLen
-;	mov @nChar,0
-	mov @nChar,eax
+	mov @nChar,0
+;	mov @nChar,eax
 	xor edx,edx
 	.if !ecx
 		mov @pStr,0
@@ -307,8 +307,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	je _Nomem
 	mov [edi].lpCustom,eax
 
-	.if ![edi].bReadOnly 
-		invoke N2OpenMapFile,edi,[edi].lpCustom
+	.if ![edi].bReadOnly
+		invoke N2OpenMapFile,[edi].lpszName,[edi].lpCustom
 		.if !eax
 			invoke N2MakeIndexTable,[edi].lpCustom
 			mov ecx,[edi].lpCustom
@@ -324,11 +324,11 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov @pEnd,eax
 	xor ebx,ebx
 	.while esi<@pEnd
-;		.if word ptr [esi+4]==0d8h && word ptr [esi+6]==3
-;			inc ebx
-;		.endif
+		.if word ptr [esi+4]==0d8h && word ptr [esi+6]==3
+			inc ebx
+		.endif
 		movzx ecx,word ptr [esi+6]
-		add ebx,ecx
+;		add ebx,ecx
 		add esi,8
 		.while ecx
 			lodsd
@@ -343,64 +343,67 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	or eax,eax
 	je _Nomem
 	mov [edi].lpTextIndex,eax
-	invoke VirtualAlloc,0,ebx,MEM_COMMIT,PAGE_READWRITE
+	lea eax,[ebx+ebx*2]
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _Nomem
 	mov [edi].lpStreamIndex,eax
 	
 	mov esi,[edi].lpStream
 	mov @nLine,0
+	xor ebx,ebx
 	.while esi<@pEnd
-;		.if word ptr [esi+4]==0d8h && word ptr [esi+6]==3
-;			add esi,8
-;			lodsd
-;			add esi,eax
-;			lodsd
-;			add esi,eax
-;			invoke N2GetLine,esi,[edi].nCharSet
-;			or eax,eax
-;			je @F
-;			mov ecx,[edi].lpTextIndex
-;			mov [ecx+ebx*4],eax
-;			mov ecx,[edi].lpStreamIndex
-;			mov [ecx+ebx*4],esi
-;			inc ebx
-;			@@:
-;			lodsd
-;			add esi,eax
-;		.else
-;			movzx ecx,word ptr [esi+6]
-;			add esi,8
-;			.while ecx
-;				lodsd
-;				add esi,eax
-;				dec ecx
-;			.endw
-;		.endif
-		movzx ebx,word ptr [esi+6]
-		movzx eax,word ptr [esi+4]
-		mov @nCode,eax
-		add esi,8
-		.while ebx
-			invoke N2GetLine,esi,[edi].nCharSet,@nCode
+		.if word ptr [esi+4]==0d8h && word ptr [esi+6]==3
+			add esi,8
+			lodsd
+			add esi,eax
+			lodsd
+			add esi,eax
+			invoke N2GetLine,esi,[edi].nCharSet,0
 			or eax,eax
 			je @F
 			mov ecx,[edi].lpTextIndex
-			mov edx,@nLine
-			mov [ecx+edx*4],eax
+			mov [ecx+ebx*4],eax
 			mov ecx,[edi].lpStreamIndex
-			mov [ecx+edx*4],esi
-			inc @nLine
+			lea eax,[ebx+ebx*2]
+			mov _StreamEntry.lpStart[ecx+eax*4],esi
+			inc ebx
 			@@:
 			lodsd
 			add esi,eax
-			dec ebx
-		.endw
+		.else
+			movzx ecx,word ptr [esi+6]
+			add esi,8
+			.while ecx
+				lodsd
+				add esi,eax
+				dec ecx
+			.endw
+		.endif
+;		movzx ebx,word ptr [esi+6]
+;		movzx eax,word ptr [esi+4]
+;		mov @nCode,eax
+;		add esi,8
+;		.while ebx
+;			invoke N2GetLine,esi,[edi].nCharSet,@nCode
+;			or eax,eax
+;			je @F
+;			mov ecx,[edi].lpTextIndex
+;			mov edx,@nLine
+;			mov [ecx+edx*4],eax
+;			mov ecx,[edi].lpStreamIndex
+;			mov [ecx+edx*4],esi
+;			inc @nLine
+;			@@:
+;			lodsd
+;			add esi,eax
+;			dec ebx
+;		.endw
 	.endw
 	
 	mov [edi].nMemoryType,MT_EVERYSTRING
-	mov eax,@nLine
-	mov [edi].nLine,eax
+;	mov eax,@nLine
+	mov [edi].nLine,ebx
 	
 	assume edi:nothing
 	mov ecx,_lpRI
@@ -495,7 +498,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	
 	mov ecx,[edi].lpStreamIndex
 	mov eax,_nLine
-	mov esi,[ecx+eax*4]
+	lea eax,[eax+eax*2]
+	mov esi,_StreamEntry.lpStart[ecx+eax*4]
 	lodsd
 	
 	.if eax==@nNewLen
@@ -529,7 +533,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		mov eax,_nLine
 		inc eax
 		.while eax<[edi].nLine
-			add dword ptr [ecx+eax*4],ebx
+			lea edx,[eax+eax*2]
+			add _StreamEntry.lpStart[ecx+edx*4],ebx
 			inc eax
 		.endw
 		

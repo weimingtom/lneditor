@@ -49,7 +49,7 @@ _ofnOpenHook proc uses esi edi ebx hwnd,uMsg,wParam,lParam
 _ofnOpenHook endp
 
 ;
-_OpenFileDlg proc uses edi ebx _lpszFilter,_lpszFN,_lpszInit,_lpszTitle,_lpdwPlugin
+_OpenFileDlg proc uses edi ebx _lpszFilter,_lppszFN,_lpszInit,_lpszTitle,_lpdwPlugin
 	LOCAL @opFileName:OPENFILENAME
 	LOCAL @szErrMsg[128]:byte
 	
@@ -57,6 +57,14 @@ _OpenFileDlg proc uses edi ebx _lpszFilter,_lpszFN,_lpszInit,_lpszTitle,_lpdwPlu
 	xor eax,eax
 	mov ecx,sizeof @opFileName
 	rep stosb
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN
+	test eax,eax
+	jz _ExOFD
+	mov edx,eax
+	mov ecx,_lppszFN
+	mov [ecx],eax
+	mov ebx,MAX_STRINGLEN/2
+_GetFN:
 	mov @opFileName.lStructSize,sizeof @opFileName
 	push hWinMain
 	pop @opFileName.hwndOwner
@@ -64,10 +72,9 @@ _OpenFileDlg proc uses edi ebx _lpszFilter,_lpszFN,_lpszInit,_lpszTitle,_lpdwPlu
 	pop @opFileName.hInstance
 	push _lpszFilter
 	pop @opFileName.lpstrFilter
-	mov eax,_lpszFN
-	mov word ptr [eax],0
-	mov @opFileName.lpstrFile,eax
-	mov @opFileName.nMaxFile,MAX_STRINGLEN/2
+	mov word ptr [edx],0
+	mov @opFileName.lpstrFile,edx
+	mov @opFileName.nMaxFile,ebx
 	push _lpszInit
 	pop @opFileName.lpstrInitialDir
 	push _lpszTitle
@@ -85,8 +92,28 @@ _OpenFileDlg proc uses edi ebx _lpszFilter,_lpszFN,_lpszInit,_lpszTitle,_lpdwPlu
 	invoke GetOpenFileNameW,eax
 	.if !eax
 		invoke CommDlgExtendedError
-		.if !eax
-			ret
+		test eax,eax
+		jz _ErrOFD
+		.if eax==FNERR_BUFFERTOOSMALL
+			mov eax,IDS_SELECTFILEAGAIN
+			invoke _GetConstString
+			invoke MessageBoxW,hWinMain,eax,0,MB_ICONEXCLAMATION
+			xor eax,eax
+			mov ecx,@opFileName.lpstrFile
+			mov ax,[ecx]
+			add eax,10
+			mov ebx,eax
+			shl eax,1
+			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
+			test eax,eax
+			jz _ErrOFD
+			mov edi,eax
+			mov ecx,_lppszFN
+			invoke HeapFree,hGlobalHeap,0,[ecx]
+			mov ecx,_lppszFN
+			mov [ecx],edi
+			mov edx,edi
+			jmp _GetFN
 		.endif
 		mov ebx,eax
 		mov eax,IDS_ERROPENDLG
@@ -102,6 +129,12 @@ _OpenFileDlg proc uses edi ebx _lpszFilter,_lpszFN,_lpszInit,_lpszTitle,_lpdwPlu
 		mov [ecx],eax
 	.endif
 	mov eax,1
+_ExOFD:
+	ret
+_ErrOFD:
+	mov ecx,_lppszFN
+	invoke HeapFree,hGlobalHeap,0,[ecx]
+	xor eax,eax
 	ret
 _OpenFileDlg endp
 
@@ -322,22 +355,38 @@ _ExALT:
 _AddLinesToList endp
 
 ;从Name1生成Name2
-_GenName2 proc uses ebx _lpszName1,_lpszName2
-	LOCAL @szStr[MAX_STRINGLEN]:byte
+_GenName2 proc uses ebx _lpszName1,_lppszName2
+	LOCAL @lpszStr
 	LOCAL @szTemp[SHORT_STRINGLEN]:byte
+	invoke lstrlenW,_lpszName1
+	add eax,20
+	shl eax,1
+	mov ebx,eax
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
+	test eax,eax
+	jz _ErrGN
+	mov ecx,_lppszName2
+	mov [ecx],eax
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
+	.if !eax
+		mov ecx,_lppszName2
+		invoke HeapFree,hGlobalHeap,0,[ecx]
+		jmp _ErrGN
+	.endif
+	mov @lpszStr,eax
 	
-	invoke lstrcpyW,addr @szStr,_lpszName1
-	invoke _DirBackW,addr @szStr
+	invoke lstrcpyW,@lpszStr,_lpszName1
+	invoke _DirBackW,@lpszStr
 	invoke _DirFileNameW,_lpszName1
 	mov ebx,eax
-	invoke _DirCmpW,addr @szStr,dbConf+_Configs.lpNewScDir
+	invoke _DirCmpW,@lpszStr,dbConf+_Configs.lpNewScDir
 	.if !eax
-		invoke lstrcpyW,addr @szStr, _lpszName1
-		invoke _DirBackW,addr @szStr
-		invoke _DirBackW,addr @szStr
+		invoke lstrcpyW,@lpszStr, _lpszName1
+		invoke _DirBackW,@lpszStr
+		invoke _DirBackW,@lpszStr
 		invoke _DirFileNameW,_lpszName1
-		invoke _DirCatW,addr @szStr,eax
-		invoke CreateFileW,addr @szStr,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
+		invoke _DirCatW,@lpszStr,eax
+		invoke CreateFileW,@lpszStr,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
 		.if eax!=-1
 			invoke CloseHandle,eax
 			mov eax,IDS_WRONGPOS
@@ -348,43 +397,54 @@ _GenName2 proc uses ebx _lpszName1,_lpszName2
 			invoke MessageBoxW,hWinMain,ecx,eax,MB_YESNOCANCEL or MB_DEFBUTTON1 or MB_ICONQUESTION
 			.if eax==IDYES
 				.if dbConf+_Configs.nNewLoc==NL_CURRENT
-					invoke lstrcpyW,_lpszName2,_lpszName1
-					invoke lstrcpyW,_lpszName1,addr @szStr
+					mov ecx,_lppszName2
+					invoke lstrcpyW,[ecx],_lpszName1
+					invoke lstrcpyW,_lpszName1,@lpszStr
 					jmp _ExGN
 				.else
-					invoke lstrcpyW,_lpszName1,addr @szStr
+					invoke lstrcpyW,_lpszName1,@lpszStr
 					jmp _MakeFN2GN
 				.endif
 			.endif
 			cmp eax,IDCANCEL
 			jne _MakeFN2GN
+			invoke HeapFree,hGlobalHeap,0,@lpszStr
+			mov ecx,_lppszName2
+			invoke HeapFree,hGlobalHeap,0,[ecx]
 			xor eax,eax
 			ret
 		.endif
 	.endif
 _MakeFN2GN:
 	.if dbConf+_Configs.nNewLoc==NL_CURRENT
-		invoke lstrcpyW,addr @szStr,_lpszName1
+		invoke lstrcpyW,@lpszStr,_lpszName1
 	.else
-		invoke GetModuleFileNameW,0,addr @szStr,MAX_STRINGLEN/2
+		invoke GetModuleFileNameW,0,@lpszStr,MAX_STRINGLEN/2
 	.endif
-	invoke _DirBackW,addr @szStr
-	invoke _DirCatW,addr @szStr,dbConf+_Configs.lpNewScDir
-	invoke SetCurrentDirectoryW,addr @szStr
+	invoke _DirBackW,@lpszStr
+	invoke _DirCatW,@lpszStr,dbConf+_Configs.lpNewScDir
+	invoke SetCurrentDirectoryW,@lpszStr
 	.if !eax
-		invoke CreateDirectoryW,addr @szStr,0
-		invoke SetCurrentDirectoryW,addr @szStr
+		invoke CreateDirectoryW,@lpszStr,0
+		invoke SetCurrentDirectoryW,@lpszStr
 		.if !eax
-			mov eax,_lpszName2
+			mov ecx,_lppszName2
+			mov eax,[ecx]
 			mov word ptr [eax],0
-			jmp _ExGN
+			invoke HeapFree,hGlobalHeap,0,@lpszStr
+			jmp _ErrGN
 		.endif
 	.endif
 	invoke _DirFileNameW,_lpszName1
-	invoke _DirCatW,addr @szStr,eax
-	invoke lstrcpyW,_lpszName2,addr @szStr
+	invoke _DirCatW,@lpszStr,eax
+	mov ecx,_lppszName2
+	invoke lstrcpyW,[ecx],@lpszStr
 _ExGN:
+	invoke HeapFree,hGlobalHeap,0,@lpszStr
 	mov eax,1
+	ret
+_ErrGN:
+	xor eax,eax
 	ret
 _GenName2 endp
 
@@ -399,7 +459,7 @@ _BeginLF:
 	.else
 		mov ecx,GENERIC_READ or GENERIC_WRITE
 	.endif
-	invoke CreateFileW,edi,ecx,FILE_SHARE_READ or FILE_SHARE_WRITE,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
+	invoke CreateFileW,[edi].lpszName,ecx,FILE_SHARE_READ or FILE_SHARE_WRITE,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
 	cmp eax,-1
 	je _FailLF
 	mov [edi].hFile,eax
@@ -410,7 +470,7 @@ _BeginLF:
 		mov eax,dword ptr @nFileSize
 		.if !eax && !dword ptr [@nFileSize+4]
 			invoke CloseHandle,[edi].hFile
-			invoke DeleteFileW,edi
+			invoke DeleteFileW,[edi].lpszName
 			jmp _BeginLF
 		.endif
 		.if _LargeMem==LM_HALF
@@ -454,7 +514,7 @@ _SaveOrNot proc
 _SaveOrNot endp
 
 ;释放FileInfo结构中的内存并清零
-_ClearAll proc uses edi _pFI
+_ClearAll proc uses edi ebx esi _pFI
 	mov edi,_pFI
 	assume edi:ptr _FileInfo
 	mov eax,dbSimpFunc+_SimpFunc.Release
@@ -464,8 +524,6 @@ _ClearAll proc uses edi _pFI
 	.endif
 	mov ecx,[edi].nMemoryType
 	.if ecx==MT_EVERYSTRING || ecx==MT_POINTERONLY
-		push esi
-		push ebx
 		mov esi,[edi].lpTextIndex
 		mov ebx,[edi].nLine
 		.while ebx
@@ -473,13 +531,26 @@ _ClearAll proc uses edi _pFI
 			invoke HeapFree,hGlobalHeap,0,eax
 			dec ebx
 		.endw
-		pop ebx
-		pop esi
 	.endif
+	mov esi,[edi].lpStreamIndex
+	mov ebx,[edi].nLine
+	test ebx,ebx
+	jz _ExLoop
+	_loop1:
+		mov eax,_StreamEntry.lpInformation[esi]
+		.if eax
+			invoke HeapFree,hGlobalHeap,0,eax
+		.endif
+		add esi,sizeof _StreamEntry
+		dec ebx
+	jnz _loop1
+	_ExLoop:
+	
 	invoke CloseHandle,[edi].hFile
 	invoke VirtualFree,[edi].lpStream,0,MEM_RELEASE
 	invoke VirtualFree,[edi].lpTextIndex,0,MEM_RELEASE
 	invoke VirtualFree,[edi].lpStreamIndex,0,MEM_RELEASE
+	invoke HeapFree,hGlobalHeap,0,[edi].lpszName
 	assume edi:nothing
 	xor al,al
 	mov ecx,sizeof _FileInfo
@@ -876,14 +947,14 @@ _ShowPic endp
 _GenWindowTitle proc _lpsz,_nType
 	mov eax,_nType
 	.if EAX==GWT_FILENAME1
-		invoke lstrcpyW,_lpsz,offset FileInfo1.szName
+		invoke lstrcpyW,_lpsz,FileInfo1.lpszName
 		@@:
 		invoke lstrcatW,_lpsz,offset szGang
 		mov eax,IDS_WINDOWTITLE
 		invoke _GetConstString
 		invoke lstrcatW,_lpsz,eax
 	.elseif eax==GWT_FILENAME2
-		invoke lstrcpyW,_lpsz,offset FileInfo2.szName
+		invoke lstrcpyW,_lpsz,FileInfo2.lpszName
 		jmp @B
 	.elseif eax==GWT_VERSION
 		mov eax,IDS_WINDOWTITLE

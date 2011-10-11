@@ -20,7 +20,7 @@ DllMain endp
 ;
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],0
 	ret
 InitInfo endp
@@ -88,9 +88,9 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	assume edi:ptr _FileInfo
 	mov esi,[edi].lpStream
 	.if word ptr [esi]==0
-		mov bIsCrypted,0
+		mov [edi].lpCustom,0
 	.elseif word ptr [esi]==8888h
-		mov bIsCrypted,1
+		mov [edi].lpCustom,1
 		invoke _XorBlock,[edi].lpStream,[edi].nStreamSize
 	.else
 		mov eax,E_WRONGFORMAT
@@ -99,6 +99,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	
 	mov ecx,[edi].nStreamSize
 	shr ecx,2
+	lea ecx,[ecx+ecx*2]
 	invoke VirtualAlloc,0,ecx,MEM_COMMIT,PAGE_READWRITE
 	.if !eax
 		mov eax,E_NOMEM
@@ -108,6 +109,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	
 	mov [edi].nMemoryType,MT_POINTERONLY
 	mov [edi].nStringType,ST_PASCAL4
+	
 	mov ecx,esi
 	add esi,dword ptr [esi+2]
 	add ecx,[edi].nStreamSize
@@ -137,8 +139,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				or eax,eax
 				je @F
 				lea ecx,[esi-4]
-				mov [ebx],ecx
-				add ebx,4
+				mov _StreamEntry.lpStart[ebx],ecx
+				add ebx,sizeof _StreamEntry
 				add esi,eax
 			.endif
 			@@:
@@ -146,8 +148,11 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 		.endw
 	.endw
 	sub ebx,[edi].lpStreamIndex
-	shr ebx,2
-	mov [edi].nLine,ebx
+	mov eax,ebx
+	xor edx,edx
+	mov ecx,12
+	div ecx
+	mov [edi].nLine,eax
 	
 	assume edi:nothing
 	mov ecx,_lpRI
@@ -164,6 +169,7 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	assume edi:ptr _FileInfo
 	mov ecx,[edi].lpStreamIndex
 	mov eax,_nLine
+	lea eax,[eax+eax*2]
 	mov esi,[ecx+eax*4]
 	invoke _GetStringInList,_lpFI,_nLine
 	mov ebx,eax
@@ -215,7 +221,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		mov eax,_nLine
 		inc eax
 		.while eax<[edi].nLine
-			add dword ptr [ecx+eax*4],ebx
+			lea edx,[eax+eax*2]
+			add _StreamEntry.lpStart[ecx+edx*4],ebx
 			inc eax
 		.endw
 		
@@ -263,8 +270,8 @@ ModifyLine endp
 
 ;
 SaveText proc _lpFI
-	.if bIsCrypted
-		mov ecx,_lpFI
+	mov ecx,_lpFI
+	.if _FileInfo.lpCustom[ecx]
 		invoke _XorBlock,_FileInfo.lpStream[ecx],_FileInfo.nStreamSize[ecx]
 		invoke _SaveText,_lpFI
 		push eax		

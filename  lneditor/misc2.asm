@@ -26,15 +26,15 @@ _MakeStringListFromStream proc uses edi esi ebx _lpFI
 	assume edi:nothing
 	mov edi,eax
 	.while ebx<@nLine
-		lodsd
-		push eax
+		push esi
 		push edi
 		push _lpFI
 		call dbSimpFunc+_SimpFunc.GetStr
-;		invoke _GetStringFromStmPtr,_lpFI,edi,eax
+;		invoke _GetStringFromStmPtr,_lpFI,edi,esi
 		or eax,eax
 		jnz _ExMSL
 		add edi,4
+		add esi,sizeof _StreamEntry
 		inc ebx
 	.endw
 	xor eax,eax
@@ -42,7 +42,7 @@ _ExMSL:
 	ret
 _MakeStringListFromStream endp
 
-_GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
+_GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpStreamEntry
 	LOCAL @nStrLen,@bIsEnd
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
@@ -50,31 +50,43 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 	MOV edx,[edi].nCharSet
 	assume edi:nothing
 	.if eax==ST_ENDWITHZERO
+		mov ecx,_lpStreamEntry
+		mov esi,_StreamEntry.lpStart[ecx]
 		.if edx==CS_UNICODE
-			invoke lstrlenW,_lpBuff
+			invoke lstrlenW,esi
 			lea ecx,[eax+1]
 		.else
-			invoke lstrlenA,_lpBuff
+			invoke lstrlenA,esi
 			lea ecx,[eax+1]
 		.endif
-		mov esi,_lpBuff
 	.elseif eax==ST_PASCAL2
-		mov esi,_lpBuff
-		lodsw
-		movzx ecx,ax
+		mov ecx,_lpStreamEntry
+		mov esi,_StreamEntry.lpStart[ecx]
+		xor ecx,ecx
+		mov cx,[esi]
+		add esi,2
 		.if edx==CS_UNICODE
 			SHL ecx,1
 		.endif
 	.elseif eax==ST_PASCAL4
-		mov esi,_lpBuff
-		lodsd
-		mov ecx,eax
+		mov ecx,_lpStreamEntry
+		mov esi,_StreamEntry.lpStart[ecx]
+		mov ecx,[esi]
+		add esi,4
 		.if edx==CS_UNICODE
 			SHL ecx,1
 		.endif
+	.elseif eax==ST_SPECLEN
+		mov ecx,_lpStreamEntry
+		mov esi,_StreamEntry.lpStart[ecx]
+		mov ecx,_StreamEntry.nStringLen[ecx]
+		.if edx==CS_UNICODE
+			shl ecx,1
+		.endif
 	.elseif eax==ST_TXTENDW
+		mov ecx,_lpStreamEntry
+		mov edi,_StreamEntry.lpStart[ecx]
 		xor ecx,ecx
-		mov edi,_lpBuff
 		.while word ptr [edi]!=0dh
 			.break .if !word ptr [edi]
 			add edi,2
@@ -96,7 +108,8 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 		mov ecx,@nStrLen
 		shr ecx,1
 		mov edi,eax
-		mov esi,_lpBuff
+		mov edx,_lpStreamEntry
+		mov esi,_StreamEntry.lpStart[edx]
 		rep movsw
 		mov word ptr [edi],0
 		xor eax,eax
@@ -106,7 +119,8 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 			mov eax,E_INVALIDPARAMETER
 			jmp _ExGSFS
 		.endif
-		mov edi,_lpBuff
+		mov ecx,_lpStreamEntry
+		mov edi,_StreamEntry.lpStart[ecx]
 		mov @bIsEnd,0
 		xor ecx,ecx
 		.while word ptr [edi]!=0a0dh
@@ -136,7 +150,8 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 		mov [edx],eax
 		push eax
 		push @nStrLen
-		push _lpBuff
+		mov ecx,_lpStreamEntry
+		push _StreamEntry.lpStart[ecx]
 		push 0
 		mov ebx,_lpFI
 		mov eax,[ebx+_FileInfo.nCharSet]
@@ -146,7 +161,8 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 			mov eax,E_NOTENOUGHBUFF
 			jmp _ExGSFS
 		.endif
-		mov ecx,_lpBuff
+		mov ecx,_lpStreamEntry
+		mov ecx,_StreamEntry.lpStart[ecx]
 		mov word ptr [ecx+eax*2],0
 		xor eax,eax
 		jmp _ExGSFS
@@ -174,7 +190,7 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 		mov edx,[edi].nStringType
 		mov edi,eax
 		rep movsw
-		.if edx==ST_PASCAL2 || EDX==ST_PASCAL4
+		.if edx==ST_PASCAL2 || EDX==ST_PASCAL4 || edx==ST_SPECLEN
 			mov word ptr [edi],0
 		.endif
 	.else
@@ -199,7 +215,7 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpBuff
 			jmp _ExGSFS
 		.endif
 		mov edx,[edi].nStringType
-		.if edx==ST_PASCAL2 || EDX==ST_PASCAL4
+		.if edx==ST_PASCAL2 || EDX==ST_PASCAL4 || edx==ST_SPECLEN
 			mov ecx,_lppString
 			mov edx,[ecx]
 			mov word ptr [edx+eax*2],0
@@ -225,7 +241,10 @@ _RecodeFile proc uses esi ebx edi _lpFI
 		mov edi,ebx
 		xor ebx,ebx
 		.while ebx<[esi].nLine
-			invoke HeapFree,hGlobalHeap,0,[edi+ebx*4]
+			mov eax,[edi+ebx*4]
+			.if eax
+				invoke HeapFree,hGlobalHeap,0,eax
+			.endif
 			inc ebx
 		.endw
 		invoke VirtualFree,edi,0,MEM_RELEASE
@@ -243,6 +262,19 @@ _RecodeFile proc uses esi ebx edi _lpFI
 				inc ebx
 			.endw
 		.endif
+		mov edi,[esi].lpStreamIndex
+		mov ebx,[esi].nLine
+		test ebx,ebx
+		jz _ExLoop
+		_loop1:
+			mov eax,_StreamEntry.lpInformation[edi]
+			.if eax
+				invoke HeapFree,hGlobalHeap,0,eax
+			.endif
+			add edi,sizeof _StreamEntry
+			dec ebx
+		jnz _loop1
+		_ExLoop:
 		invoke VirtualFree,[esi].lpTextIndex,0,MEM_RELEASE
 		invoke VirtualFree,[esi].lpStreamIndex,0,MEM_RELEASE
 		lea eax,@ret
