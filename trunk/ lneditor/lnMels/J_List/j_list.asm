@@ -20,7 +20,7 @@ DllMain endp
 ;
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],0
 	ret
 InitInfo endp
@@ -105,7 +105,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 
 	mov eax,[edi].nStreamSize
 	shr eax,2
-	invoke VirtualAlloc,0,ebx,MEM_COMMIT,PAGE_READWRITE
+	lea eax,[eax+eax*2]
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _Nomem
 	mov [edi].lpStreamIndex,eax
@@ -135,7 +136,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			.elseif bl==-2
 				mov eax,[edi].lpStreamIndex
 				mov ecx,@nLine
-				mov [eax+ecx*4],esi
+				lea ecx,[ecx+ecx*2]
+				mov _StreamEntry.lpStart[eax+ecx*4],esi
 				inc @nLine
 				.while byte ptr [esi]
 					.break .if esi>=@pEnd
@@ -163,7 +165,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 						add esi,2
 						mov eax,[edi].lpStreamIndex
 						mov ecx,@nLine
-						mov [eax+ecx*4],esi
+						lea ecx,[ecx+ecx*2]
+						mov _StreamEntry.lpStart[eax+ecx*4],esi
 						inc @nLine
 						.while byte ptr [esi]
 							.break .if esi>=@pEnd
@@ -275,7 +278,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	
 	mov ecx,[edi].lpStreamIndex
 	mov eax,_nLine
-	mov esi,[ecx+eax*4]
+	lea eax,[eax+eax*2]
+	mov esi,_StreamEntry.lpStart[ecx+eax*4]
 	invoke lstrlenA,esi
 	inc eax
 	
@@ -308,7 +312,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		mov eax,_nLine
 		inc eax
 		.while eax<[edi].nLine
-			add dword ptr [ecx+eax*4],ebx
+			lea edx,[eax+eax*2]
+			add _StreamEntry.lpStart[ecx+edx*4],ebx
 			inc eax
 		.endw
 		

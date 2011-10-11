@@ -223,11 +223,18 @@ _ExportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 					invoke _SelfMatch,edi
 				.endif
 				cmp eax,MR_NO
-				je _Next2EATT
+				je _Next4EATT
 				cmp eax,MR_ERR
-				je _Next2EATT
+				je _Next4EATT
 			.endif
-			invoke lstrcpyW,addr @stFileInfo.szName,edi
+			invoke lstrlenW,edi
+			add eax,5
+			shl eax,1
+			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
+			test eax,eax
+			jz _Next4EATT
+			mov @stFileInfo.lpszName,eax
+			invoke lstrcpyW,eax,edi
 			.if _nMelIdx!=-1
 				mov ecx,[ebx].lpMelInfo2
 			.else
@@ -493,10 +500,17 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 				.endif
 				.if eax==MR_NO || EAX==MR_ERR
 					invoke _OutputMessage,WLT_BATCHIMPERR,ebx,edi,offset szWltEImp1
-					jmp _Next2IATT
+					jmp _Next4IATT
 				.endif
 			.endif
-			invoke lstrcpyW,addr @stFileInfo.szName,edi
+			invoke lstrlenW,edi
+			add eax,5
+			shl eax,1
+			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
+			test eax,eax
+			jz _Next4IATT
+			mov @stFileInfo.lpszName,eax
+			invoke lstrcpyW,eax,edi
 			.if _nMelIdx!=-1
 				mov ecx,[ebx].lpMelInfo2
 			.else

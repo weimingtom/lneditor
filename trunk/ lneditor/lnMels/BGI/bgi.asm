@@ -20,7 +20,7 @@ DllMain endp
 ;
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],0
 	ret
 InitInfo endp
@@ -40,11 +40,6 @@ Match proc uses esi edi _lpszName
 	repe cmpsb
 	.if ZERO?
 		mov eax,MR_YES
-		ret
-	.endif
-	lea esi,@szMagic
-	.if dword ptr [esi]==10h && dword ptr [esi+4]==0
-		mov eax,MR_MAYBE
 		ret
 	.endif
 _NotMatch:
@@ -85,7 +80,8 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 			mov @pCSEnd,esi
 		.endif
 	.endw
-	lea edi,[ecx*4+4]
+	lea ecx,[ecx+ecx*2]
+	lea edi,[ecx*4+sizeof _StreamEntry]
 	invoke VirtualAlloc,0,edi,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	mov @pSI,eax
@@ -99,9 +95,6 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	
 	mov [ebx].nMemoryType,MT_POINTERONLY
 	mov [ebx].nStringType,ST_ENDWITHZERO
-	.if [ebx].bReadOnly && ![ebx].nCharSet
-		mov [ebx].nCharSet,CS_SJIS
-	.endif
 	
 	mov esi,[ebx].lpStream
 	add esi,@nHdrSize
@@ -119,8 +112,8 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 			add eax,@nHdrSize
 			add eax,[ebx].lpStream
 			.continue .if eax<@pCSEnd || byte ptr [eax]<81h 
-			stosd
-			add @pSI,4
+			mov _StreamEntry.lpStart[edi],eax
+			add @pSI,sizeof _StreamEntry
 			add @pRI,4
 			inc ecx
 ;			.if eax<edx
@@ -155,7 +148,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	.endif
 	mov edi,[ecx+eax*4]
 	mov ecx,[ebx].lpStreamIndex
-	mov esi,[ecx+eax*4]
+	lea eax,[eax+eax*2]
+	mov esi,_StreamEntry.lpStart[ecx+eax*4]
 	invoke lstrlenA,esi
 	inc eax
 	invoke WideCharToMultiByte,[ebx].nCharSet,0,edi,-1,esi,eax,0,0

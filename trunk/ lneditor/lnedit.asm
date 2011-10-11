@@ -173,30 +173,32 @@ _WndMainProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 				invoke _GetConstString
 				lea ecx,@nPlugin
 				mov dword ptr [ecx],-2
-				invoke _OpenFileDlg,offset szOpenFilter,offset FileInfo1.szName,dbConf+_Configs.lpInitDir1,eax,ecx
+				invoke _OpenFileDlg,offset szOpenFilter,offset FileInfo1.lpszName,dbConf+_Configs.lpInitDir1,eax,ecx
 				or eax,eax
 				je _ExMain
 				mov ebx,@nPlugin
 				cmp ebx,-2
 				jne _ForcePluginMain
 _BeginOpenMain:
-				invoke lstrcpyW,dbConf+_Configs.lpInitDir1,offset FileInfo1.szName
+				invoke lstrcpyW,dbConf+_Configs.lpInitDir1,FileInfo1.lpszName
 				invoke _DirBackW,dbConf+_Configs.lpInitDir1
 
-				invoke _TryMatch,offset FileInfo1.szName
+				invoke _TryMatch,FileInfo1.lpszName
 				mov ebx,eax
 _ForcePluginMain:
 				.if ebx==-3
 					mov eax,IDS_ERRMATCH
 					invoke _GetConstString
 					invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
-					mov word ptr FileInfo1.szName,0
+					invoke HeapFree,hGlobalHeap,0,FileInfo1.lpszName
+					mov FileInfo1.lpszName,0
 					jmp _ExMain
 				.ELSEif ebx==-2
 					mov eax,IDS_NOMATCH
 					invoke _GetConstString
 					invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
-					mov word ptr FileInfo1.szName,0
+					invoke HeapFree,hGlobalHeap,0,FileInfo1.lpszName
+					mov FileInfo1.lpszName,0
 					jmp _ExMain
 				.elseif ebx==-1
 					invoke _SelfPreProc
@@ -232,11 +234,11 @@ _Open2Main:
 				mov esi,eax
 				mov eax,IDS_OPENTITLE2
 				invoke _GetConstString
-				invoke _OpenFileDlg,offset szOpenFilter,offset FileInfo2.szName,dbConf+_Configs.lpInitDir2,eax,0
+				invoke _OpenFileDlg,offset szOpenFilter,offset FileInfo2.lpszName,dbConf+_Configs.lpInitDir2,eax,0
 				or eax,eax
 				je _ExMain
 _LoadMain:
-				invoke lstrcpyW,dbConf+_Configs.lpInitDir2,offset FileInfo2.szName
+				invoke lstrcpyW,dbConf+_Configs.lpInitDir2,FileInfo2.lpszName
 				invoke _DirBackW,dbConf+_Configs.lpInitDir2
 				mov eax,esi
 			.endif
@@ -368,7 +370,11 @@ _PaintMain:
 		.endif
 		.if dbConf+_Configs.nEditMode==EM_SINGLE
 			@@:
-			invoke DragQueryFileW,wParam,0,offset FileInfo1.szName,MAX_STRINGLEN/2
+			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN
+			test eax,eax
+			jz _ErrDrop
+			mov FileInfo1.lpszName,eax
+			invoke DragQueryFileW,wParam,0,FileInfo1.lpszName,MAX_STRINGLEN/2
 			mov esi,IDM_OPEN
 			jmp _BeginOpenMain
 		.elseif dbConf+_Configs.nEditMode==EM_DOUBLE
@@ -378,12 +384,21 @@ _PaintMain:
 			call ChildWindowFromPoint
 			cmp eax,hList1
 			je @B
-			.if eax==hList2 && word ptr [FileInfo1.szName]
-				invoke DragQueryFileW,wParam,0,offset FileInfo2.szName,MAX_STRINGLEN/2
+			mov ecx,FileInfo1.lpszName
+			.if eax==hList2 && word ptr [ecx]
+				invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN
+				test eax,eax
+				jz _ErrDrop
+				mov FileInfo2.lpszName,eax
+				invoke DragQueryFileW,wParam,0,FileInfo2.lpszName,MAX_STRINGLEN/2
 				mov esi,IDM_LOAD
 				jmp _LoadMain
 			.endif
 		.endif
+	_ErrDrop:
+		mov eax,IDS_CANTOPENFILE
+		invoke _GetConstString
+		invoke MessageBoxW,hWinMain,eax,0,MB_ICONERROR
 	
 	.elseif eax==WM_CREATE
 		mov nUIStatus,UIS_GUI OR UIS_IDLE
@@ -432,7 +447,14 @@ _PaintMain:
 				cmp eax,-1
 				je _ExMain
 				invoke CloseHandle,eax
-				invoke lstrcpyW,offset FileInfo1.szName,dbConf+_Configs.lpPrevFile
+				invoke lstrlenW,dbConf+_Configs.lpPrevFile
+				add eax,5
+				shl eax,1
+				invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
+				test eax,eax
+				jz _ExMain
+				mov FileInfo1.lpszName,eax
+				invoke lstrcpyW,FileInfo1.lpszName,dbConf+_Configs.lpPrevFile
 ;				invoke WaitForSingleObject,@hFile,INFINITE
 ;				invoke CloseHandle,@hFile
 				mov esi,IDM_OPEN
@@ -444,7 +466,7 @@ _PaintMain:
 		invoke HeapAlloc,hGlobalHeap,0,MAX_STRINGLEN
 		mov ebx,eax
 		.if ebx
-			invoke lstrcpyW,ebx,offset FileInfo1.szName
+			invoke lstrcpyW,ebx,FileInfo1.lpszName
 		.endif
 		invoke _CloseScript
 		cmp eax,-1
@@ -658,24 +680,17 @@ _TryMatch proc uses edi esi ebx _lpszName
 	.endw
 	assume edi:nothing
 	lea esi,@pFunc
-	cmp dword ptr [esi],-1
-	je _SelfMatchTM
-_ChooseTM:
-;		.if dword ptr [esi+4]==-1
-;			mov eax,[esi]
-;			jmp _ExTM
-;		.endif
-		invoke DialogBoxParamW,hInstance,IDD_CHOOSEMEL,hWinMain,offset _WndCMProc,0;此参数存储显示在列表中的插件序号，为0则全部显示
-		jmp _ExTM
-	;else
+	.if dword ptr [esi]!=-1
+		invoke DialogBoxParamW,hInstance,IDD_CHOOSEMEL,hWinMain,offset _WndCMProc,esi
+	.else
 _SelfMatchTM:
 		invoke _SelfMatch,_lpszName
 		.if eax==MR_YES
 			or eax,-1
 		.else
-			jmp _ChooseTM
-			mov eax,-2
+			invoke DialogBoxParamW,hInstance,IDD_CHOOSEMEL,hWinMain,offset _WndCMProc,0;此参数存储显示在列表中的插件序号，为0则全部显示
 		.endif
+	.endif
 _ExTM:
 	pop fs:[0]
 	pop ecx

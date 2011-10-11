@@ -287,8 +287,8 @@ _FileRec ends
 	nCurMel			dd		?	;当前使用的插件编号（在lpMels中的位置）
 	nCurIdx			dd		?	;当前编辑行
 	
-	bModified		dd		?	;文件本次打开是否被修改过
 	bOpen			dd		?	;编辑器是否打开了文件
+	bModified		dd		?	;文件本次打开是否被修改过
 	nUIStatus			dd		?	;UI状态,UIS_XXX
 
 	hLogFile			dd		?	;日志文件句柄
@@ -325,8 +325,8 @@ _FileRec ends
 	TW0			'Multiline Editor',	szDisplayName
 	TW0			'lnedit',			szInnerName
 	TW0			'defaultedit',		szDefaultPluginName
-	TW0			' v1.1',			szDisplayVer
-	TW0			'1.1.2.475',		szFullVer
+	TW0			' v2.0',			szDisplayVer
+	TW0			'2.0.0.498',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0

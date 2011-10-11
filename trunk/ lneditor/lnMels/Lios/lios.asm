@@ -20,7 +20,7 @@ DllMain endp
 ;
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],0
 	ret
 InitInfo endp
@@ -136,8 +136,9 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	je _NomemGT
 	mov [ebx].lpTextIndex,eax
 	mov @pTIdx,eax
-
-	invoke VirtualAlloc,0,esi,MEM_COMMIT,PAGE_READWRITE
+	
+	lea eax,[esi+esi*2]
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _NomemGT
 	mov [ebx].lpStreamIndex,eax
@@ -150,10 +151,6 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 		mov eax,E_ERROR
 		mov dword ptr [ecx],RI_FAIL_ERRORCS
 		ret
-	.endif
-	.if ecx==CS_UNKNOWN && [EBX].bReadOnly
-		mov @nCharSet,CS_SJIS
-		mov [ebx].nCharSet,CS_SJIS
 	.endif
 	assume ebx:nothing
 	
@@ -172,8 +169,8 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 				or eax,eax
 				je _Nomem2GT
 				mov ecx,@pSIdx
-				mov [ecx],ebx
-				add @pSIdx,4
+				mov _StreamEntry.lpStart[ecx],ebx
+				add @pSIdx,sizeof _StreamEntry
 			.endif 
 _i51GT:
 			invoke _GetTextByIdx,[esi],edi
@@ -182,8 +179,8 @@ _i51GT:
 			or eax,eax
 			je _Nomem2GT
 			mov ecx,@pSIdx
-			mov [ecx],ebx
-			add @pSIdx,4
+			mov _StreamEntry.lpStart[ecx],ebx
+			add @pSIdx,sizeof _StreamEntry
 		.elseif ax==52h
 			add esi,10h
 			jmp _i51GT
@@ -215,9 +212,10 @@ _i51GT:
 			mov edx,ecx
 			mov edi,@pSIdx
 			@@:
-			mov eax,ebx
-			stosd
-			loop @B
+				mov _StreamEntry.lpStart[edi],ebx
+				add edi,sizeof _StreamEntry
+			dec ecx
+			jnz @B
 			shl edx,2
 			add @pSIdx,edx
 			pop edi
@@ -372,6 +370,8 @@ _CheckPage proc uses esi _lpStr,_line,_char
 			.else
 				sub ecx,2
 			.endif
+			or ax,ax
+			je _NoPage
 			cmp ecx,0
 			jg _Ctn1
 			.break
@@ -434,15 +434,16 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	mov ecx,[edi].lpStreamIndex
 	mov @nCharSet,eax
 	mov edx,_nLine
-	lea esi,[ecx+edx*4]
-	mov eax,[esi]
+	lea eax,[edx+edx*2]
+	lea esi,[ecx+eax*4]
+	mov eax,_StreamEntry.lpStart[esi]
 	mov @nSelectTableIndex,0
-	sub esi,4
+	sub esi,sizeof _StreamEntry
 	.if esi>=ecx && eax==dword ptr [esi]
 		inc @nSelectTableIndex
 		.while esi>ecx
-			sub esi,4
-			.break .if eax!=dword ptr [esi]
+			sub esi,sizeof _StreamEntry
+			.break .if eax!=_StreamEntry.lpStart[esi]
 			inc @nSelectTableIndex
 		.endw
 	.endif
@@ -458,16 +459,17 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		mov ecx,_lpFI
 		mov ecx,[ecx+_FileInfo.lpStreamIndex]
 		mov edx,_nLine
-		lea eax,[ecx+edx*4]
-		mov ecx,[eax]
-		.if ecx==[eax+4]
+		lea eax,[edx+edx*2]
+		lea eax,[ecx+eax*4]
+		mov ecx,_StreamEntry.lpStart[eax]
+		.if ecx==_StreamEntry.lpStart[eax+sizeof _StreamEntry]
 			sub esi,4
 		.endif
 		invoke _CheckPage,@pNewStr,3,42
 		.if eax && !bIsSilent
-			mov eax,_nLine
-			mov nLine,eax
-			invoke DialogBoxParamW,hInstance,IDD_DLG1,hWinMain,_WndProc,0
+;			mov eax,_nLine
+;			mov nLine,eax
+;			invoke DialogBoxParamW,hInstance,IDD_DLG1,hWinMain,_WndProc,0
 		.endif
 _i51ML:
 		invoke _GetTextByIdx,[esi],ebx

@@ -38,6 +38,16 @@ _IsEncode proto :dword
 _Encode proto :dword,:dword
 _CmpStrOut proto :dword
 
+YukaStruct struct
+	lpPrg		dd		?
+	nPrgLen		dd		?
+	lpCmd		dd		?
+	nCmdLen	dd		?
+	lpRes		dd		?
+	nResLen		dd		?
+	bIsCrypted	dd		?
+YukaStruct ends
+
 .data?
 	hInstance		dd		?
 	hGlobalHeap		dd		?

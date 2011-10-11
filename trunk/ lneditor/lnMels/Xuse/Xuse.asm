@@ -20,7 +20,7 @@ DllMain endp
 ;
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],MIC_NOHALFANGLE or MIC_CUSTOMCONFIG
 	ret
 InitInfo endp
@@ -142,7 +142,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	
 	shr edx,1
 	mov ebx,edx
-	invoke VirtualAlloc,0,ebx,MEM_COMMIT,PAGE_READWRITE
+	lea eax,[edx+edx*2]
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _Nomem
 	mov [edi].lpStreamIndex,eax
@@ -170,7 +171,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			mov ecx,[edi].lpTextIndex
 			mov [ecx+ebx*4],eax
 			mov edx,[edi].lpStreamIndex
-			mov [edx+ebx*4],esi
+			lea eax,[ebx+ebx*2]
+			mov [edx+eax*4],esi
 			inc ebx
 		.endif
 	_Ctn:
@@ -242,7 +244,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	
 	mov ecx,[edi].lpStreamIndex
 	mov eax,_nLine
-	mov esi,[ecx+eax*4]
+	lea eax,[eax+eax*2]
+	mov esi,_StreamEntry.lpStart[ecx+eax*4]
 	movzx ecx,word ptr [esi+2]
 	mov @nOldLen,ecx
 	mov ebx,esi

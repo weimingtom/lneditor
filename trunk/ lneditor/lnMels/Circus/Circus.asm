@@ -20,7 +20,7 @@ DllMain endp
 ;
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],MIC_NOHALFANGLE or MIC_CUSTOMCONFIG
 	ret
 InitInfo endp
@@ -166,7 +166,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	
 	shl eax,1
 	mov ebx,eax
-	invoke VirtualAlloc,0,ebx,MEM_COMMIT,PAGE_READWRITE
+	lea eax,[eax+eax*2]
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _Nomem
 	mov [edi].lpStreamIndex,eax
@@ -188,11 +189,12 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			invoke CircusGetLine,esi,[edi].nCharSet
 			or eax,eax
 			je _Nextline
-			mov ecx,[edi].lpStreamIndex
-			mov edx,@nLine
-			mov [ecx+edx*4],esi
 			mov ecx,[edi].lpTextIndex
+			mov edx,@nLine
 			mov [ecx+edx*4],eax
+			mov ecx,[edi].lpStreamIndex
+			lea edx,[edx+edx*2]
+			mov _StreamEntry.lpStart[ecx+edx*4],esi
 			inc @nLine
 			
 			invoke lstrlenA,esi
@@ -204,11 +206,12 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				invoke CircusGetLine,esi,[edi].nCharSet
 				or eax,eax
 				je _Nextline
-				mov ecx,[edi].lpStreamIndex
 				mov edx,@nLine
-				mov [ecx+edx*4],esi
 				mov ecx,[edi].lpTextIndex
 				mov [ecx+edx*4],eax
+				mov ecx,[edi].lpStreamIndex
+				lea edx,[edx+edx*2]
+				mov _StreamEntry.lpStart[ecx+edx*4],esi
 				inc @nLine
 			.endif
 		.elseif al>30h
@@ -224,11 +227,12 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				invoke CircusGetLine,esi,[edi].nCharSet
 				or eax,eax
 				je _Nextline
-				mov ecx,[edi].lpStreamIndex
 				mov edx,@nLine
-				mov [ecx+edx*4],esi
 				mov ecx,[edi].lpTextIndex
 				mov [ecx+edx*4],eax
+				mov ecx,[edi].lpStreamIndex
+				lea edx,[edx+edx*2]
+				mov _StreamEntry.lpStart[ecx+edx*4],esi
 				inc @nLine
 				invoke lstrlenA,esi
 				lea esi,[esi+eax+1]
@@ -387,7 +391,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		mov eax,_nLine
 		inc eax
 		.while eax<[edi].nLine
-			add dword ptr [ecx+eax*4],ebx
+			lea edx,[eax+eax*2]
+			add _StreamEntry.lpStart[ecx+edx*4],ebx
 			inc eax
 		.endw
 		

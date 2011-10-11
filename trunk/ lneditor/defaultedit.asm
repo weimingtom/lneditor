@@ -57,11 +57,13 @@ _ForceMBCS:
 	shl ecx,2
 	mov edi,ecx
 	
-	invoke VirtualAlloc,0,edi,MEM_COMMIT,PAGE_READWRITE
+	lea eax,[edi+edi*2] ;eax=nLine*sizeof _StreamEntry 
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _NomemGT2
 	mov [ebx].lpStreamIndex,eax
 	mov esi,eax
+	assume esi:ptr _StreamEntry
 	invoke VirtualAlloc,0,edi,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _NomemGT2
@@ -78,8 +80,8 @@ _ForceMBCS:
 	mov @nCurLine,eax
 	.while eax<[ebx].nLine
 		mov ecx,@lpCur
-		mov [esi],ecx
-		add esi,4
+		mov [esi].lpStart,ecx
+		add esi,sizeof _StreamEntry
 		invoke _GetStringInTxt,edi,addr @lpCur,[ebx].nCharSet
 		or eax,eax
 		jne _NomemGT2
@@ -89,23 +91,23 @@ _ForceMBCS:
 			call dbTxtFunc+_TxtFunc.IsLineAdding
 			.if !eax
 				sub edi,4
-				sub esi,4
+				sub esi,sizeof _StreamEntry
 				jmp @F
 			.endif
 		.endif
 		.if dbTxtFunc+_TxtFunc.TrimLineHead
 			push [edi-4]
 			call dbTxtFunc+_TxtFunc.TrimLineHead
-			add [esi-4],eax
+			add dword ptr [esi-sizeof _StreamEntry],eax
 		.endif
 		@@:
 		inc @nCurLine
 		mov eax,@nCurLine
 	.endw
+	assume esi:nothing
 	sub edi,[ebx].lpTextIndex
 	shr edi,2
 	mov [ebx].nLine,edi
-;	mov [ebx].nLineLen,0
 	mov [ebx].nMemoryType,MT_EVERYSTRING
 	mov ecx,_lpRI
 	mov dword ptr [ecx],RI_SUC_LINEONLY
@@ -159,7 +161,8 @@ _ModifyLineA proc uses esi edi ebx _pFI,_nLine
 	mov @pNewStr,eax
 	mov esi,[edi].lpStreamIndex
 	mov eax,_nLine
-	mov esi,[esi+eax*4]
+	lea eax,[eax+eax*2] ;sizeof _StreamEntry
+	mov esi,_StreamEntry.lpStart[esi+eax*4]
 	
 	invoke WideCharToMultiByte,[edi].nCharSet,0,ebx,-1,@pNewStr,@pNewLen,0,0
 	.if !eax
@@ -188,12 +191,13 @@ _ModifyLineA proc uses esi edi ebx _pFI,_nLine
 	
 	mov esi,[edi].lpStreamIndex
 	mov eax,_nLine
-	lea esi,[esi+eax*4+4]
+	lea eax,[eax+eax*2]
+	lea esi,[esi+eax*4+sizeof _StreamEntry]
 	mov eax,@pNewLen
 	sub eax,@pOldLen
 	.while dword ptr [esi]
-		add [esi],eax
-		add esi,4
+		add _StreamEntry.lpStart[esi],eax
+		add esi,sizeof _StreamEntry
 	.endw
 	add [edi].nStreamSize,eax
 	mov eax,[edi].lpStream
@@ -229,7 +233,8 @@ _ModifyLineW proc uses esi edi ebx _pFI,_nLine
 	mov @pNewLen,eax
 	mov esi,[edi].lpStreamIndex
 	mov eax,_nLine
-	mov esi,[esi+eax*4]
+	lea eax,[eax+eax*2]
+	mov esi,_StreamEntry.lpStart[esi+eax*4]
 	mov edx,esi
 	.while word ptr [esi]!=0dh
 		.break .if !word ptr [esi]
@@ -247,12 +252,13 @@ _ModifyLineW proc uses esi edi ebx _pFI,_nLine
 	
 	mov esi,[edi].lpStreamIndex
 	mov eax,_nLine
-	lea esi,[esi+eax*4+4]
+	lea eax,[eax+eax*2]
+	lea esi,[esi+eax*4+sizeof _StreamEntry]
 	mov eax,@pNewLen
 	sub eax,@pOldLen
 	.while dword ptr [esi]
-		add [esi],eax
-		add esi,4
+		add _StreamEntry.lpStart[esi],eax
+		add esi,sizeof _StreamEntry
 	.endw
 	add [edi].nStreamSize,eax
 	mov eax,[edi].lpStream

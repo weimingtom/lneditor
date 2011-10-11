@@ -12,7 +12,7 @@ _OpenScript proc
 	inc eax
 	mov FileInfo1.bReadOnly,eax
 	.if dbConf+_Configs.nEditMode==EM_SINGLE
-		invoke _GenName2,offset FileInfo1.szName,offset FileInfo2.szName
+		invoke _GenName2,FileInfo1.lpszName,offset FileInfo2.lpszName
 		or eax,eax
 		je _ExOS
 	.endif
@@ -37,7 +37,7 @@ _OpenScript proc
 		.if !eax
 			invoke GetLastError
 			.if eax==ERROR_FILE_NOT_FOUND
-				invoke CopyFileW,offset FileInfo1.szName,offset FileInfo2.szName,FALSE
+				invoke CopyFileW,FileInfo1.lpszName,FileInfo2.lpszName,FALSE
 				invoke _LoadFile,offset FileInfo2,LM_HALF,ebx
 				or eax,eax
 				jne @F
@@ -336,8 +336,9 @@ _SaveAs proc
 		lea esi,FileInfo2
 		mov ecx,sizeof _FileInfo
 		rep movsb
-		invoke lstrcpyW,addr @fi.szName,addr @szStr
-		invoke CreateFileW,addr @fi.szName,GENERIC_WRITE or GENERIC_READ,FILE_SHARE_READ,0,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0
+		lea eax,@szStr
+		mov @fi.lpszName,eax
+		invoke CreateFileW,@fi.lpszName,GENERIC_WRITE or GENERIC_READ,FILE_SHARE_READ,0,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0
 		.if eax==-1
 			mov eax,IDS_CANTOPENFILE
 			invoke _GetConstString
@@ -536,7 +537,7 @@ _ExportTxt proc
 	LOCAL @szStr[MAX_STRINGLEN]:byte
 	LOCAL @hTxtFile
 	
-	invoke lstrcpyW,addr @szStr,offset FileInfo2.szName
+	invoke lstrcpyW,addr @szStr,FileInfo2.lpszName
 	invoke _DirModifyExtendName,addr @szStr,offset szTxt
 	
 	mov eax,IDS_EXPORTTXT

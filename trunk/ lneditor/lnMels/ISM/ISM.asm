@@ -20,7 +20,7 @@ DllMain endp
 ;
 InitInfo proc _lpMelInfo2
 	mov ecx,_lpMelInfo2
-	mov _MelInfo2.nInterfaceVer[ecx],00020000h
+	mov _MelInfo2.nInterfaceVer[ecx],00030000h
 	mov _MelInfo2.nCharacteristic[ecx],0
 	ret
 InitInfo endp
@@ -198,7 +198,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	add ecx,eax
 	add ecx,edx
 	.if byte ptr [ecx]!=24h
-		int 3
+;		int 3
 		mov eax,E_ANALYSISFAILED
 		jmp _Ex
 	.endif
@@ -232,7 +232,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 		cmp eax,0
 		jnl _NextInst
 		.if eax==-1
-			int 3
+;			int 3
 			mov eax,E_ANALYSISFAILED
 			jmp _Ex
 		.endif
@@ -349,7 +349,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	or eax,eax
 	je _Nomem
 	mov [edi].lpTextIndex,eax
-	invoke VirtualAlloc,0,ebx,MEM_COMMIT,PAGE_READWRITE
+	lea eax,[ebx+ebx*2]
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _Nomem
 	mov [edi].lpStreamIndex,eax
@@ -364,7 +365,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 		cmp eax,0
 		jnl _NextLine2
 		.if eax==-1
-			int 3
+;			int 3
 			mov eax,E_ANALYSISFAILED
 			jmp _Ex
 		.endif
@@ -390,13 +391,16 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				.continue
 			.endif
 			.if !eax
-				int 3
+;				int 3
+				mov eax,E_NOMEM
+				jmp _Ex
 			.endif
 			mov ecx,[edi].lpTextIndex
 			mov [ecx+ebx*4],eax
 			mov ecx,[edi].lpStreamIndex
 			lea eax,[esi-1]
-			mov [ecx+ebx*4],eax
+			lea edx,[ebx+ebx*2]
+			mov _StreamEntry.lpStart[ecx+edx*4],eax
 			inc ebx
 			
 			xor eax,eax
@@ -424,7 +428,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			mov [ecx+ebx*4],eax
 			mov ecx,[edi].lpStreamIndex
 			lea eax,[esi-5]
-			mov [ecx+ebx*4],eax
+			lea edx,[ebx+ebx*2]
+			mov _StreamEntry.lpStart[ecx+edx*4],eax
 			inc ebx
 			.continue
 		.endif
@@ -519,7 +524,8 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	
 	mov ecx,[edi].lpStreamIndex
 	mov eax,_nLine
-	mov esi,[ecx+eax*4]
+	lea eax,[eax+eax*2]
+	mov esi,_StreamEntry.lpStart[ecx+eax*4]
 	mov @lpRcv,0
 	.if byte ptr [esi]==45h
 		push edi
@@ -602,7 +608,8 @@ _Replace:
 		mov eax,_nLine
 		inc eax
 		.while eax<[edi].nLine
-			add dword ptr [ecx+eax*4],ebx
+			lea edx,[eax+eax*2]
+			add _StreamEntry.lpStart[ecx+edx*4],ebx
 			inc eax
 		.endw
 		mov edi,[edi].lpCustom

@@ -15,7 +15,7 @@ _ReadRec proc uses ebx _nType
 	invoke SetCurrentDirectoryW,ebx
 	or eax,eax
 	je _ErrRR
-	invoke lstrcpyW,ebx,offset FileInfo1.szName
+	invoke lstrcpyW,ebx,FileInfo1.lpszName
 	invoke lstrcatW,ebx,offset szRecExt
 	invoke _DirFileNameW,ebx
 	or eax,eax
@@ -73,7 +73,7 @@ _WriteRec proc uses ebx edi
 		or eax,eax
 		je _ErrWR
 	.endif
-	invoke lstrcpyW,ebx,offset FileInfo1.szName
+	invoke lstrcpyW,ebx,FileInfo1.lpszName
 	invoke lstrcatW,ebx,offset szRecExt
 	invoke _DirFileNameW,ebx
 	or eax,eax
