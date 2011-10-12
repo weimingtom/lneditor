@@ -463,16 +463,25 @@ _PaintMain:
 		.endif
 		
 	.elseif eax==WM_CLOSE
-		invoke HeapAlloc,hGlobalHeap,0,MAX_STRINGLEN
-		mov ebx,eax
-		.if ebx
-			invoke lstrcpyW,ebx,FileInfo1.lpszName
+		.if bOpen
+			invoke lstrlenW,FileInfo1.lpszName
+			inc eax
+			shl eax,1
+			invoke HeapAlloc,hGlobalHeap,0,eax
+			mov ebx,eax
+			.if ebx
+				invoke lstrcpyW,ebx,FileInfo1.lpszName
+			.endif
+		.else
+			xor ebx,ebx
 		.endif
 		invoke _CloseScript
 		cmp eax,-1
 		je _ExMain
 		.if ebx
 			invoke lstrcpyW,dbConf+_Configs.lpPrevFile,ebx
+		.else
+			mov dbConf+_Configs.lpPrevFile,offset szNULL
 		.endif
 		invoke _SaveConfig
 		invoke DestroyWindow,hwnd

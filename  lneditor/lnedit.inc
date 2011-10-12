@@ -136,6 +136,7 @@ _IsDisplay				proto :dword
 _MatchFilter			proto :dword,:dword
 _ResetHideTable		proto :dword
 _UpdateHideTable		proto :dword
+_CalcCenterIndex		proto :dword,:dword
 
 ;Record
 _ReadRec				proto :dword
@@ -326,7 +327,7 @@ _FileRec ends
 	TW0			'lnedit',			szInnerName
 	TW0			'defaultedit',		szDefaultPluginName
 	TW0			' v2.0',			szDisplayVer
-	TW0			'2.0.0.498',		szFullVer
+	TW0			'2.0.2.515',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0

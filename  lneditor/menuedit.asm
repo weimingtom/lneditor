@@ -163,11 +163,9 @@ _NextLineWithCenter proc uses esi
 		invoke esi,hList1,LB_SETCURSEL,ebx,0
 		invoke esi,hList2,LB_SETCURSEL,ebx,0
 		invoke esi,hList2,LB_GETTOPINDEX,0,0
-		mov ecx,ebx
-		sub ecx,eax
-		.if ecx>7
-			lea ecx,[ebx-7]
-			invoke _SetListTopIndex,ecx
+		invoke _CalcCenterIndex,eax,ebx
+		.if eax!=-1
+			invoke _SetListTopIndex,eax
 		.endif
 		invoke esi,hWinMain,WM_COMMAND,LBN_SELCHANGE*65536+IDC_LIST2,hList2
 		assume esi:nothing

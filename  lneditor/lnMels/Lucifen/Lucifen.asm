@@ -143,7 +143,8 @@ LuciGetLine proc uses ebx esi lpsz,nlen,code
 				.endif
 			.endw
 		.endif
-		lea esi,[edx+ecx]
+;		lea esi,[edx+ecx]
+		mov esi,ecx
 		inc ecx
 		mov ebx,ecx
 		lea eax,[ecx+ecx]
@@ -172,6 +173,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	LOCAL @lpIndex,@nIndex
 	LOCAL @lpContent
 	LOCAL @pSIdx,@pTIdx
+	LOCAL @lpOpLen
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
 	mov esi,[edi].lpStream
@@ -228,6 +230,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				.elseif ecx==1
 				ftype1:
 					mov edx,[esi]
+					mov @lpOpLen,esi
 					add esi,4
 					.if ecx==0 && eax!=0 || ecx!=0 && eax==0
 						lea esi,[esi+edx-4]
@@ -259,9 +262,6 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 									add esi,ecx
 									jmp _loop1c
 								.endif
-								.if byte ptr [esi-1]
-									int 3
-								.endif
 								invoke LuciGetLine,esi,ecx,[edi].nCharSet
 								test eax,eax
 								jz _Nomem ;不准确
@@ -270,6 +270,9 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 								mov edx,@pSIdx
 								lea ecx,[esi-2]
 								mov _StreamEntry.lpStart[edx],ecx
+								mov _StreamEntry.nStringLen[edx],-1
+								mov eax,@lpOpLen
+								mov _StreamEntry.lpInformation[edx],eax
 								add @pSIdx,sizeof _StreamEntry
 								add @pTIdx,4
 								xor eax,eax
@@ -314,8 +317,9 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			jz _Nomem ;不准确
 			mov edx,@pSIdx
 			mov _StreamEntry.lpStart[edx],esi
+			mov _StreamEntry.nStringLen[edx],ecx
 			add @pSIdx,sizeof _StreamEntry
-			mov esi,ecx
+			add esi,ecx
 			mov ecx,@pTIdx
 			mov [ecx],eax
 			add @pTIdx,4
@@ -325,6 +329,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov eax,@pSIdx
 	sub eax,[edi].lpStreamIndex
 	shr eax,2
+	mov ecx,0aaaaaaabh
+	mul ecx
 	mov [edi].nLine,eax
 	mov [edi].nMemoryType,MT_EVERYSTRING
 	
@@ -339,71 +345,73 @@ _Nomem:
 	ret
 GetText endp
 
-;
-CircusSetLine proc uses esi edi _lpStr,_nCS
-	xor eax,eax
+LuciSetLine proc uses ebx _lpsz,_cs
+	LOCAL @pstr
+	invoke lstrlenW,_lpsz
+	lea ebx,[eax*2+2]
+	invoke HeapAlloc,hHeap,0,ebx
+	test eax,eax
+	jz _Ex
+	mov @pstr,eax
+	invoke WideCharToMultiByte,_cs,0,_lpsz,-1,eax,ebx,0,0
+	mov ecx,eax
+	.if ecx>=0ffffh
+		xor eax,eax
+		jmp _Ex
+	.endif
+	mov eax,@pstr
+_Ex:
 	ret
-CircusSetLine endp
-
-CircusCheckLine proc _lpStr
-	mov esi,_lpStr
-	cmp word ptr [esi],0
-	je _Err
-	.repeat
-		lodsw
-		.break .if !ax
-		.if ax=='\' && word ptr [esi]=='n'
-			add esi,2
-			.continue
-		.endif
-		.if ax=='$' && word ptr [esi]=='n'
-			add esi,2
-			.continue
-		.endif
-;		.if ax<80h
-;			int 3
-;		.endif
-		cmp ax,80h
-		jbe _Err
-	.until 0
-	mov eax,1
-	ret
-_Err:
-	xor eax,eax
-	ret
-CircusCheckLine endp
+LuciSetLine endp
 
 ;
 ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	LOCAL @pNewStr,@nNewLen,@nOldLen
+	LOCAL @pCur
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
-	xor eax,eax
-	ret
 	
 	invoke _GetStringInList,edi,_nLine
 	mov ebx,eax
+	
+	invoke LuciSetLine,ebx,[edi].nCharSet
 	mov @pNewStr,eax
-	invoke lstrlenA,eax
-	mov @nNewLen,eax
+	mov @nNewLen,ecx
 	
 	mov ecx,[edi].lpStreamIndex
 	mov eax,_nLine
-	mov esi,[ecx+eax*4]
-	invoke lstrlenA,esi
+	lea eax,[eax+eax*2]
+	lea esi,[ecx+eax*4]
+	assume esi:ptr _StreamEntry
+	mov eax,[esi].nStringLen
+	.if eax==-1
+		mov ecx,[esi].lpStart
+		xor eax,eax
+		mov ax,[ecx]
+	.else
+		dec @nNewLen
+	.endif
+	mov @nOldLen,eax
 	
 	.if eax==@nNewLen
-		mov edi,esi
+		mov edi,[esi].lpStart
+		.if [esi].nStringLen==-1
+			add edi,2
+		.endif
 		mov esi,@pNewStr
 		mov ecx,eax
 		rep movsb
 	.else
-		mov @nOldLen,eax
 		mov ecx,[edi].nStreamSize
 		add ecx,[edi].lpStream
-		sub ecx,esi
+		mov eax,[esi].lpStart
+		mov @pCur,eax
+		.if [esi].nStringLen==-1
+			add eax,2
+		.endif
+		sub ecx,eax
 		sub ecx,@nOldLen
-		invoke _ReplaceInMem,@pNewStr,@nNewLen,esi,@nOldLen,ecx
+		invoke _ReplaceInMem,@pNewStr,@nNewLen,eax,@nOldLen,ecx
 		.if eax
 			mov ebx,eax
 			invoke HeapFree,hHeap,0,@pNewStr
@@ -411,34 +419,56 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 			jmp _Ex
 		.endif
 		
-		mov ecx,@nNewLen
-		sub ecx,@nOldLen
-		add [edi].nStreamSize,ecx
-		mov ebx,ecx
+		mov ebx,@nNewLen
+		sub ebx,@nOldLen
+		
+		.if [esi].nStringLen==-1
+			;修正字符串和指令长度
+			mov eax,@nNewLen
+			mov ecx,[esi].lpStart
+			mov [ecx],ax
+			mov ecx,[esi].lpInformation
+			add dword ptr [ecx],ebx
+		.endif
 		
 		mov ecx,[edi].lpStreamIndex
-		mov eax,_nLine
-		inc eax
-		.while eax<[edi].nLine
-			add dword ptr [ecx+eax*4],ebx
-			inc eax
+		mov eax,[edi].nLine
+		lea eax,[eax+eax*2]
+		lea edx,[ecx+eax*4]
+		mov eax,[esi].lpStart
+		add esi,sizeof _StreamEntry
+		.while esi<edx
+			add [esi].lpStart,ebx
+			.if [esi].nStringLen==-1 && [esi].lpInformation>eax
+				add [esi].lpInformation,ebx
+			.endif
+			add esi,sizeof _StreamEntry
 		.endw
 		
-		mov edx,esi
+		assume esi:nothing
 		mov esi,[edi].lpStream
-		lodsd
-		mov ecx,eax
-		shl eax,2
+		mov eax,[esi+4]
+		lea esi,[esi+eax+4]
+		mov eax,[esi]
 		add eax,esi
+		mov edx,@pCur
 		sub edx,eax
-		@@:
-			.if dword ptr [esi]>edx
+		mov ecx,[esi+4]
+		add esi,8
+		
+		test ecx,ecx
+		jz _exloop1
+		_loop1:
+			.if edx<dword ptr [esi]
 				add dword ptr [esi],ebx
 			.endif
 			add esi,4
-		loop @B
+			dec ecx
+			jnz _loop1
+		_exloop1:
+		
+		add [edi].nStreamSize,ebx
 	.endif
-	
 	assume edi:nothing
 _Success:
 	invoke HeapFree,hHeap,0,@pNewStr

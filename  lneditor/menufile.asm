@@ -724,25 +724,25 @@ _ImportSingleTxt endp
 
 ;
 _ImportTxt proc
-	LOCAL @szStr[MAX_STRINGLEN]:byte
+	LOCAL @lpStr
 	LOCAL @hTxtFile,@lpBuff,@pEnd,@nFlag
 	local @nFZ:LARGE_INTEGER
-
-	lea eax,@szStr
-	mov word ptr [eax],0	
+	
 	mov eax,IDS_IMPORTTXT
 	invoke _GetConstString
-	invoke _OpenFileDlg,offset szTxtFilter,addr @szStr,dbConf+_Configs.lpInitDir2,eax,0
+	invoke _OpenFileDlg,offset szTxtFilter,addr @lpStr,dbConf+_Configs.lpInitDir2,eax,0
 	.if eax
-		invoke CreateFileW,addr @szStr,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
+		invoke CreateFileW,@lpStr,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
 		.if eax==-1
 			mov eax,IDS_CANTOPENFILE
 _ErrIT:
 			invoke _GetConstString
 			invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
+			invoke HeapFree,hGlobalHeap,0,@lpStr
 			jmp _ExIT
 		.endif
 		mov @hTxtFile,eax
+		invoke HeapFree,hGlobalHeap,0,@lpStr
 		invoke GetFileSizeEx,@hTxtFile,addr @nFZ
 		invoke VirtualAlloc,0,dword ptr @nFZ,MEM_COMMIT,PAGE_READWRITE
 		.if !eax
@@ -793,6 +793,7 @@ _NomemIT:
 				
 		
 		invoke CloseHandle,@hTxtFile
+		invoke InvalidateRect,hWinMain,0,TRUE
 		invoke _SetModified,1
 	.endif
 _ExIT:

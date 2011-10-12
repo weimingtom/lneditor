@@ -532,19 +532,6 @@ _ClearAll proc uses edi ebx esi _pFI
 			dec ebx
 		.endw
 	.endif
-	mov esi,[edi].lpStreamIndex
-	mov ebx,[edi].nLine
-	test ebx,ebx
-	jz _ExLoop
-	_loop1:
-		mov eax,_StreamEntry.lpInformation[esi]
-		.if eax
-			invoke HeapFree,hGlobalHeap,0,eax
-		.endif
-		add esi,sizeof _StreamEntry
-		dec ebx
-	jnz _loop1
-	_ExLoop:
 	
 	invoke CloseHandle,[edi].hFile
 	invoke VirtualFree,[edi].lpStream,0,MEM_RELEASE
