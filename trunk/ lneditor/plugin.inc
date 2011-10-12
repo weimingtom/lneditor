@@ -1,4 +1,5 @@
 INTERFACE_VER			EQU		00030000h
+TXTINTERFACE_VER		EQU		00010000h
 
 MAX_STRINGLEN			equ		4096
 ;错误代码
@@ -68,7 +69,7 @@ ST_TXTENDW				EQU		11h
 _StreamEntry struct
 	lpStart				dd		?	;字符串起始
 	nStringLen			dd		?	;字符串长度，可选
-	lpInformation			dd		?	;字符串附加信息，可选，如不使用必须为NULL
+	lpInformation			dd		?	;字符串附加信息，可选，如分配内存须自行释放
 _StreamEntry ends
 
 ;文件信息

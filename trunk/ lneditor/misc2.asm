@@ -80,9 +80,6 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpStreamEntry
 		mov ecx,_lpStreamEntry
 		mov esi,_StreamEntry.lpStart[ecx]
 		mov ecx,_StreamEntry.nStringLen[ecx]
-		.if edx==CS_UNICODE
-			shl ecx,1
-		.endif
 	.elseif eax==ST_TXTENDW
 		mov ecx,_lpStreamEntry
 		mov edi,_StreamEntry.lpStart[ecx]
@@ -262,19 +259,6 @@ _RecodeFile proc uses esi ebx edi _lpFI
 				inc ebx
 			.endw
 		.endif
-		mov edi,[esi].lpStreamIndex
-		mov ebx,[esi].nLine
-		test ebx,ebx
-		jz _ExLoop
-		_loop1:
-			mov eax,_StreamEntry.lpInformation[edi]
-			.if eax
-				invoke HeapFree,hGlobalHeap,0,eax
-			.endif
-			add edi,sizeof _StreamEntry
-			dec ebx
-		jnz _loop1
-		_ExLoop:
 		invoke VirtualFree,[esi].lpTextIndex,0,MEM_RELEASE
 		invoke VirtualFree,[esi].lpStreamIndex,0,MEM_RELEASE
 		lea eax,@ret
@@ -588,3 +572,32 @@ _ResetHideTable proc _lpFI
 	.endif
 	ret
 _ResetHideTable endp
+
+_CalcCenterIndex proc uses ebx esi edi _nCurTop,_nCur
+	LOCAL @rect:RECT
+	mov ebx,_nCur
+	cmp ebx,1
+	jbe _Ex
+	dec ebx
+	xor esi,esi
+	mov ecx,dbConf+_Configs.windowRect[WRI_LIST2]+RECT.bottom
+	sub ecx,dbConf+_Configs.windowRect[WRI_LIST2]+RECT.top
+	shl ecx,1
+	mov eax,0cccccccdh
+	mul ecx
+	mov edi,eax
+	.while ebx>_nCurTop
+		invoke SendMessageW,hList2,LB_GETITEMRECT,ebx,addr @rect
+		mov eax,@rect.bottom
+		sub eax,@rect.top
+		add esi,eax
+		.if esi>=edi
+			mov eax,ebx
+			ret
+		.endif
+		dec ebx
+	.endw
+_Ex:
+	or eax,-1
+	ret
+_CalcCenterIndex endp
