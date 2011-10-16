@@ -827,9 +827,7 @@ _GetSimpFunc proc uses edi ebx _hModule,_pSF
 		mov [edi].SaveText,eax
 	.endif
 	invoke GetProcAddress,_hModule,offset szFSetLine
-	.if eax
-		mov [edi].SetLine,eax
-	.endif
+	mov [edi].SetLine,eax
 	invoke GetProcAddress,_hModule,offset szFRetLine
 	mov [edi].RetLine,eax
 	invoke GetProcAddress,_hModule,offset szFRelease

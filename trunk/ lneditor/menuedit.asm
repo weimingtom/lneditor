@@ -34,6 +34,12 @@ _Modify proc
 	.if eax
 		push @pStr
 		call eax
+		.if eax
+			mov eax,IDS_DECLINEMOD
+			invoke _GetConstString
+			invoke MessageBoxW,hWinMain,eax,0,MB_ICONERROR
+			jmp _ExML
+		.endif
 	.endif
 	@@:
 	invoke SendMessageW,hList2,LB_GETCURSEL,0,1

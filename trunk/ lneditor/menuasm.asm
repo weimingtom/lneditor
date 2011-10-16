@@ -605,11 +605,19 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 					or eax,eax
 					je _NextLineIATT
 				.endif
+				.if dbSimpFunc+_SimpFunc.RetLine
+					invoke _GetStringInList,addr @stFileInfo,ebx
+					push eax
+					call dbSimpFunc+_SimpFunc.RetLine
+					test eax,eax
+					jnz _DeclineIATT
+				.endif
 				push ebx
 				lea eax,@stFileInfo
 				push eax
 				call dbSimpFunc+_SimpFunc.ModifyLine
 				.if eax
+				_DeclineIATT:
 					lea ecx,[ebx+1]
 					invoke wsprintfW,offset gszTemp,offset szWltBImpErr2,ecx
 					invoke wsprintfW,offset gszTemp2,offset szWltBImpErr,edi,offset gszTemp

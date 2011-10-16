@@ -429,6 +429,9 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 			mov [ecx],ax
 			mov ecx,[esi].lpInformation
 			add dword ptr [ecx],ebx
+		.else
+			mov eax,@nNewLen
+			mov [esi].nStringLen,eax
 		.endif
 		
 		mov ecx,[edi].lpStreamIndex
