@@ -368,7 +368,7 @@ BEGIN
   IDS_LINENOTMATCH "新脚本行数与原始脚本不一致！"
   IDS_IMPORTPART "由于TXT中某些行长度过长，该行未被导入。"
   IDS_STRTOOLONG "修改过程中发生错误！可能是文本长度过长或内存不足！"
-  IDS_DECLINEMOD "修改被拒绝！"
+  IDS_DECLINEMOD "修改被插件拒绝！"
   IDS_NOMEM "内存不足！"
   IDS_DEVELOP "功能开发中"
   IDS_SHUAI "摔14不解释"

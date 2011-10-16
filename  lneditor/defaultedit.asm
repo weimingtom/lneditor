@@ -506,3 +506,16 @@ _ExSL:
 	ret
 _SetLine endp
 
+_RetLine proc _lpsz
+	mov edx,_lpsz
+	.while word ptr [edx]!=0
+		.if word ptr [edx]==0ah || word ptr [edx]==0dh
+			mov eax,E_LINEDENIED
+			jmp _ExRL
+		.endif
+		add edx,2
+	.endw
+	xor eax,eax
+_ExRL:
+	ret
+_RetLine endp
