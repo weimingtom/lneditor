@@ -11,6 +11,7 @@ include com.inc
 
 include _browsefolder.asm
 include _CreateDIBitmap.asm
+include progbar.asm
 include config.asm
 include wildchar.asm
 include log.asm
@@ -22,7 +23,6 @@ include menuasm.asm
 include menuopt.asm
 include defaultedit.asm
 include record.asm
-
 
 include misc.asm
 include misc2.asm
@@ -62,8 +62,8 @@ xor ebx,ebx
 invoke _OpenLog
 
 invoke GetCommandLineW
-invoke CommandLineToArgvW,eax,offset dwTemp
-push eax
+invoke CommandLineToArgvW,eax,offset nArgc
+mov lpArgTbl,eax
 mov ebx,[eax]
 invoke lstrlenW,ebx
 shl eax,1
@@ -73,7 +73,6 @@ or eax,eax
 je _FinalMemErr
 mov lpszConfigFile,eax
 invoke lstrcpyW,eax,ebx
-call LocalFree
 invoke _DirBackW,lpszConfigFile
 invoke _DirCatW,lpszConfigFile,offset szcfFileName
 

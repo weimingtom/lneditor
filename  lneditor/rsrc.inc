@@ -167,6 +167,9 @@ IDC_IA_MELIDX           equ 2116
 IDD_OPENTML             equ 2200
 IDC_STC34               equ 2201
 IDC_OPEN_PLUGINS        equ 2202
+IDD_PROGBAR             equ 2300
+IDC_PRBAR_BAR           equ 2301
+IDC_PRBAR_STOP          equ 2302
 IDR_MMENU_CHS           equ 10000
 IDM_OPEN                equ 10001
 IDM_LOAD                equ 10002
@@ -259,6 +262,7 @@ IDS_NOTSUPPORTBATCHEXP  equ 53
 IDS_NOTSUPPORTBATCHIMP  equ 54
 IDS_AUTOMATCH           equ 55
 IDS_SELECTFILEAGAIN     equ 56
+IDS_LISTFILEVERIONTOOLOW equ 57
 IDR_ACCEL1              equ 1
 IDR_VERSION1            equ 1
 IDR_XPMANIFEST1         equ 1

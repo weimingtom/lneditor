@@ -10,6 +10,12 @@ TW0		'Can\-t load %s. %s\n',	szWltLoadMelErr
 TW0		'This is not an available MEL.',szWltEMel1
 TW0		'Version too low.',szWltEMel2
 
+TW0		'Update: %s %s\n',	szWltUpdateErr
+TW0		'Can\-t download the list file.',		szWltEUpdate1
+TW0		'Can\-t download the file:',			szWltEUpdate2
+TW0		'File check failed:',			szWltEUpdate3
+TW0		'File updated:',			szWltEUpdate4
+
 TW0		'An error has occurred while importing %s. %s\n',	szWltBImpErr
 TW0		'Line %d can\-t be committed to the plugin.',	szWltBImpErr2
 TW		'File do not match the plugin ',	szWltEImp1
@@ -147,6 +153,9 @@ _WriteLog proc uses ebx _nType,_lpszName,para1,para2
 			lea ebx,[ebx+eax*2]
 		.elseif EAX==WLT_LOADMELERR
 			invoke wsprintfW,ebx,offset szWltLoadMelErr,para1,para2
+			lea ebx,[ebx+eax*2]
+		.elseif eax==WLT_UPDATEERR
+			invoke wsprintfW,ebx,offset szWltUpdateErr,para1,para2
 			lea ebx,[ebx+eax*2]
 		.endif
 		lea ecx,@szLog

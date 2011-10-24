@@ -26,7 +26,7 @@ if not exist lnrc.obj goto nores
 \MASM32\BIN\Link.exe /SUBSYSTEM:WINDOWS /DEF:export.def lnedit.obj lnrc.obj
 if errorlevel 1 goto errlink
 dir lnedit.*
-incver
+copy lnedit.exe bin\lnedit.exe
 goto TheEnd
 
 :nores
@@ -35,8 +35,7 @@ goto TheEnd
 : -----------------------
 \MASM32\BIN\Link.exe /SUBSYSTEM:WINDOWS lnedit.obj
 if errorlevel 1 goto errlink
-dir lnedit.*
-incver.exe
+echo RES ERROR!
 goto TheEnd
 
 :errlink

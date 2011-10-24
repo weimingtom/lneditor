@@ -10,6 +10,7 @@ _GetText
 _SaveText
 _ModifyLine
 _SetLine
+_RetLine
 
 _GetStringInTxt
 _WildcharMatchW

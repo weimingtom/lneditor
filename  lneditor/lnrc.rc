@@ -92,6 +92,7 @@
 #define IDS_NOTSUPPORTBATCHIMP 54
 #define IDS_AUTOMATCH 55
 #define IDS_SELECTFILEAGAIN 56
+#define IDS_LISTFILEVERIONTOOLOW 57
 #define IDR_VERSION1 1
 #define IDR_XPMANIFEST1 1
 #define IDR_ACCEL1 1
@@ -262,6 +263,9 @@
 #define IDD_OPENTML 2200
 #define IDC_STC34 2201
 #define IDC_OPEN_PLUGINS 2202
+#define IDD_PROGBAR 2300
+#define IDC_PRBAR_BAR 2301
+#define IDC_PRBAR_STOP 2302
 
 LANGUAGE 4,2
 
@@ -395,11 +399,12 @@ BEGIN
   IDS_NOTSUPPORTBATCHIMP "该插件不支持批量导入！"
   IDS_AUTOMATCH "自动匹配"
   IDS_SELECTFILEAGAIN "请再选择一次刚才的文件！"
+  IDS_LISTFILEVERIONTOOLOW "主程序版本过低，无法自动更新，请到\nhttp://code.google.com/p/lneditor/downloads/list\n下载最新版本！"
 END
 
 IDR_VERSION1 VERSIONINFO
-FILEVERSION 2,0,2,515
-PRODUCTVERSION 2,0,2,515
+FILEVERSION 2,0,2,529
+PRODUCTVERSION 2,0,2,529
 FILEOS 0x00000004
 FILETYPE 0x00000001
 BEGIN
@@ -407,8 +412,8 @@ BEGIN
   BEGIN
     BLOCK "080404B0"
     BEGIN
-      VALUE "FileVersion", "2.0.2.515\0"
-      VALUE "ProductVersion", "2.0.2.515\0"
+      VALUE "FileVersion", "2.0.2.529\0"
+      VALUE "ProductVersion", "2.0.2.529\0"
       VALUE "FileDescription", "A General Script Editor for Galgame.\0"
       VALUE "InternalName", "lnedit\0"
       VALUE "OriginalFilename", "lnedit.exe\0"
@@ -684,5 +689,15 @@ STYLE 0x54000404
 BEGIN
   CONTROL "指定插件:",IDC_STC34,"Static",0x50000000,6,3,45,9
   CONTROL "",IDC_OPEN_PLUGINS,"ComboBox",0x50010003,59,0,156,12
+END
+
+IDD_PROGBAR DIALOGEX 10,10,315,21
+CAPTION "进度"
+FONT 9,"宋体",400,0,134
+STYLE 0x10C80000
+EXSTYLE 0x00000001
+BEGIN
+  CONTROL "",IDC_PRBAR_BAR,"msctls_progress32",0x50000000,3,3,258,12
+  CONTROL "中止",IDC_PRBAR_STOP,"Button",0x50010000,273,3,33,15
 END
 

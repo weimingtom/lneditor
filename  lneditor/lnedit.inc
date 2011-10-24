@@ -10,6 +10,7 @@
       include \masm32\include\msvcrt.inc
       include \masm32\include\version.inc
       include \masm32\include\shlwapi.inc
+      include \masm32\include\urlmon.inc
       include \masm32\macros\macros.asm
       include \masm32\macros\strings.mac
 	include \masm32\include\ole32.inc
@@ -28,6 +29,7 @@
       includelib \masm32\lib\shlwapi.lib
 	includelib \masm32\lib\ole32.lib
 	includelib \masm32\lib\msimg32.lib
+	includelib \masm32\lib\urlmon.lib
 	
 
 	include rsrc.inc
@@ -137,6 +139,9 @@ _MatchFilter			proto :dword,:dword
 _ResetHideTable		proto :dword
 _UpdateHideTable		proto :dword
 _CalcCenterIndex		proto :dword,:dword
+_MakeFile			proto :dword
+_MakePath			proto :dword
+_CalcCheckSum		proto :dword,:dword
 
 ;Record
 _ReadRec				proto :dword
@@ -226,6 +231,13 @@ _LightenColor			proto :dword
 _DarkenColor			proto :dword
 _SetListTopIndex		proto :dword
 
+;Progress Bar
+_WndProgBarProc		proto :dword,:dword,:dword,:dword
+
+;Update
+_UpdateThd			proto :dword
+_CheckFile			proto :dword,:dword
+
 ;System Struct
 OFNOTIFY STRUCT
 	hdr				NMHDR		<>
@@ -262,6 +274,19 @@ _FileRec struct
 	nOffsetResv		dd		5	dup(?)
 _FileRec ends
 
+_ProgBarInfo struct
+	lpszTitle			dd		?
+	bNoStop			dd		?
+_ProgBarInfo ends
+
+_UpdateFileInfo struct
+	lpszName		dd		?
+	ftMTime			FILETIME	<>
+	nCheckSum		dd		?	;只使用低16bit
+	nFlags			dd		?
+	nReserved		dd		?
+_UpdateFileInfo ends
+
 .data?
 	hInstance		dd		?
 	hIcon			dd		?
@@ -272,6 +297,9 @@ _FileRec ends
 	hBackBmp		dd		?	;窗口的背景图片句柄
 	
 	lpszConfigFile		dd		?	;配置文件的全路径
+	lpArgTbl			dd		?
+	nArgc			dd		?
+	
 	lpStrings			dd		?	;全局常量字符串表指针
 	lpMels			dd		?	;插件信息表指针
 	lpUndo			dd		?	;撤销列表指针
@@ -327,7 +355,7 @@ _FileRec ends
 	TW0			'lnedit',			szInnerName
 	TW0			'defaultedit',		szDefaultPluginName
 	TW0			' v2.0',			szDisplayVer
-	TW0			'2.0.2.515',		szFullVer
+	TW0			'2.0.2.529',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0

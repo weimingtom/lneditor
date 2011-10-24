@@ -300,6 +300,7 @@ _DirModifyExtendName endp
 _AddLines proc uses esi edi ebx _pdb
 	LOCAL @hList
 	LOCAL @nLine
+;	LOCAL @time1
 	mov eax,_pdb
 	mov edi,[eax]
 	mov ecx,[eax+4]
@@ -309,17 +310,49 @@ _AddLines proc uses esi edi ebx _pdb
 	invoke SendMessageW,@hList,WM_SETREDRAW,FALSE,0
 	mov ecx,[edi].nLine
 	mov @nLine,ecx
+	mov ecx,hList2
+	.if ecx==@hList
+;		rdtsc
+;		shr eax,28
+;		shl edx,4
+;		or edx,eax
+;		mov @time1,edx
+		invoke SendDlgItemMessageW,hProgBarWindow,IDC_PRBAR_BAR,PBM_SETRANGE32,0,@nLine
+	.endif
 	.if [edi].nMemoryType==MT_EVERYSTRING || [edi].nMemoryType==MT_POINTERONLY
 		mov esi,[edi].lpTextIndex
 		.while ebx<@nLine
+			.if bProgBarStopping!=0
+				mov ecx,hList2
+				.if ecx==@hList
+					invoke PostMessageW,hWinMain,WM_COMMAND,IDM_CLOSE,0
+				.endif
+				jmp _ExAL
+			.endif
 			mov ecx,lpMarkTable
 			.if !(byte ptr [ecx+ebx]&2)
 				invoke SendMessageW,@hList,LB_ADDSTRING,0,[esi]
+				mov ecx,hList2
+				.if ecx==@hList && hProgBarWindow
+					mov nProgBarLine,ebx
+				.endif
 			.endif
 			add esi,4
 			inc ebx
 		.endw
 	.endif
+	mov ecx,hList2
+	.if ecx==@hList
+;		rdtsc
+;		shr eax,28
+;		shl edx,4
+;		or edx,eax
+;		sub edx,@time1
+;		int 3
+		mov bProgBarStopping,1
+		invoke EndDialog,hProgBarWindow,0
+	.endif
+
 	invoke SendMessageW,@hList,WM_SETREDRAW,TRUE,0
 	invoke HeapFree,hGlobalHeap,0,_pdb
 	.if ![edi].bReadOnly
@@ -336,6 +369,7 @@ _AddLines proc uses esi edi ebx _pdb
 		.endif
 	.endif
 	assume edi:nothing
+_ExAL:
 	ret
 _AddLines endp
 
