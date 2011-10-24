@@ -23,6 +23,7 @@ include menuasm.asm
 include menuopt.asm
 include defaultedit.asm
 include record.asm
+include update.asm
 
 include misc.asm
 include misc2.asm
@@ -416,6 +417,7 @@ _PaintMain:
 ;		invoke CreateThread,0,0,offset _LoadMel,0,0,0
 ;		mov @hFile,eax
 		invoke _LoadMel,0
+		invoke CreateThread,0,0,offset _UpdateThd,0,0,0
 		invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,sizeof _PreData
 		or eax,eax
 		je @B

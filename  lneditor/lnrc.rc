@@ -92,7 +92,7 @@
 #define IDS_NOTSUPPORTBATCHIMP 54
 #define IDS_AUTOMATCH 55
 #define IDS_SELECTFILEAGAIN 56
-#define IDS_LISTFILEVERIONTOOLOW 57
+#define IDS_LISTFILEVERSIONTOOLOW 57
 #define IDR_VERSION1 1
 #define IDR_XPMANIFEST1 1
 #define IDR_ACCEL1 1
@@ -399,7 +399,7 @@ BEGIN
   IDS_NOTSUPPORTBATCHIMP "该插件不支持批量导入！"
   IDS_AUTOMATCH "自动匹配"
   IDS_SELECTFILEAGAIN "请再选择一次刚才的文件！"
-  IDS_LISTFILEVERIONTOOLOW "主程序版本过低，无法自动更新，请到\nhttp://code.google.com/p/lneditor/downloads/list\n下载最新版本！"
+  IDS_LISTFILEVERSIONTOOLOW "主程序版本过低，无法自动更新，请到\nhttp://code.google.com/p/lneditor/downloads/list\n下载最新版本！"
 END
 
 IDR_VERSION1 VERSIONINFO
