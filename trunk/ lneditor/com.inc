@@ -108,4 +108,17 @@ IPicture struct dword
 	get_Attributes		dd		?
 IPicture ends
 
+IBindStatusCallback struct
+	QueryInterface		dd		?
+	AddRef				dd		?
+	Release				dd		?
+	OnStartBinding		dd		?
+	GetPriority			dd		?
+	OnLowResource		dd		?
+	OnProgress			dd		?
+	OnStopBinding		dd		?
+	GetBindInfo			dd		?
+	OnDataAvailable		dd		?
+	OnObjectAvailable		dd		?
+IBindStatusCallback ends
 

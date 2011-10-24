@@ -420,6 +420,10 @@ _FindNFN:
 			invoke DestroyWindow,hwnd
 			invoke PostQuitMessage,0
 		.endif
+	.elseif eax==WM_ACTIVATE
+		.if word ptr wParam==WA_CLICKACTIVE
+			invoke SetForegroundWindow,hwnd
+		.endif
 	.elseif eax==WM_INITDIALOG
 		invoke CheckDlgButton,hwnd,IDC_FIND_NEW,BST_CHECKED
 		invoke SetForegroundWindow,hwnd
@@ -436,6 +440,7 @@ _WndFindProc endp
 _Replace proc
 	.if FindInfo.hFindWindow
 		invoke SetFocus,FindInfo.hFindWindow
+		invoke SetForegroundWindow,FindInfo.hFindWindow
 		jmp _ExRPC
 	.endif
 	invoke CreateThread,0,0,offset _CreateReplaceWindow,0,0,0
@@ -671,6 +676,10 @@ _FindNWRP:
 		.elseif EAX==IDCANCEL
 			invoke DestroyWindow,hwnd
 			invoke PostQuitMessage,0
+		.endif
+	.elseif eax==WM_ACTIVATE
+		.if word ptr wParam==WA_CLICKACTIVE
+			invoke SetForegroundWindow,hwnd
 		.endif
 	.elseif eax==WM_INITDIALOG
 		invoke SetForegroundWindow,hwnd

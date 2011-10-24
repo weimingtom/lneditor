@@ -5,6 +5,7 @@ assume fs:nothing
 _OpenScript proc
 	LOCAL @nReturnInfo
 	LOCAL @nPos
+	LOCAL @pbInfo:_ProgBarInfo
 	LOCAL @szstr[SHORT_STRINGLEN]:byte
 	
 	xor eax,eax
@@ -118,7 +119,12 @@ _OpenScript proc
 					.endif
 				.endif
 				mov nCurIdx,-1
+				mov bProgBarStopping,0
+				invoke _DirFileNameW,FileInfo2.lpszName
+				mov @pbInfo.lpszTitle,eax
+				mov @pbInfo.bNoStop,0
 				invoke _AddLinesToList,offset FileInfo2,hList2
+				invoke DialogBoxParamW,hInstance,IDD_PROGBAR,hWinMain,offset _WndProgBarProc,addr @pbInfo
 				mov ecx,dbConf+_Configs.nAutoCode
 				.if ecx && FileInfo2.nCharSet!=CS_UNICODE && FileInfo2.nCharSet!=CS_UTF8
 					mov FileInfo2.nCharSet,ecx
