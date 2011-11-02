@@ -1,4 +1,5 @@
 ;Pre-Defined CONST
+      include \masm32\include\windows.inc
 
 ;Edit Mode
 EM_SINGLE			EQU 	1
@@ -26,6 +27,17 @@ WRI_STATUS			EQU		80
 ;WRI_CODE2N			EQU		(9*16)
 
 
+_TextFilter struct
+	bInclude			db		?
+	bExclude			db		?
+	bTrimHead		db		?
+	bTrimTail			db		?
+	lpszInclude		dd		?
+	lpszExclude		dd		?
+	lpszTrimHead		dd		?
+	lpszTrimTail		dd		?
+_TextFilter ends
+
 ;Config Struct
 _Configs struct
 	nEditMode			dd			?
@@ -37,13 +49,18 @@ _Configs struct
 	bAutoOpen			dd			?
 	bSaveInChLine		dd			?
 	bAutoSelText			dd			?
+	bAutoUpdate			dd			?
+	
 	lpDefaultMel			dd			?
 	lpInitDir1				dd			?
 	lpInitDir2				dd			?
 	lpNewScDir			dd			?
 	lpPrevFile			dd			?
 	
+	bAlwaysFilterPlugin	dd			?
+	bFilterPluginOn		dd			?
 	bAlwaysFilter			dd			?
+	lpDefaultMef			dd			?
 	TxtFilter				_TextFilter	<?>
 	
 	lpBackName			dd			?

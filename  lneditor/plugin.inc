@@ -69,7 +69,7 @@ ST_TXTENDW				EQU		11h
 
 _StreamEntry struct
 	lpStart				dd		?	;字符串起始
-	nStringLen			dd		?	;字符串长度，可选
+	nStringLen			dd		?	;字符串长度(以字节计算)，可选
 	lpInformation			dd		?	;字符串附加信息，可选，如分配内存须自行释放
 _StreamEntry ends
 
@@ -112,6 +112,11 @@ _MelInfo2 struct
 	nInterfaceVer			dd		?			;接口版本
 	nCharacteristic		dd		?			;插件特征信息
 _MelInfo2 ends
+
+_MefInfo2 struct
+	nInterfaceVer			dd		?			;接口版本
+	nCharacteristic		dd		?			;插件特征信息
+_MefInfo2 ends
 
 ;菜单项的处理函数，其中OpenScript之前经过了一些处理，其余均为直接调用。均可被插件重载。
 _Functions struct
@@ -198,15 +203,4 @@ _PreData struct
 	
 	lpHandles		dd		?	;窗口句柄列表指针，指向_Handles结构
 _PreData ends
-
-_TextFilter struct
-	bInclude			db		?
-	bExclude			db		?
-	bTrimHead		db		?
-	bTrimTail			db		?
-	lpszInclude		dd		?
-	lpszExclude		dd		?
-	lpszTrimHead		dd		?
-	lpszTrimTail		dd		?
-_TextFilter ends
 

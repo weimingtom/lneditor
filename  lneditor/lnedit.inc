@@ -1,4 +1,4 @@
-      include \masm32\include\windows.inc
+;      include \masm32\include\windows.inc
       include \masm32\include\masm32.inc
       include \masm32\include\gdi32.inc
       include \masm32\include\user32.inc
@@ -38,7 +38,6 @@
 TOTAL_STRINGNUM	EQU		100
 SHORT_STRINGLEN	EQU		64
 MAX_MELCOUNT		EQU		50
-BF_UNDO_SIZE		EQU		1000000
 
 UNICODE			EQU		1
 
@@ -82,6 +81,7 @@ _WinMain 			proto
 _WndMainProc 		proto :dword,:dword,:dword,:dword
 _InitWindow 			proto :dword
 _LoadMel			proto :dword
+_LoadMef			proto :dword
 _TryMatch			proto :dword
 _SelfMatch			proto :dword
 _SelfPreProc			proto
@@ -130,6 +130,7 @@ _Dev	proto
 ;Misc2
 _MakeStringListFromStream	proto :dword
 _GetStringFromStmPtr	proto :dword,:dword,:dword
+_RecodeFile			proto :dword,:dword
 _GetCodeIndex		proto :dword
 _AddCodeCombo		proto :dword
 _GetDispLine			proto :dword
@@ -142,6 +143,7 @@ _CalcCenterIndex		proto :dword,:dword
 _MakeFile			proto :dword
 _MakePath			proto :dword
 _CalcCheckSum		proto :dword,:dword
+_FindPlugin			proto :dword,:dword
 
 ;Record
 _ReadRec				proto :dword
@@ -155,7 +157,6 @@ _SaveScript			proto
 _SaveAs				proto
 _CloseScript			proto
 _SetCode				proto
-_RecodeFile			proto :dword
 _WndCodeProc		proto :dword,:dword,:dword,:dword
 _ExportTxt			proto
 _ExportSingleTxt		proto :dword,:dword
@@ -260,6 +261,16 @@ _MelInfo struct
 	lpMelInfo2			dd		?							;插件详细信息指针
 _MelInfo ends
 
+;过滤插件信息
+_MefInfo struct
+	szName				db		SHORT_STRINGLEN	dup(?)	;
+	hModule				dd		?
+	dwResv				dd		?
+	lpMefInfo2			dd		?
+	ProcessLine			dd		?
+	RecoverLine			dd		?
+_MefInfo ends
+
 ;打开过的脚本的记录文件的文件头
 _FileRec struct
 	szMagic			dd		?	;"MREC"
@@ -301,7 +312,8 @@ _UpdateFileInfo ends
 	nArgc			dd		?
 	
 	lpStrings			dd		?	;全局常量字符串表指针
-	lpMels			dd		?	;插件信息表指针
+	lpMels			dd		?	;文本提取插件信息表指针
+	lpMefs			dd		?	;过滤插件信息表指针
 	lpUndo			dd		?	;撤销列表指针
 	lpPreData		dd		?	;传递给PreProc函数的_PreData结构指针
 	lpOriFuncTable	dd		?	;原始的菜单函数地址表，包括_Functions和_SimpFunc
@@ -312,8 +324,9 @@ _UpdateFileInfo ends
 	nStartTime		dd		?	;启动编辑器以来的时间
 	nFileOpenTime	dd		?	;本文件打开以来的时间
 	
-	nMels			dd		?	;共载入了多少个插件
-	nCurMel			dd		?	;当前使用的插件编号（在lpMels中的位置）
+	nMels			dd		?	;文本提取插件的数量
+	nMefs			dd		?	;文本过滤插件的数量
+	nCurMel			dd		?	;当前使用的文本提取插件编号（在lpMels中的位置）
 	nCurIdx			dd		?	;当前编辑行
 	
 	bOpen			dd		?	;编辑器是否打开了文件
@@ -348,14 +361,17 @@ _UpdateFileInfo ends
 	dwTemp			dd		?
 	gszTemp			db		512	dup (?)
 	gszTemp2		db		512	dup (?)
-	
+
+.data
+	nCurMef			dd		-1	;当前使用的过滤器索引
+
 .data
 	szNULL			dd		0
 	TW0			'Multiline Editor',	szDisplayName
 	TW0			'lnedit',			szInnerName
 	TW0			'defaultedit',		szDefaultPluginName
-	TW0			' v2.0',			szDisplayVer
-	TW0			'2.0.2.529',		szFullVer
+	TW0			' v2.1',			szDisplayVer
+	TW0			'2.1.0.578',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0
@@ -363,6 +379,7 @@ _UpdateFileInfo ends
 	TW0			'gif\}\0*.bmp;*.jpg;*.gif\0',	
 	szDLLDir			dw		'm','e','l',0
 	szMelFile			dw		'*','.','m','e','l',0
+	TW0			'*.mef',		szMefFile
 	szTxt			dw		'.','t','x','t',0
 	TW0			'Rec',			szRecDir
 	TW0			'.rec',			szRecExt
@@ -384,11 +401,13 @@ _UpdateFileInfo ends
 	szFPreProc		db		'PreProc',0
 	szFGetText		db		'GetText',0
 	szFSaveText		db		'SaveText',0
-	szFModifyLine		db		'ModifyLine',0
+	szFModifyLine	db		'ModifyLine',0
 	szFSetLine		db		'SetLine',0
 	szFRetLine		db		'RetLine',0
 	szFRelease		db		'Release',0
 	szFGetStr			db		'GetStr',0
+	
+	szFProcessLine	db		'ProcessLine',0
 
 .data
 	TW0		'%d',		szToStr
@@ -468,6 +487,8 @@ _UpdateFileInfo ends
 					dd			TRUE
 					dd			FALSE
 					dd			TRUE
+					dd			TRUE
+					
 					dd			NULL
 					dd			NULL
 					dd			NULL
@@ -475,6 +496,9 @@ _UpdateFileInfo ends
 					dd			NULL
 					
 					dd			FALSE
+					dd			FALSE
+					dd			FALSE
+					dd			NULL
 					_TextFilter	<>
 					
 					dd			NULL
@@ -518,6 +542,8 @@ _UpdateFileInfo ends
 	TW0		'AutoSelectText',	szcfASL
 	TW0		'AutoConvert',	szcfAC
 	TW0		'AutoOpenOldFile',	szcfAO
+	TW0		'AutoUpdate',		szcfAutoUpdate
+	
 	TW0		'DefaultMel',		szcfDM
 	TW0		'InitDir1',			szcfID1
 	TW0		'InitDir2',			szcfID2
@@ -544,6 +570,10 @@ _UpdateFileInfo ends
 	TW0		'TrimHeadPattern',	szcfHeadPtn
 	TW0		'TrimTailOn',		szcfTailOn
 	TW0		'TrimTailPattern',	szcfTailPtn
+	
+	TW0		'AlwaysFilterPlugin',	szcfAlwaysFltPlugin
+	TW0		'FilterPluginOn',		szcfFltPluginOn
+	TW0		'FilterPlugin',		szcfFltPlugin
 	
 	dbConfigsOfTxtFilter	dd	offset szcfInOn,offset szcfInPtn
 						dd	offset szcfExOn,offset szcfExPtn

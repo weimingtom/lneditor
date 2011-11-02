@@ -14,7 +14,8 @@ TW0		'Update: %s %s\n',	szWltUpdateErr
 TW0		'Can\-t download the list file.',		szWltEUpdate1
 TW0		'Can\-t download the file:',			szWltEUpdate2
 TW0		'File check failed:',			szWltEUpdate3
-TW0		'File updated:',			szWltEUpdate4
+TW0		'Can\-t access orignal file:',	szWltEUpdate4
+TW0		'File updated:',			szWltEUpdateSuccess
 
 TW0		'An error has occurred while importing %s. %s\n',	szWltBImpErr
 TW0		'Line %d can\-t be committed to the plugin.',	szWltBImpErr2

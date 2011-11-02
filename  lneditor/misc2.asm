@@ -42,7 +42,7 @@ _ExMSL:
 	ret
 _MakeStringListFromStream endp
 
-_GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpStreamEntry
+_GetStringFromStmPtr proc uses esi edi ebx _lpFI,_lppString,_lpStreamEntry
 	LOCAL @nStrLen,@bIsEnd
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
@@ -54,7 +54,7 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpStreamEntry
 		mov esi,_StreamEntry.lpStart[ecx]
 		.if edx==CS_UNICODE
 			invoke lstrlenW,esi
-			lea ecx,[eax+1]
+			lea ecx,[eax+eax+2]
 		.else
 			invoke lstrlenA,esi
 			lea ecx,[eax+1]
@@ -91,10 +91,6 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpStreamEntry
 		.endw
 		mov @nStrLen,ecx
 		add ecx,2
-;		mov eax,MAX_STRINGLEN
-;		.if ecx>eax
-;			mov eax,ecx
-;		.endif
 		invoke HeapAlloc,hGlobalHeap,0,ecx
 		.if !eax
 			mov eax,E_NOMEM
@@ -129,11 +125,6 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpStreamEntry
 		inc ecx
 		shl ecx,1
 		mov eax,ecx
-;		mov eax,MAX_STRINGLEN
-;		.if ecx>eax
-;			mov eax,ecx
-;		.endif
-;		mov ecx,eax
 		shr ecx,1
 		push ecx
 		invoke HeapAlloc,hGlobalHeap,0,eax
@@ -170,12 +161,7 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpStreamEntry
 	assume edi:ptr _FileInfo
 	mov @nStrLen,ecx
 	.if edx==CS_UNICODE
-;		mov eax,MAX_STRINGLEN
-;		.if ecx>eax
-;			mov eax,ecx
-;		.endif
-		inc ecx
-		shl ecx,1
+		add ecx,4
 		invoke HeapAlloc,hGlobalHeap,0,ecx
 		.if !eax
 			mov eax,E_NOMEM
@@ -186,6 +172,7 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpStreamEntry
 		mov ecx,@nStrLen
 		mov edx,[edi].nStringType
 		mov edi,eax
+		shr ecx,1
 		rep movsw
 		.if edx==ST_PASCAL2 || EDX==ST_PASCAL4 || edx==ST_SPECLEN
 			mov word ptr [edi],0
@@ -193,7 +180,6 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpStreamEntry
 	.else
 		inc ecx
 		shl ecx,1
-		push ebx
 		mov ebx,ecx
 		invoke HeapAlloc,hGlobalHeap,0,ecx
 		.if !eax
@@ -203,13 +189,16 @@ _GetStringFromStmPtr proc uses esi edi _lpFI,_lppString,_lpStreamEntry
 		.endif
 		mov ecx,_lppString
 		mov [ecx],eax
-		invoke MultiByteToWideChar,[edi].nCharSet,0,esi,@nStrLen,eax,ebx
-		pop ebx
-		.if !eax
-			mov ecx,_lppString
-			invoke HeapFree,hGlobalHeap,0,[ecx]
-			mov eax,E_NOTENOUGHBUFF
-			jmp _ExGSFS
+		.if @nStrLen!=0
+			invoke MultiByteToWideChar,[edi].nCharSet,0,esi,@nStrLen,eax,ebx
+			.if !eax
+				mov ecx,_lppString
+				invoke HeapFree,hGlobalHeap,0,[ecx]
+				mov eax,E_NOTENOUGHBUFF
+				jmp _ExGSFS
+			.endif
+		.else
+			xor eax,eax
 		.endif
 		mov edx,[edi].nStringType
 		.if edx==ST_PASCAL2 || EDX==ST_PASCAL4 || edx==ST_SPECLEN
@@ -224,11 +213,11 @@ _ExGSFS:
 	ret
 _GetStringFromStmPtr endp
 
-_RecodeFile proc uses esi ebx edi _lpFI
+_RecodeFile proc uses esi ebx edi _lpFI,_bReopen
 	LOCAL @ret
 	mov esi,_lpFI
 	assume esi:ptr _FileInfo
-	.if [esi].nMemoryType==MT_POINTERONLY
+	.if !_bReopen && [esi].nMemoryType==MT_POINTERONLY
 		mov ebx,[esi].lpTextIndex
 		invoke _MakeStringListFromStream,_lpFI
 		.if eax
@@ -251,7 +240,7 @@ _RecodeFile proc uses esi ebx edi _lpFI
 			push esi
 			call eax
 		.endif
-		.if [esi].nMemoryType==MT_EVERYSTRING
+		.if [esi].nMemoryType==MT_EVERYSTRING || [esi].nMemoryType==MT_POINTERONLY
 			mov edi,[esi].lpTextIndex
 			xor ebx,ebx
 			.while ebx<[esi].nLine
@@ -260,7 +249,9 @@ _RecodeFile proc uses esi ebx edi _lpFI
 			.endw
 		.endif
 		invoke VirtualFree,[esi].lpTextIndex,0,MEM_RELEASE
+		mov [esi].lpTextIndex,0
 		invoke VirtualFree,[esi].lpStreamIndex,0,MEM_RELEASE
+		mov [esi].lpStreamIndex,0
 		lea eax,@ret
 		push eax
 		push _lpFI
@@ -757,3 +748,54 @@ _CalcCheckSum proc uses esi ebx _lpBuff,_nSize
 	or eax,edx
 	ret
 _CalcCheckSum endp
+
+;
+_FindPlugin proc uses edi ebx esi _lpszName,_dwType
+	LOCAL @pStr
+	invoke HeapAlloc,hGlobalHeap,0,SHORT_STRINGLEN
+	test eax,eax
+	jz _Err
+	mov @pStr,eax
+	xor ecx,ecx
+	mov edi,eax
+	mov esi,_lpszName
+	.while ecx<SHORT_STRINGLEN
+		mov ax,[esi+ecx]
+		.if ax=='.'
+			mov word ptr [edi+ecx],0
+			.break
+		.endif
+		mov [edi+ecx],ax
+		.break .if !ax
+		add ecx,2
+	.endw
+	
+	.if _dwType==1
+		mov edi,lpMels
+		invoke lstrcatW,@pStr,$CTW0(".mel")
+		mov esi,sizeof _MelInfo
+	.elseif _dwType==2
+		mov edi,lpMefs
+		invoke lstrcatW,@pStr,$CTW0(".mef")
+		mov esi,sizeof _MefInfo
+	.endif
+	
+	xor ebx,ebx
+	.while ebx<MAX_MELCOUNT
+		invoke lstrcmpiW,edi,@pStr
+		test eax,eax
+		jz _Success
+		add edi,esi
+		inc ebx
+	.endw
+	invoke HeapFree,hGlobalHeap,0,@pStr
+_Err:
+	or eax,-1
+	ret
+_Success:
+	invoke HeapFree,hGlobalHeap,0,@pStr
+	mov eax,edi
+	mov ecx,ebx
+	ret
+_FindPlugin endp
+

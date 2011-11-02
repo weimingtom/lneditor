@@ -11,9 +11,10 @@ _UpdateThd proc uses esi edi ebx _lparam
 	LOCAL @szUrl[1024]:word
 	LOCAL @szFileName[1024]:word
 	LOCAL @ppos
-	LOCAL @lpList,@nListSize,@nListFile,@lpTempName
+	LOCAL @lpList,@nListSize,@nListFile,@lpTempName,@lpNewFileName
 	LOCAL @FInfo:_UpdateFileInfo
 	LOCAL @ft:FILETIME
+	
 	lea ebx,@szUrl
 	invoke lstrcpyW,ebx,offset szGoogleCode
 	invoke lstrcatW,ebx,offset szUpdateListFile
@@ -69,6 +70,10 @@ _UpdateThd proc uses esi edi ebx _lparam
 	test eax,eax
 	jz _Ex2UT
 	mov @lpTempName,eax
+	invoke HeapAlloc,hGlobalHeap,0,1024*2
+	test eax,eax
+	jz _Ex3UT
+	mov @lpNewFileName,eax
 	.while @nListFile
 		mov @FInfo.lpszName,esi
 		invoke lstrlenW,esi
@@ -108,35 +113,50 @@ _UpdateThd proc uses esi edi ebx _lparam
 			invoke CloseHandle,eax
 		.endif
 	_DownFileUT:
-		lea ebx,@szFileName
-		invoke lstrcpyW,@lpTempName,ebx
-		invoke lstrcatW,@lpTempName,$CTW0('.bak')
-		invoke MoveFileExW,ebx,@lpTempName,MOVEFILE_REPLACE_EXISTING
 		lea edi,@szUrl
 		invoke lstrcpyW,edi,offset szGoogleCode
 		invoke lstrcatW,edi,@FInfo.lpszName
-		invoke URLDownloadToFileW,0,edi,ebx,0,0
+		invoke URLDownloadToCacheFileW,0,edi,@lpNewFileName,1024,0,0
 		.if eax!=S_OK
 			invoke lstrcpyW,edi,offset szGoogleCode
 			invoke lstrcatW,edi,$CTW0('bin/')
 			invoke lstrcatW,edi,@FInfo.lpszName
-			invoke URLDownloadToFileW,0,edi,ebx,0,0
+			invoke URLDownloadToCacheFileW,0,edi,@lpNewFileName,1024,0,0
 			.if eax!=S_OK
 				invoke _WriteLog,WLT_UPDATEERR,offset szInnerName,offset szWltEUpdate2,@FInfo.lpszName
 				jmp _NextFileUT
 			.endif
 		.endif
-		invoke _CheckFile,ebx,addr @FInfo
+		invoke _CheckFile,@lpNewFileName,addr @FInfo
 		.if !eax
-			invoke MoveFileExW,@lpTempName,ebx,MOVEFILE_REPLACE_EXISTING
 			invoke _WriteLog,WLT_UPDATEERR,offset szInnerName,offset szWltEUpdate3,@FInfo.lpszName
+			invoke DeleteFileW,@lpNewFileName
+			jmp _NextFileUT
 		.else
+			lea ebx,@szFileName
+			invoke lstrcpyW,@lpTempName,ebx
+			invoke lstrcatW,@lpTempName,$CTW0('.bak')
+			invoke MoveFileExW,ebx,@lpTempName,MOVEFILE_REPLACE_EXISTING
+			.if !eax
+				_lbl2:
+				invoke DeleteFileW,@lpNewFileName
+				invoke _WriteLog,WLT_UPDATEERR,offset szInnerName,offset szWltEUpdate4,@FInfo.lpszName
+				jmp _NextFileUT
+			.endif
+			invoke MoveFileExW,@lpNewFileName,ebx,MOVEFILE_REPLACE_EXISTING
+			.if !eax
+				invoke MoveFileExW,@lpTempName,ebx,MOVEFILE_REPLACE_EXISTING
+				jmp _lbl2
+			.endif
 			invoke DeleteFileW,@lpTempName
-			invoke _WriteLog,WLT_UPDATEERR,offset szInnerName,offset szWltEUpdate4,@FInfo.lpszName
+			invoke DeleteFileW,@lpNewFileName
+			invoke _WriteLog,WLT_UPDATEERR,offset szInnerName,offset szWltEUpdateSuccess,@FInfo.lpszName
 		.endif
 	_NextFileUT:
 		dec @nListFile
 	.endw
+_Ex4UT:
+	invoke HeapFree,hGlobalHeap,0,@lpNewFileName
 _Ex3UT:
 	invoke HeapFree,hGlobalHeap,0,@lpTempName
 _Ex2UT:

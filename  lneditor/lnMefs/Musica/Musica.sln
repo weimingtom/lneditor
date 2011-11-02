@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CppTemplate", "CppTemplate\CppTemplate.vcxproj", "{BF2A5037-B630-4875-9427-0C7F30C4F488}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Musica", "Musica\Musica.vcxproj", "{BF2A5037-B630-4875-9427-0C7F30C4F488}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
