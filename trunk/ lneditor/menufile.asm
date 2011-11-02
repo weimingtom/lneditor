@@ -447,7 +447,7 @@ _WndCodeProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			mov ebx,FileInfo1.nCharSet
 			.if ecx!=ebx
 				mov FileInfo1.nCharSet,ecx
-				invoke _RecodeFile,offset FileInfo1
+				invoke _RecodeFile,offset FileInfo1,FALSE
 				.if eax
 					.if eax==E_FATALERROR
 						mov bModified,0
@@ -465,7 +465,7 @@ _WndCodeProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			mov ebx,FileInfo2.nCharSet
 			.if ecx!=ebx
 				mov FileInfo2.nCharSet,ecx
-				invoke _RecodeFile,offset FileInfo2
+				invoke _RecodeFile,offset FileInfo2,FALSE
 				.if eax
 					.if eax==E_FATALERROR
 						mov bModified,0

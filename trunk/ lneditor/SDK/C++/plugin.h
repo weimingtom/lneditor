@@ -3,6 +3,7 @@
 
 //Interface version
 #define INTERFACE_VERSION		0x00030000
+#define TXTINTERFACE_VERSION	0x00010000
 
 //MRESULT
 #define E_ERROR				-1
@@ -75,32 +76,32 @@ typedef struct _STREAM_ENTRY {
 
 
 typedef struct _FILE_INFO {
-	LPWSTR	lpszName;
-	HANDLE	hFile;
+	LPWSTR			lpszName;
+	HANDLE			hFile;
 	
-	LPVOID	lpStream;
+	LPVOID			lpStream;
 
-	DWORD	dwMemoryType;
+	DWORD			dwMemoryType;
 
-	LPVOID	lpTextIndex;	//指向一个数组……
+	LPWSTR*			lpTextIndex;	//指向一个数组……
 	STREAM_ENTRY*	lpStreamIndex;
 
-	DWORD	dwStringType;
-	DWORD	nStreamSize;
-	DWORD	nLine;
+	DWORD			dwStringType;
+	DWORD			nStreamSize;
+	DWORD			nLine;
 
-	BOOL	bReadOnly;
-	DWORD	dwCharSet;
+	BOOL			bReadOnly;
+	DWORD			dwCharSet;
 
-	LPVOID	lpCustom;
-	DWORD	dwReserved1;
-	DWORD	dwReserved2;
+	LPVOID			lpCustom;
+	DWORD			dwReserved1;
+	DWORD			dwReserved2;
 } FILE_INFO, *LPFILE_INFO;
 
 
 //Characteristics of Mel
 #define MIC_CUSTOMEDIT			0x00000001
-#define MIC_CUSTOMTXTPROC		0x00000002
+//#define MIC_CUSTOMTXTPROC		0x00000002
 #define MIC_NOPREREAD			0x00000004
 #define MIC_CUSTOMGUI			0x00000008
 #define MIC_CUSTOMCONFIG		0x00000010
@@ -113,6 +114,11 @@ typedef struct _MEL_INFO {
 	DWORD	dwInterfaceVersion;
 	DWORD	dwCharacteristic;
 } MEL_INFO, *LPMEL_INFO;
+
+typedef struct _MEF_INFO {
+	DWORD	dwInterfaceVersion;
+	DWORD	dwCharacteristic;
+} MEF_INFO, *LPMEF_INFO;
 
 //Select range for edit control
 typedef struct _SEL_RANGE {
@@ -191,16 +197,16 @@ extern "C" {
 
 }
 
-#ifdef RELOAD_NEW
+#ifdef OVERLOAD_NEW
 
 void* operator new(size_t size)
 {
-	return (void*)HeapAlloc(hMainHeap,0,size);
+	return (void*)HeapAlloc(g_hHeap,0,size);
 }
 
 void operator delete(void* p)
 {
-	HeapFree(hMainHeap,0,(LPVOID)p);
+	HeapFree(g_hHeap,0,(LPVOID)p);
 }
 
 #endif

@@ -4,9 +4,9 @@ option casemap:none
 
 
 include plugin.inc
+include config.inc
 include lnedit.inc
 include macros.inc
-include config.inc
 include com.inc
 
 include _browsefolder.asm
@@ -405,19 +405,13 @@ _PaintMain:
 		mov eax,hwnd
 		mov hWinMain,eax
 		invoke _InitWindow,hwnd
-		invoke VirtualAlloc,0,BF_UNDO_SIZE,MEM_COMMIT,PAGE_READWRITE
-		.if !eax
-			@@:
-			mov eax,IDS_NOMEM
-			invoke _GetConstString
-			invoke MessageBoxW,hwnd,EAX,0,MB_OK or MB_ICONERROR
-			invoke ExitProcess,0
-		.endif
-		mov lpUndo,eax
 ;		invoke CreateThread,0,0,offset _LoadMel,0,0,0
 ;		mov @hFile,eax
 		invoke _LoadMel,0
-		invoke CreateThread,0,0,offset _UpdateThd,0,0,0
+		invoke _LoadMef,0
+		.if dbConf+_Configs.bAutoUpdate
+			invoke CreateThread,0,0,offset _UpdateThd,0,0,0
+		.endif
 		invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,sizeof _PreData
 		or eax,eax
 		je @B
@@ -546,10 +540,10 @@ _InitWindow proc hwnd
 	ret
 _InitWindow endp
 
-;载入所有插件，每个插件使用一个MelInfo结构，依次储存在lpMels里面
+;载入所有文本提取插件，每个插件使用一个MelInfo结构，依次储存在lpMels里面
 _LoadMel proc uses edi esi ebx _lParam
 	LOCAL @szStr[MAX_STRINGLEN]:byte
-	LOCAL @stFindData:WIN32_FIND_DATA
+	LOCAL @stFindData:WIN32_FIND_DATAW
 	LOCAL @hFind
 	
 	invoke GetModuleFileNameW,0,addr @szStr,MAX_STRINGLEN/2
@@ -574,6 +568,9 @@ _LoadMel proc uses edi esi ebx _lParam
 			assume esi:ptr _MelInfo
 			.repeat
 				lea edi,@stFindData.cFileName
+				invoke lstrlenW,edi
+				cmp eax,SHORT_STRINGLEN/2
+				jae _CtnLM
 				invoke LoadLibraryW,edi
 				.if eax
 					mov [esi].hModule,eax
@@ -602,7 +599,7 @@ _LoadMel proc uses edi esi ebx _lParam
 					mov ecx,[esi].lpMelInfo2
 					mov eax,_MelInfo2.nInterfaceVer[ecx]
 					shr eax,16
-					.if eax<(INTERFACE_VER shr 16)
+					.if eax!=(INTERFACE_VER shr 16)
 						lea ecx,@stFindData.cFileName
 						invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,ecx,offset szWltEMel2
 						jmp _CtnLM
@@ -625,6 +622,90 @@ _ExLM:
 	ret
 _LoadMel endp
 
+;载入所有文本过滤插件
+_LoadMef proc uses edi esi ebx _lParam
+	LOCAL @szStr[MAX_STRINGLEN]:byte
+	LOCAL @stFindData:WIN32_FIND_DATAW
+	LOCAL @hFind
+	
+	invoke GetModuleFileNameW,0,addr @szStr,MAX_STRINGLEN/2
+	invoke _DirBackW,addr @szStr
+	invoke _DirCatW,addr @szStr,offset szDLLDir
+	invoke SetCurrentDirectoryW,addr @szStr
+	mov lpMefs,0
+	.if eax
+		invoke FindFirstFileW,offset szMefFile,addr @stFindData
+		.if eax!=INVALID_HANDLE_VALUE
+			mov @hFind,eax
+			invoke VirtualAlloc,0,MAX_MELCOUNT*sizeof _MefInfo,MEM_COMMIT,PAGE_READWRITE
+			.if !eax
+				mov eax,IDS_FAILLOADMEL
+				invoke _GetConstString
+				invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
+				jmp _Ex2LM
+			.endif
+			mov lpMefs,eax
+			mov esi,eax
+			xor ebx,ebx
+			assume esi:ptr _MefInfo
+			.repeat
+				lea edi,@stFindData.cFileName
+				invoke lstrlenW,edi
+				cmp eax,SHORT_STRINGLEN/2
+				jae _CtnLM
+				invoke LoadLibraryW,edi
+				.if eax
+					mov [esi].hModule,eax
+					invoke lstrcpyW,esi,edi
+					invoke GetProcAddress,[esi].hModule,offset szFInitInfo
+					.if !eax
+					_BadMel:
+						invoke FreeLibrary,[esi].hModule
+						invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,edi,offset szWltEMel1
+						jmp _CtnLM
+					.endif
+					mov edi,eax
+					invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,sizeof _MefInfo2
+					.if !eax
+						lea ecx,@stFindData.cFileName
+						invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,ecx,offset szWltEMem1
+						jmp _CtnLM
+					.endif
+					mov [esi].lpMefInfo2,eax
+					push eax
+					call edi
+					mov ecx,[esi].lpMefInfo2
+					mov eax,_MefInfo2.nInterfaceVer[ecx]
+					shr eax,16
+					.if eax!=(TXTINTERFACE_VER shr 16)
+						lea ecx,@stFindData.cFileName
+						invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,ecx,offset szWltEMel2
+						jmp _CtnLM
+					.endif
+					invoke GetProcAddress,[esi].hModule,offset szFProcessLine
+					.if !eax
+						lea edi,@stFindData.cFileName
+						jmp _BadMel
+					.endif
+					mov [esi].ProcessLine,eax
+				.endif
+				add esi,sizeof _MefInfo
+				inc ebx
+_CtnLM:
+				invoke FindNextFileW,@hFind,addr @stFindData
+			.until eax==FALSE || ebx>=MAX_MELCOUNT-1
+			mov nMefs,ebx
+_Ex2LM:
+			invoke FindClose,@hFind
+			assume esi:nothing
+		.endif
+	.endif
+_ExLM:
+	
+	xor eax,eax
+	ret
+_LoadMef endp
+
 ;对每个插件进行匹配，返回值：
 ;大于等于0即为匹配成功的插件的索引值，-1为内置匹配成功，-2为匹配失败，-3为匹配过程中发生错误
 _TryMatch proc uses edi esi ebx _lpszName
@@ -637,36 +718,33 @@ _TryMatch proc uses edi esi ebx _lpszName
 	je _SelfMatchTM
 	mov edi,dbConf+_Configs.lpDefaultMel
 	.if edi && word ptr [edi]
-		mov esi,lpMels
-		xor ebx,ebx
-		.while ebx<nMels
-			invoke lstrcmpW,esi,edi
-			.if !eax
-				assume esi:ptr _MelInfo
-				push _lpszName
-				call [esi].pMatch
-				.if eax==MR_NO
-					invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN
-					mov @pstr,eax
-					mov eax,IDS_NOTDEFMEL
-					invoke _GetConstString
-					invoke wsprintfW,@pstr,eax,edi
-					mov eax,IDS_WINDOWTITLE
-					invoke _GetConstString
-					invoke MessageBoxW,hWinMain,@pstr,eax,MB_YESNO or MB_DEFBUTTON2
-					mov esi,eax
-					invoke HeapFree,hGlobalHeap,0,@pstr
-					.break .if esi==IDNO
-				.endif
-				assume esi:nothing
-				mov eax,ebx
-				jmp _ExTM
+		invoke _FindPlugin,edi,1
+		mov ebx,ecx
+		.if eax!=-1
+			mov esi,eax
+			assume esi:ptr _MelInfo
+			push _lpszName
+			call [esi].pMatch
+			.if eax==MR_NO
+				invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN
+				mov @pstr,eax
+				mov eax,IDS_NOTDEFMEL
+				invoke _GetConstString
+				invoke wsprintfW,@pstr,eax,edi
+				mov eax,IDS_WINDOWTITLE
+				invoke _GetConstString
+				invoke MessageBoxW,hWinMain,@pstr,eax,MB_YESNO or MB_DEFBUTTON2
+				mov esi,eax
+				invoke HeapFree,hGlobalHeap,0,@pstr
+				cmp esi,IDNO
+				je _lbl1
 			.endif
-			inc ebx
-			add esi,sizeof _MelInfo
-		.endw
+			assume esi:nothing
+			mov eax,ebx
+			jmp _ExTM
+		.endif
 	.endif
-	
+_lbl1:
 	lea esi,@pFunc
 	mov edi,esi
 	or eax,-1

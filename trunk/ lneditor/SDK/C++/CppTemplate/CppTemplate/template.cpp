@@ -1,8 +1,8 @@
 #include<Windows.h>
 
 HANDLE g_hHeap;
-#define RELOAD_NEW
-#include "plugin.h"
+#define OVERLOAD_NEW
+#include "\masm32\lneditor\SDK\C++\plugin.h"
 
 #include"xuse.h"
 

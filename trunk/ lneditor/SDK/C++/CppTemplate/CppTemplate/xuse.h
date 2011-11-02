@@ -1,4 +1,5 @@
 #include<Windows.h>
+
 struct XuseHdr {
 	DWORD dwMagic;
 	DWORD nVer;

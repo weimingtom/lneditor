@@ -80,8 +80,8 @@ _WndFilterProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 	LOCAL @szStr[MAX_STRINGLEN]:byte
 	mov eax,uMsg
 	.if eax==WM_COMMAND
-		mov ecx,wParam
-		.if cx==IDC_TF_OK
+		mov eax,wParam
+		.if ax==IDC_TF_OK
 			invoke IsDlgButtonChecked,hwnd,IDC_TF_ALWAYSAPPLY
 			mov dbConf+_Configs.bAlwaysFilter,eax
 			invoke IsDlgButtonChecked,hwnd,IDC_TF_INON
@@ -96,6 +96,50 @@ _WndFilterProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 			invoke GetDlgItemTextW,hwnd,IDC_TF_EXPTN,dbConf+_Configs.TxtFilter.lpszExclude,MAX_STRINGLEN/2
 			invoke GetDlgItemTextW,hwnd,IDC_TF_HEADPTN,dbConf+_Configs.TxtFilter.lpszTrimHead,MAX_STRINGLEN/2
 			invoke GetDlgItemTextW,hwnd,IDC_TF_TAILPTN,dbConf+_Configs.TxtFilter.lpszTrimTail,MAX_STRINGLEN/2
+			invoke IsDlgButtonChecked,hwnd,IDC_TF_USEPLUGIN
+			mov dbConf+_Configs.bFilterPluginOn,eax
+			invoke IsDlgButtonChecked,hwnd,IDC_TF_ALWAYSPLUGIN
+			mov dbConf+_Configs.bAlwaysFilterPlugin,eax
+			
+			.if dbConf+_Configs.bFilterPluginOn
+				invoke SendDlgItemMessageW,hwnd,IDC_TF_PLUGINCOMBO,CB_GETCURSEL,0,0
+				mov nCurMef,eax
+				mov ecx,sizeof _MefInfo
+				mul ecx
+				add eax,lpMefs
+				invoke lstrcpyW,dbConf+_Configs.lpDefaultMef,eax
+			.else
+				mov nCurMef,-1
+			.endif
+			
+			.if bOpen
+				invoke _RecodeFile,offset FileInfo1,TRUE
+				.if eax
+				_FilterErr:
+					mov eax,IDS_FILTERPLUGINERR2
+				_FilterErr2:
+					invoke _GetConstString
+					invoke MessageBoxW,hwnd,eax,0,MB_ICONERROR
+					invoke PostMessageW,hWinMain,WM_COMMAND,IDM_CLOSE,0
+					jmp _ExitF
+				.endif
+				invoke _RecodeFile,offset FileInfo2,TRUE
+				test eax,eax
+				jnz _FilterErr
+				mov eax,FileInfo1.nLine
+				.if eax!=FileInfo2.nLine
+					mov eax,IDS_FILTERPLUGINERR1
+					jmp _FilterErr2
+				.endif
+				.if FileInfo1.nMemoryType==MT_POINTERONLY
+					invoke _MakeStringListFromStream,offset FileInfo1
+					test eax,eax
+					jnz _FilterErr
+					invoke _MakeStringListFromStream,offset FileInfo2
+					test eax,eax
+					jnz _FilterErr
+				.endif
+			.endif
 			
 			invoke SendMessageW,hList1,LB_GETCURSEL,0,1
 			mov nCurIdx,eax
@@ -105,12 +149,32 @@ _WndFilterProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 			
 			invoke SendMessageW,hList1,LB_RESETCONTENT,0,0
 			invoke SendMessageW,hList2,LB_RESETCONTENT,0,0
+			
+			mov bProgBarStopping,0
 			invoke _AddLinesToList,offset FileInfo1,hList1
 			invoke _AddLinesToList,offset FileInfo2,hList2
-			jmp @F
+			jmp _ExitF
+		.elseif ax==IDC_TF_USEPLUGIN
+			invoke IsDlgButtonChecked,hwnd,IDC_TF_USEPLUGIN
+			mov ebx,eax
+			invoke GetDlgItem,hwnd,IDC_TF_ALWAYSPLUGIN
+			invoke EnableWindow,eax,ebx
+			invoke GetDlgItem,hwnd,IDC_TF_PLUGINCOMBO
+			invoke EnableWindow,eax,ebx
+		.elseif ax==IDC_TF_PLUGINCOMBO
+			shr eax,16
+			.if ax==CBN_SELCHANGE
+				invoke SendDlgItemMessageW,hwnd,IDC_TF_PLUGINCOMBO,CB_GETCURSEL,0,0
+				mov ecx,sizeof _MefInfo
+				mul ecx
+				add eax,lpMefs
+				lea ecx,@szStr
+				invoke _GetMelInfo,eax,ecx,VT_FILEDESC
+				invoke SetDlgItemTextW,hwnd,IDC_TF_PLUGINDESC,addr @szStr
+			.endif
 		.endif
-		cmp cx,IDC_TF_CANCEL
-		je @F
+		cmp ax,IDC_TF_CANCEL
+		je _ExitF
 	.elseif eax==WM_INITDIALOG
 		invoke CheckDlgButton,hwnd,IDC_TF_ALWAYSAPPLY,dbConf+_Configs.bAlwaysFilter
 		movzx eax,byte ptr dbConf+_Configs.TxtFilter.bInclude
@@ -125,8 +189,38 @@ _WndFilterProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 		invoke SetDlgItemTextW,hwnd,IDC_TF_EXPTN,dbConf+_Configs.TxtFilter.lpszExclude
 		invoke SetDlgItemTextW,hwnd,IDC_TF_HEADPTN,dbConf+_Configs.TxtFilter.lpszTrimHead
 		invoke SetDlgItemTextW,hwnd,IDC_TF_TAILPTN,dbConf+_Configs.TxtFilter.lpszTrimTail
+		
+		invoke GetDlgItem,hwnd,IDC_TF_PLUGINCOMBO
+		mov ebx,eax
+		mov edi,lpMefs
+		.while word ptr [edi]
+			invoke _GetMelInfo,edi,addr @szStr,VT_PRODUCTNAME
+			invoke SendMessageW,ebx,CB_ADDSTRING,0,addr @szStr
+			
+			add edi,sizeof _MefInfo
+		.endw
+		invoke SendMessageW,ebx,CB_SETCURSEL,0,0
+		mov edi,dbConf+_Configs.lpDefaultMef
+		.if word ptr [edi]
+			invoke _FindPlugin,edi,2
+			.if eax!=-1
+				mov esi,ecx
+				lea ecx,@szStr
+				invoke _GetMelInfo,eax,ecx,VT_FILEDESC
+				invoke SetDlgItemTextW,hwnd,IDC_TF_PLUGINDESC,addr @szStr
+				invoke SendMessageW,ebx,CB_SETCURSEL,esi,0
+			.endif
+		.endif
+		invoke CheckDlgButton,hwnd,IDC_TF_USEPLUGIN,dbConf+_Configs.bFilterPluginOn
+		invoke CheckDlgButton,hwnd,IDC_TF_ALWAYSPLUGIN,dbConf+_Configs.bAlwaysFilterPlugin
+		.if !dbConf+_Configs.bFilterPluginOn
+			invoke GetDlgItem,hwnd,IDC_TF_ALWAYSPLUGIN
+			invoke EnableWindow,eax,FALSE
+			invoke GetDlgItem,hwnd,IDC_TF_PLUGINCOMBO
+			invoke EnableWindow,eax,FALSE
+		.endif
 	.elseif eax==WM_CLOSE
-	@@:
+	_ExitF:
 		invoke EndDialog,hwnd,0
 	.endif
 	xor eax,eax

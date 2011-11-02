@@ -141,6 +141,11 @@ IDC_STC25               equ 2014
 IDC_TF_CANCEL           equ 2
 IDC_TF_OK               equ 1
 IDC_TF_ALWAYSAPPLY      equ 2016
+IDC_GRP24               equ 2015
+IDC_TF_USEPLUGIN        equ 2017
+IDC_TF_PLUGINCOMBO      equ 2018
+IDC_TF_ALWAYSPLUGIN     equ 2019
+IDC_TF_PLUGINDESC       equ 2020
 IDD_IMPALL              equ 2100
 IDC_GRP18               equ 2101
 IDC_STC29               equ 2102
@@ -263,6 +268,8 @@ IDS_NOTSUPPORTBATCHIMP  equ 54
 IDS_AUTOMATCH           equ 55
 IDS_SELECTFILEAGAIN     equ 56
 IDS_LISTFILEVERSIONTOOLOW equ 57
+IDS_FILTERPLUGINERR1    equ 58
+IDS_FILTERPLUGINERR2    equ 59
 IDR_ACCEL1              equ 1
 IDR_VERSION1            equ 1
 IDR_XPMANIFEST1         equ 1

@@ -7,7 +7,11 @@ _LoadConfig proc uses ebx
 	or eax,eax
 	je _NomemLC
 	mov dbConf+_Configs.lpDefaultMel,eax
-	
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,SHORT_STRINGLEN
+	or eax,eax
+	je _NomemLC
+	mov dbConf+_Configs.lpDefaultMef,eax
+		
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN
 	or eax,eax
 	je _NomemLC
@@ -65,6 +69,8 @@ _LoadConfig proc uses ebx
 		mov dbConf+_Configs.bAutoSelText,eax
 		invoke GetPrivateProfileIntW,offset szcfSett,offset szcfAC,dbConf+_Configs.nAutoConvert,lpszConfigFile
 		mov dbConf+_Configs.nAutoConvert,eax
+		invoke GetPrivateProfileIntW,offset szcfSett,offset szcfAutoUpdate,dbConf+_Configs.bAutoUpdate,lpszConfigFile
+		mov dbConf+_Configs.bAutoUpdate,eax
 		
 		invoke GetPrivateProfileStringW,offset szcfSett,offset szcfDM,NULL,dbConf+_Configs.lpDefaultMel,SHORT_STRINGLEN/2,lpszConfigFile
 		invoke GetPrivateProfileStringW,offset szcfSett,offset szcfID1,NULL,dbConf+_Configs.lpInitDir1,MAX_STRINGLEN/2,lpszConfigFile
@@ -82,6 +88,11 @@ _LoadConfig proc uses ebx
 				[ebx*4+4+offset dbConf+_Configs.TxtFilter],MAX_STRINGLEN/2,lpszConfigFile
 			inc ebx
 		.endw
+		invoke GetPrivateProfileIntW,offset szcfTxtFlt,offset szcfAlwaysFltPlugin,0,lpszConfigFile
+		mov dbConf+_Configs.bAlwaysFilterPlugin,eax
+		invoke GetPrivateProfileIntW,offset szcfTxtFlt,offset szcfFltPluginOn,0,lpszConfigFile
+		mov dbConf+_Configs.bFilterPluginOn,eax
+		invoke GetPrivateProfileStringW,offset szcfTxtFlt,offset szcfFltPlugin,NULL,dbConf+_Configs.lpDefaultMef,SHORT_STRINGLEN/2,lpszConfigFile
 		
 		invoke GetPrivateProfileStringW,offset szcfUI,offset szcfBP,NULL,dbConf+_Configs.lpBackName,MAX_STRINGLEN/2,lpszConfigFile
 		
@@ -140,6 +151,8 @@ _SaveConfig proc uses ebx
 	invoke _WriteSetting,offset szcfASL,addr @s
 	invoke _Int2Str,dbConf+_Configs.nAutoConvert,addr @s,FALSE
 	invoke _WriteSetting,offset szcfAC,addr @s
+	invoke _Int2Str,dbConf+_Configs.bAutoUpdate,addr @s,FALSE
+	invoke _WriteSetting,offset szcfAutoUpdate,addr @s
 	invoke _WriteSetting,offset szcfDM,dbConf+_Configs.lpDefaultMel
 	invoke _WriteSetting,offset szcfID1,dbConf+_Configs.lpInitDir1
 	invoke _WriteSetting,offset szcfID2,dbConf+_Configs.lpInitDir2
@@ -156,6 +169,11 @@ _SaveConfig proc uses ebx
 		invoke WritePrivateProfileStringW,offset szcfTxtFlt,[ebx*8+offset dbConfigsOfTxtFilter+4],[ebx*4+4+offset dbConf+_Configs.TxtFilter],lpszConfigFile
 		inc ebx
 	.endw
+	invoke _Int2Str,dbConf+_Configs.bAlwaysFilterPlugin,addr @s,FALSE
+	invoke WritePrivateProfileStringW,offset szcfTxtFlt,offset szcfAlwaysFltPlugin,addr @s,lpszConfigFile
+	invoke _Int2Str,dbConf+_Configs.bFilterPluginOn,addr @s,FALSE
+	invoke WritePrivateProfileStringW,offset szcfTxtFlt,offset szcfFltPluginOn,addr @s,lpszConfigFile
+	invoke WritePrivateProfileStringW,offset szcfTxtFlt,offset szcfFltPlugin,dbConf+_Configs.lpDefaultMef,lpszConfigFile
 	
 	invoke _WriteUI,offset szcfBP,dbConf+_Configs.lpBackName
 	invoke _Int2Str,dbConf+_Configs.TextColorSelected,addr @s,TRUE
