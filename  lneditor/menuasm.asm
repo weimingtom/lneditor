@@ -516,7 +516,7 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 			.else
 				lea ecx,offset dbMelInfo2
 			.endif
-			invoke _LoadFile,addr @stFileInfo,LM_NONE,ecx
+			invoke _LoadFile,addr @stFileInfo,LM_ONE,ecx
 			.if !eax
 				invoke _OutputMessage,WLT_BATCHIMPERR,ebx,edi,offset szWltEFileLoad
 				jmp _Next2IATT
