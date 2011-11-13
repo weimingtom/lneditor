@@ -360,11 +360,13 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	
 	mov ecx,[edi].lpStreamIndex
 	mov eax,_nLine
-	mov esi,[ecx+eax*4]
-	invoke lstrlenA,esi
+	lea eax,[eax+eax*2]
+	lea esi,[ecx+eax*4]
+	assume esi:ptr _StreamEntry
+	invoke lstrlenA,[esi].lpStart
 	
 	.if eax==@nNewLen
-		mov edi,esi
+		mov edi,[esi].lpStart
 		mov esi,@pNewStr
 		mov ecx,eax
 		rep movsb
@@ -372,9 +374,9 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		mov @nOldLen,eax
 		mov ecx,[edi].nStreamSize
 		add ecx,[edi].lpStream
-		sub ecx,esi
+		sub ecx,[esi].lpStart
 		sub ecx,@nOldLen
-		invoke _ReplaceInMem,@pNewStr,@nNewLen,esi,@nOldLen,ecx
+		invoke _ReplaceInMem,@pNewStr,@nNewLen,[esi].lpStart,@nOldLen,ecx
 		.if eax
 			mov ebx,eax
 			invoke HeapFree,hHeap,0,@pNewStr
@@ -396,7 +398,7 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 			inc eax
 		.endw
 		
-		mov edx,esi
+		mov edx,[esi].lpStart
 		mov esi,[edi].lpStream
 		lodsd
 		mov ecx,eax

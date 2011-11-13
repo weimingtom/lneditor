@@ -83,7 +83,7 @@ typedef struct _FILE_INFO {
 
 	DWORD			dwMemoryType;
 
-	LPWSTR*			lpTextIndex;	//指向一个数组……
+	LPWSTR*			lpTextIndex;
 	STREAM_ENTRY*	lpStreamIndex;
 
 	DWORD			dwStringType;
