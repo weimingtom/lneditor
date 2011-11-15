@@ -99,6 +99,10 @@ CircusGetLine proc uses esi edi _lpStr,_nCS
 	mov edi,eax
 	mov esi,_lpStr
 	mov ecx,@nLen
+	.if !ecx
+		mov word ptr [edi],0
+		jmp _Ex2
+	.endif
 	mov @nChar,0
 	@@:
 		lodsb
@@ -141,6 +145,7 @@ CircusGetLine proc uses esi edi _lpStr,_nCS
 		jmp _Ex
 	.endif
 	invoke HeapFree,hHeap,0,@pStr2
+_Ex2:
 	mov eax,@pStr
 _Ex:
 	ret
