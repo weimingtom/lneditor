@@ -15,5 +15,6 @@ _RetLine
 _GetStringInTxt
 _WildcharMatchW
 _ReplaceInMem
+_ReplaceCharsW
 
 _OutputMessage

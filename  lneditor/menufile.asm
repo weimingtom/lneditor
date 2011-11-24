@@ -78,7 +78,8 @@ _OpenScript proc
 			.if dbConf+_Configs.bAlwaysFilter
 				invoke _UpdateHideTable,offset FileInfo1
 			.endif
-			invoke _AddLinesToList,offset FileInfo1,hList1
+			mov bProgBarStopping1,0
+			invoke _AddLinesToList,offset FileInfo1,hList1,offset bProgBarStopping1
 		.endif
 	.else
 		jmp _ErrDllOS
@@ -119,11 +120,11 @@ _OpenScript proc
 					.endif
 				.endif
 				mov nCurIdx,-1
-				mov bProgBarStopping,0
+				mov bProgBarStopping2,0
 				invoke _DirFileNameW,FileInfo2.lpszName
 				mov @pbInfo.lpszTitle,eax
 				mov @pbInfo.bNoStop,0
-				invoke _AddLinesToList,offset FileInfo2,hList2
+				invoke _AddLinesToList,offset FileInfo2,hList2,offset bProgBarStopping2
 				invoke DialogBoxParamW,hInstance,IDD_PROGBAR,hWinMain,offset _WndProgBarProc,addr @pbInfo
 				mov ecx,dbConf+_Configs.nAutoCode
 				.if ecx && FileInfo2.nCharSet!=CS_UNICODE && FileInfo2.nCharSet!=CS_UTF8
@@ -246,7 +247,8 @@ _LoadScript proc
 				.endif
 			.endif
 			mov nCurIdx,-1
-			invoke _AddLinesToList,offset FileInfo2,hList2
+			mov bProgBarStopping2,0
+			invoke _AddLinesToList,offset FileInfo2,hList2,offset bProgBarStopping2
 			mov ecx,dbConf+_Configs.nAutoCode
 ;			.if ecx && FileInfo2.nCharSet!=CS_UNICODE && File2.nCharSet!=CS_UTF8
 ;				mov FileInfo2.nCharSet,ecx

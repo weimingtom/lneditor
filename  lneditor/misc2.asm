@@ -799,3 +799,87 @@ _Success:
 	ret
 _FindPlugin endp
 
+
+_ReplaceCharsW proc uses esi edi ebx  _lpStr,_nOption,_lpReserved
+	LOCAL @lpNew
+	mov @lpNew,0
+	mov eax,_nOption
+	and eax,0ffffh
+	.if eax&1
+		mov esi,_lpStr
+		invoke lstrlenW,esi
+		lea ebx,[eax+1]
+		xor ecx,ecx
+		xor edx,edx
+		.while ecx<ebx
+			mov ax,[esi+ecx*2]
+			.if ax==0ah || ax==0dh || ax==9
+				inc edx
+			.endif
+			inc ecx
+		.endw
+		inc edx
+		shl edx,1
+		lea eax,[ebx*2+edx]
+		invoke HeapAlloc,hGlobalHeap,0,eax
+		test eax,eax
+		jz _ExRC
+		mov @lpNew,eax
+		mov edi,eax
+		
+		mov eax,_nOption
+		shr eax,16
+		.if eax&1
+			xor ecx,ecx
+			.while ecx<ebx
+				mov ax,[esi+ecx*2]
+				.if ax==0ah
+					mov word ptr [edi],'\'
+					mov word ptr [edi+2],'n'
+					add edi,4
+				.elseif ax==0dh
+					mov word ptr [edi],'\'
+					mov word ptr [edi+2],'r'
+					add edi,4
+				.elseif ax==9
+					mov word ptr [edi],'\'
+					mov word ptr [edi+2],'t'
+					add edi,4
+				.else
+					mov word ptr [edi],ax
+					add edi,2
+				.endif
+				inc ecx
+			.endw
+		.else
+			xor ecx,ecx
+			.while ecx<ebx
+				mov ax,[esi+ecx*2]
+				.if ax=='\'
+					mov dx,[esi+ecx*2+2]
+					.if dx=='n'
+						mov word ptr [edi],0ah
+						inc ecx
+					.elseif dx=='r'
+						mov word ptr [edi],0dh
+						inc ecx
+					.elseif dx=='t'
+						mov word ptr [edi],9
+						inc ecx
+					.else
+						mov word ptr [edi],'\'
+					.endif
+				.else
+					mov [edi],ax
+				.endif
+				add edi,2
+				inc ecx
+			.endw
+		.endif
+	.endif
+	mov eax,@lpNew
+	ret
+_ExRC:
+	xor eax,eax
+	ret
+_ReplaceCharsW endp

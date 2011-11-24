@@ -150,9 +150,10 @@ _WndFilterProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 			invoke SendMessageW,hList1,LB_RESETCONTENT,0,0
 			invoke SendMessageW,hList2,LB_RESETCONTENT,0,0
 			
-			mov bProgBarStopping,0
-			invoke _AddLinesToList,offset FileInfo1,hList1
-			invoke _AddLinesToList,offset FileInfo2,hList2
+			mov bProgBarStopping1,0
+			mov bProgBarStopping2,0
+			invoke _AddLinesToList,offset FileInfo1,hList1,offset bProgBarStopping1
+			invoke _AddLinesToList,offset FileInfo2,hList2,offset bProgBarStopping2
 			jmp _ExitF
 		.elseif ax==IDC_TF_USEPLUGIN
 			invoke IsDlgButtonChecked,hwnd,IDC_TF_USEPLUGIN

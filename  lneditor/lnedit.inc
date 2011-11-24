@@ -113,7 +113,7 @@ _DirModifyExtendName proto :dword,:dword
 _ClearAll				proto :dword
 _LoadFile				proto :dword,:dword,:dword
 _SaveOrNot			proto
-_AddLinesToList		proto :dword,:dword
+_AddLinesToList		proto :dword,:dword,:dword
 _SetTextToEdit		proto :dword
 _GenName2			proto :dword,:dword
 _DisplayStatus		proto :dword,:dword
@@ -371,7 +371,7 @@ _UpdateFileInfo ends
 	TW0			'lnedit',			szInnerName
 	TW0			'defaultedit',		szDefaultPluginName
 	TW0			' v2.1',			szDisplayVer
-	TW0			'2.1.0.578',		szFullVer
+	TW0			'2.1.1.583',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0
