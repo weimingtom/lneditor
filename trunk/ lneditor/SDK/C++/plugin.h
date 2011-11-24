@@ -133,7 +133,7 @@ typedef MRESULT (__stdcall *PFSET_LINE)(LPCWSTR, LPSEL_RANGE);
 typedef MRESULT (__stdcall *PFRET_LINE)(LPCWSTR);
 typedef MRESULT (__stdcall *PFRELEASE)(LPFILE_INFO);
 
-typedef MRESULT (__stdcall *PFGET_STR)(LPFILE_INFO, LPDWORD, LPSTREAM_ENTRY);
+typedef MRESULT (__stdcall *PFGET_STR)(LPFILE_INFO, LPWSTR*, LPSTREAM_ENTRY);
 
 //Simple function table
 typedef struct _SIMPFUNC_TABLE {
@@ -191,10 +191,12 @@ extern "C" {
 	MRESULT __stdcall _SetLine(LPCWSTR lpszStr, LPSEL_RANGE lpRange);
 	MRESULT __stdcall _RetLine(LPCWSTR lpszStr);
 
+	LPWSTR	__stdcall _GetStringInList(LPFILE_INFO lpFileInfo, int nLine);
 	MRESULT __stdcall _ReplaceInMem(LPVOID lpNew, DWORD nNewLen, LPVOID lpOld, DWORD nOldLen, DWORD nLeftLen);
-	MRESULT __stdcall _OutputMessage(DWORD dwType, LPCWSTR lpszPluginName, LPVOID lpParam1, LPVOID lpParam2);
 	MRESULT __stdcall _WildCharMatchW(LPCWSTR lpszPattern, LPCWSTR lpszStr);
+	LPWSTR	__stdcall _ReplaceCharsW(LPCWSTR lpszOri, DWORD dwOptions, DWORD dwReserved);
 
+	MRESULT __stdcall _OutputMessage(DWORD dwType, LPCWSTR lpszPluginName, LPVOID lpParam1, LPVOID lpParam2);
 }
 
 #ifdef OVERLOAD_NEW

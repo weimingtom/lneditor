@@ -300,11 +300,14 @@ _DirModifyExtendName endp
 _AddLines proc uses esi edi ebx _pdb
 	LOCAL @hList
 	LOCAL @nLine
+	LOCAL @lpStopping
 ;	LOCAL @time1
 	mov eax,_pdb
 	mov edi,[eax]
 	mov ecx,[eax+4]
 	mov @hList,ecx
+	mov ecx,[eax+8]
+	mov @lpStopping,ecx
 	assume edi:ptr _FileInfo
 	xor ebx,ebx
 	invoke SendMessageW,@hList,WM_SETREDRAW,FALSE,0
@@ -322,7 +325,8 @@ _AddLines proc uses esi edi ebx _pdb
 	.if [edi].nMemoryType==MT_EVERYSTRING || [edi].nMemoryType==MT_POINTERONLY
 		mov esi,[edi].lpTextIndex
 		.while ebx<@nLine
-			.if bProgBarStopping!=0
+			mov eax,@lpStopping
+			.if dword ptr [eax]!=0
 				mov ecx,hList2
 				.if ecx==@hList
 					invoke PostMessageW,hWinMain,WM_COMMAND,IDM_CLOSE,0
@@ -349,7 +353,8 @@ _AddLines proc uses esi edi ebx _pdb
 ;		or edx,eax
 ;		sub edx,@time1
 ;		int 3
-		mov bProgBarStopping,1
+		mov eax,@lpStopping
+		mov dword ptr [eax],1
 		invoke EndDialog,hProgBarWindow,0
 	.endif
 
@@ -373,9 +378,9 @@ _ExAL:
 	ret
 _AddLines endp
 
-_AddLinesToList proc uses esi edi ebx _pFI,_hList
+_AddLinesToList proc uses esi edi ebx _pFI,_hList,_lpStopping
 	LOCAL @pdb
-	invoke HeapAlloc,hGlobalHeap,0,8
+	invoke HeapAlloc,hGlobalHeap,0,12
 	or eax,eax
 	je _ExALT
 	mov @pdb,eax
@@ -383,6 +388,8 @@ _AddLinesToList proc uses esi edi ebx _pFI,_hList
 	mov [eax],ecx
 	mov ecx,_hList
 	mov [eax+4],ecx
+	mov ecx,_lpStopping
+	mov [eax+8],ecx
 	invoke CreateThread,0,0,offset _AddLines,@pdb,0,0
 _ExALT:
 	ret

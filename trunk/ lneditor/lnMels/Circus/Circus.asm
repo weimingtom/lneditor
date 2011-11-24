@@ -101,6 +101,7 @@ CircusGetLine proc uses esi edi _lpStr,_nCS
 	mov ecx,@nLen
 	.if !ecx
 		mov word ptr [edi],0
+		mov @pStr,edi
 		jmp _Ex2
 	.endif
 	mov @nChar,0

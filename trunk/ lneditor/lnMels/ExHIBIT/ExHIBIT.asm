@@ -89,7 +89,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov @nInst,eax
 	
 	lea eax,[eax+eax*2]
-	shl eax,2
+	shl eax,3
 	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _Nomem
@@ -130,6 +130,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 					inc @nLine
 				.endif
 				lea esi,[esi+eax+1]
+				dec @nInst
 				.continue
 			.endif
 			jmp _default
