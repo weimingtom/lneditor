@@ -39,21 +39,22 @@ TW0		'Can\-t create/open file.',	szWltEFileCreate
 TW0		'Can\-t read file.',	szWltEFileRead
 TW0		'Can\-t write file.',	szWltEFileWrite
 
-TW0		'Invalid Parameter.',	szWltEPara
+TW0		'Invalid parameter.',	szWltEPara
 TW0		'An error has occurred in the plugin.',	szWltEPlugin
 TW0		'Failed to analysis the script.',	szWltEAnaFailed
 
 TW0		'The line is not exist.',	szWltELineExist
 TW0		'The line is too long',	szWltELineLong
-TW0		'The CP(Code Page) operation failed',	szWltECode
+TW0		'The Code Page operation failed',	szWltECode
 TW0		'Lines in left and right is not match.',	szWltELineMatch
+TW0		'The line is denied by plugin.',		szWltELineDenied
 
 
 .data
 align 4
 pWltError1	dd	0,offset szWltEMem1,offset szWltEMem2,offset szWltEMem3,offset szWltEFileAccess,offset szWltEFatal,offset szWltEFormat
 			dd	offset szWltEFileCreate,offset szWltEFileRead,offset szWltEFileWrite,offset szWltEPara,offset szWltEPlugin,offset szWltEAnaFailed
-pWltError2	dd	offset szWltELineExist,offset szWltELineLong,offset szWltECode,offset szWltELineMatch
+pWltError2	dd	offset szWltELineExist,offset szWltELineLong,offset szWltECode,offset szWltELineMatch,offset szWltELineDenied
 
 .code
 
@@ -92,28 +93,13 @@ _GetGeneralErrorString proc _nType
 	ret
 _GetGeneralErrorString endp
 
-_OutputMessage proc _nType,_lpszName,para1,para2
-	.if nUIStatus & UIS_CONSOLE
-		
-	.else ;UIS_WINDOW
-		.if nUIStatus & UIS_BUSY
-			invoke _WriteLog,_nType,_lpszName,para1,para2
-		.else ;UIS_IDLE
-			mov eax,_nType
-			.if eax<10000h
-				invoke _GetGeneralErrorString,_nType
-				invoke MessageBoxW,hWinMain,eax,_lpszName,MB_OK or MB_ICONINFORMATION
-			.elseif eax==WLT_CUSTOM
-			.elseif eax==WLT_LOADMELERR
-			.endif
-		.endif
-	.endif
-	ret
-_OutputMessage endp
-
-_WriteLog proc uses ebx _nType,_lpszName,para1,para2
+_GetLogString proc uses ebx _nType,_lpszName,para1,para2
 	LOCAL @nowtime:SYSTEMTIME
-	LOCAL @szLog[MAX_STRINGLEN]:byte
+	LOCAL @lpszLog
+	invoke HeapAlloc,hGlobalHeap,0,MAX_STRINGLEN
+	test eax,eax
+	jz _ExGLS
+	mov @lpszLog,eax
 	.if hLogFile!=-1 && hLogFile
 		invoke GetLocalTime,addr @nowtime
 		xor eax,eax
@@ -132,36 +118,68 @@ _WriteLog proc uses ebx _nType,_lpszName,para1,para2
 		push eax
 		push _lpszName
 		push offset szWltTime
-		lea ecx,@szLog
-		push ecx
+		push @lpszLog
 		call wsprintfW
 		add esp,36
-		lea ecx,@szLog
+		mov ecx,@lpszLog
 		lea ebx,[ecx+eax*2]
 		mov eax,_nType
 		.if eax<10000h
 			invoke _GetGeneralErrorString,_nType
 			mov para1,eax
 			invoke lstrcpyW,ebx,eax
+			invoke lstrcatW,ebx,offset szCRSymbol
 			invoke lstrlenW,para1
-			lea ebx,[ebx+eax*2]
 		.elseif eax==WLT_CUSTOM
 			invoke lstrcpyW,ebx,para1
-			invoke lstrlenW,para1
-			lea ebx,[ebx+eax*2]
 		.elseif eax==WLT_BATCHIMPERR
 			invoke wsprintfW,ebx,offset szWltBImpErr,para1,para2
-			lea ebx,[ebx+eax*2]
 		.elseif EAX==WLT_LOADMELERR
 			invoke wsprintfW,ebx,offset szWltLoadMelErr,para1,para2
-			lea ebx,[ebx+eax*2]
 		.elseif eax==WLT_UPDATEERR
 			invoke wsprintfW,ebx,offset szWltUpdateErr,para1,para2
-			lea ebx,[ebx+eax*2]
 		.endif
-		lea ecx,@szLog
-		sub ebx,ecx
-		invoke WriteFile,hLogFile,addr @szLog,ebx,offset dwTemp,0
+	.endif
+	mov eax,@lpszLog
+_ExGLS:
+	ret
+_GetLogString endp
+
+_OutputMessage proc _nType,_lpszName,para1,para2
+	LOCAL @szStr[MAX_STRINGLEN]:byte
+	.if nUIStatus & UIS_CONSOLE
+		
+	.else ;UIS_WINDOW
+		.if nUIStatus & UIS_BUSY
+			invoke _WriteLog,_nType,_lpszName,para1,para2
+		.else ;UIS_IDLE
+			mov eax,_nType
+			.if eax<10000h
+				invoke _GetGeneralErrorString,_nType
+				invoke lstrcpyW,addr @szStr,eax
+			.elseif eax==WLT_CUSTOM
+				invoke lstrcpyW,addr @szStr,para1
+			.elseif eax==WLT_LOADMELERR
+				invoke wsprintfW,addr @szStr,offset szWltLoadMelErr,para1,para2
+			.elseif eax==WLT_BATCHIMPERR
+				invoke wsprintfW,addr @szStr,offset szWltBImpErr,para1,para2
+			.elseif eax==WLT_UPDATEERR
+				invoke wsprintfW,addr @szStr,offset szWltUpdateErr,para1,para2
+			.endif
+			invoke MessageBoxW,hWinMain,addr @szStr,_lpszName,MB_OK or MB_ICONINFORMATION
+		.endif
+	.endif
+	ret
+_OutputMessage endp
+
+_WriteLog proc uses ebx _nType,_lpszName,para1,para2
+	invoke _GetLogString,_nType,_lpszName,para1,para2
+	mov ebx,eax
+	.if ebx
+		invoke lstrlenW,ebx
+		shl eax,1
+		invoke WriteFile,hLogFile,ebx,eax,offset dwTemp,0
+		invoke HeapFree,hGlobalHeap,0,ebx
 	.endif
 	ret
 _WriteLog endp

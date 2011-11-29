@@ -28,6 +28,7 @@ include update.asm
 include misc.asm
 include misc2.asm
 include newUI.asm
+include cmdmode.asm
 
 
 .code
@@ -60,8 +61,6 @@ xor ebx,ebx
 	inc ebx
 .endw
 
-invoke _OpenLog
-
 invoke GetCommandLineW
 invoke CommandLineToArgvW,eax,offset nArgc
 mov lpArgTbl,eax
@@ -77,11 +76,20 @@ invoke lstrcpyW,eax,ebx
 invoke _DirBackW,lpszConfigFile
 invoke _DirCatW,lpszConfigFile,offset szcfFileName
 
+invoke _OpenLog
 invoke _LoadConfig
+invoke _GetCmdOptions,offset coCmdOptions
 
-invoke _WinMain
+invoke _GetCmdOption,offset szOptionConsole
+.if eax
+	invoke _CmdMain
+.else
+	invoke _WinMain
+.endif
 _FinalExit:
 invoke ExitProcess,NULL
+
+invoke compress,1,1,1,1
 
 ;
 _WinMain proc
@@ -152,6 +160,7 @@ _WndMainProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 	local @stRect:RECT
 	local @hdc,@hFile,@nPlugin
 	LOCAL @szStr[SHORT_STRINGLEN]:byte
+	LOCAL @opParas:_OpenParameters
 ;	LOCAL @dt:DRAWTEXTPARAMS
 
 	mov eax,uMsg
@@ -169,39 +178,54 @@ _WndMainProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 					cmp eax,-1
 					je _ExMain
 				.endif
+				lea edi,@opParas
+				mov ecx,sizeof @opParas/4
+				xor eax,eax
+				rep stosd
+				mov @opParas.Plugin,-2
+				mov @opParas.Filter,-1
 				mov eax,IDS_OPENTITLE1
 				invoke _GetConstString
-				lea ecx,@nPlugin
-				mov dword ptr [ecx],-2
-				invoke _OpenFileDlg,offset szOpenFilter,offset FileInfo1.lpszName,dbConf+_Configs.lpInitDir1,eax,ecx
+				mov ecx,eax
+				invoke _OpenFileDlg,offset szOpenFilter,addr @opParas.ScriptName,dbConf+_Configs.lpInitDir1,ecx,addr @opParas.Plugin
 				or eax,eax
 				je _ExMain
-				mov ebx,@nPlugin
+_FillParamMain:
+				.if @opParas.Line==0
+					invoke _ReadRec,@opParas.ScriptName,REC_LINEPOS,0
+					mov @opParas.Line,eax
+				.endif
+				invoke _ReadRec,@opParas.ScriptName,REC_CHARSET,0
+				.if @opParas.Code1==0
+					mov @opParas.Code1,eax
+				.endif
+				.if @opParas.Code2==0
+					mov @opParas.Code2,ecx
+				.endif
+				mov ebx,@opParas.Plugin
 				cmp ebx,-2
 				jne _ForcePluginMain
 _BeginOpenMain:
-				invoke lstrcpyW,dbConf+_Configs.lpInitDir1,FileInfo1.lpszName
-				invoke _DirBackW,dbConf+_Configs.lpInitDir1
-
-				invoke _TryMatch,FileInfo1.lpszName
+				invoke _TryMatch,@opParas.ScriptName
 				mov ebx,eax
 _ForcePluginMain:
+				invoke lstrcpyW,dbConf+_Configs.lpInitDir1,@opParas.ScriptName
+				invoke _DirBackW,dbConf+_Configs.lpInitDir1
 				.if ebx==-3
 					mov eax,IDS_ERRMATCH
 					invoke _GetConstString
 					invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
-					invoke HeapFree,hGlobalHeap,0,FileInfo1.lpszName
-					mov FileInfo1.lpszName,0
+					invoke HeapFree,hGlobalHeap,0,@opParas.ScriptName
 					jmp _ExMain
 				.ELSEif ebx==-2
 					mov eax,IDS_NOMATCH
 					invoke _GetConstString
 					invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
-					invoke HeapFree,hGlobalHeap,0,FileInfo1.lpszName
-					mov FileInfo1.lpszName,0
+					invoke HeapFree,hGlobalHeap,0,@opParas.ScriptName
 					jmp _ExMain
 				.elseif ebx==-1
 					invoke _SelfPreProc
+					mov @opParas.Plugin,ebx
 					jmp _Open2Main
 				.endif
 				xor eax,eax
@@ -217,19 +241,25 @@ _ForcePluginMain:
 					invoke _GetConstString
 					invoke wsprintfW,addr @szStr,eax,edi
 					invoke MessageBoxW,hWinMain,addr @szStr,0,MB_OK or MB_ICONERROR
+					invoke HeapFree,hGlobalHeap,0,@opParas.ScriptName
 					jmp _ExMain
 				.endif
 				mov nCurMel,ebx
+				mov @opParas.Plugin,ebx
 				invoke GetProcAddress,[edi].hModule,offset szFPreProc
 				assume edi:nothing
 				.if eax
-					push esi
 					push lpPreData
 					call eax
-					pop esi
 				.endif
 _Open2Main:
 				mov eax,esi
+				lea ecx,@opParas
+				push ecx
+				sub eax,IDM_OPEN
+				call [eax*4+offset dbFunc]
+				invoke HeapFree,hGlobalHeap,0,@opParas.ScriptName
+				jmp _ExMain
 			.elseif eax==IDM_LOAD
 				mov esi,eax
 				mov eax,IDS_OPENTITLE2
@@ -368,15 +398,22 @@ _PaintMain:
 			cmp eax,-1
 			je _ExMain
 		.endif
+		
+		lea edi,@opParas
+		mov ecx,sizeof @opParas/4
+		xor eax,eax
+		rep stosd
+		mov @opParas.Plugin,-2
+		mov @opParas.Filter,-1
 		.if dbConf+_Configs.nEditMode==EM_SINGLE
 			@@:
 			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN
 			test eax,eax
 			jz _ErrDrop
-			mov FileInfo1.lpszName,eax
-			invoke DragQueryFileW,wParam,0,FileInfo1.lpszName,MAX_STRINGLEN/2
+			mov @opParas.ScriptName,eax
+			invoke DragQueryFileW,wParam,0,eax,MAX_STRINGLEN/2
 			mov esi,IDM_OPEN
-			jmp _BeginOpenMain
+			jmp _FillParamMain
 		.elseif dbConf+_Configs.nEditMode==EM_DOUBLE
 			sub esp,sizeof POINT
 			invoke DragQueryPoint,wParam,esp
@@ -434,26 +471,72 @@ _PaintMain:
 		mov lpOriFuncTable,eax
 		invoke _BackupFunc,eax
 		
+		lea edi,@opParas
+		mov ecx,sizeof @opParas/4
+		xor eax,eax
+		rep stosd
+		mov @opParas.Plugin,-2
+		mov @opParas.Filter,-1
+		
 		mov nCurMel,-1
-		.if dbConf+_Configs.nEditMode==EM_SINGLE && dbConf+_Configs.bAutoOpen
+		lea edi,coCmdOptions
+		.if _StCmdOptions.ScriptName.lpszValue[edi]
+			invoke HeapAlloc,hGlobalHeap,0,MAX_STRINGLEN
+			test eax,eax
+			jz _ExMain
+			mov @opParas.ScriptName,eax
+			invoke lstrcpyW,eax,_StCmdOptions.ScriptName.lpszValue[edi]
+			.if _StCmdOptions.Plugin.lpszValue[edi]
+				invoke _FindPlugin,_StCmdOptions.Plugin.lpszValue[edi],1
+				.if eax!=-2
+					mov @opParas.Plugin,eax
+				.endif
+			.endif
+			.if _StCmdOptions.Filter.lpszValue[edi]
+				invoke _FindPlugin,_StCmdOptions.Filter.lpszValue[edi],2
+				.if eax!=-2
+					mov @opParas.Filter,eax
+				.endif
+			.endif
+			.if _StCmdOptions.Code1.lpszValue[edi]
+				invoke StrToIntExW,_StCmdOptions.Code1.lpszValue[edi],1,addr @opParas.Code1
+				.if !eax
+					mov @opParas.Code1,0
+				.endif
+			.endif
+			.if _StCmdOptions.Code2.lpszValue[edi]
+				invoke StrToIntExW,_StCmdOptions.Code2.lpszValue[edi],1,addr @opParas.Code2
+				.if !eax
+					mov @opParas.Code2,0
+				.endif
+			.endif
+			.if _StCmdOptions.Line.lpszValue[edi]
+				invoke StrToIntExW,_StCmdOptions.Line.lpszValue[edi],1,addr @opParas.Line
+				.if !eax
+					mov @opParas.Line,0
+				.endif
+			.endif
+		
+			mov esi,IDM_OPEN
+			jmp _FillParamMain
+		.elseif dbConf+_Configs.nEditMode==EM_SINGLE && dbConf+_Configs.bAutoOpen
 			mov eax,dbConf+_Configs.lpPrevFile
 			.if word ptr [eax]
-				invoke CreateFileW,eax,0,FILE_SHARE_READ or FILE_SHARE_WRITE,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
+				invoke GetFileAttributesW,eax
 				cmp eax,-1
-				je _ExMain
-				invoke CloseHandle,eax
+				jz _ExMain
 				invoke lstrlenW,dbConf+_Configs.lpPrevFile
 				add eax,5
 				shl eax,1
 				invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
 				test eax,eax
 				jz _ExMain
-				mov FileInfo1.lpszName,eax
-				invoke lstrcpyW,FileInfo1.lpszName,dbConf+_Configs.lpPrevFile
+				mov @opParas.ScriptName,eax
+				invoke lstrcpyW,eax,dbConf+_Configs.lpPrevFile
 ;				invoke WaitForSingleObject,@hFile,INFINITE
 ;				invoke CloseHandle,@hFile
 				mov esi,IDM_OPEN
-				jmp _BeginOpenMain
+				jmp _FillParamMain
 			.endif
 		.endif
 		
@@ -720,7 +803,7 @@ _TryMatch proc uses edi esi ebx _lpszName
 	.if edi && word ptr [edi]
 		invoke _FindPlugin,edi,1
 		mov ebx,ecx
-		.if eax!=-1
+		.if eax!=-1 && eax!=-2
 			mov esi,eax
 			assume esi:ptr _MelInfo
 			push _lpszName

@@ -1,11 +1,6 @@
 @echo off
-: -------------------------------
-: if resources exist, build them
-: -------------------------------
-if not exist lnrc.rc goto over1
-\MASM32\BIN\Rc.exe /v lnrc.rc
-\MASM32\BIN\Cvtres.exe /machine:ix86 lnrc.res
-:over1
+"C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\Bin\rc.exe" /v lnrc.rc
+"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\cvtres.exe" /machine:ix86 lnrc.res
 
 if exist lnedit.obj del lnedit.obj
 
@@ -15,25 +10,19 @@ if exist lnedit.ilk del lnedit.ilk
 : -----------------------------------------
 : assemble lnrc.asm into an OBJ file
 : -----------------------------------------
-\MASM32\BIN\Ml.exe /c /coff /Cp /Zi lnedit.asm
-if errorlevel 1 goto errasm
 
-if not exist lnrc.obj goto nores
+:path of assembler of VS2010
+"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\Ml.exe" /c /coff /Cp /Zi /D "_LN_DEBUG" lnedit.asm
+if errorlevel 1 goto errasm
 
 : --------------------------------------------------
 : link the main OBJ file with the resource OBJ file
 : --------------------------------------------------
-\MASM32\BIN\Link.exe /SUBSYSTEM:WINDOWS /DEBUG /DEBUGTYPE:CV /DEF:export.def lnedit.obj lnrc.obj
-if errorlevel 1 goto errlink
-dir lnedit.*
-incver.exe
-goto TheEnd
 
-:nores
-: -----------------------
-: link the main OBJ file
-: -----------------------
-\MASM32\BIN\Link.exe /SUBSYSTEM:WINDOWS /DEBUG /DEBUGTYPE:CV lnedit.obj
+:set path of VS2010 common tools
+set path=C:\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE
+:path of linker of VS2010
+"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\Link.exe" /ltcg  /SUBSYSTEM:WINDOWS /DEBUG /DEBUGTYPE:CV /DEF:export.def lnedit.obj lnrc.obj
 if errorlevel 1 goto errlink
 dir lnedit.*
 incver.exe

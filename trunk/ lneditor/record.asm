@@ -2,7 +2,7 @@ RECORD_VER			EQU		1
 
 .code 
 
-_ReadRec proc uses ebx _nType
+_ReadRec proc uses ebx edi _lpszName,_nType,_nLine
 	LOCAL @str[MAX_STRINGLEN]:byte
 	LOCAL @hFile
 	LOCAL @dbHdr[sizeof _FileRec]:byte
@@ -14,44 +14,46 @@ _ReadRec proc uses ebx _nType
 	invoke _DirCatW,ebx,offset szRecDir
 	invoke SetCurrentDirectoryW,ebx
 	or eax,eax
-	je _ErrRR
-	invoke lstrcpyW,ebx,FileInfo1.lpszName
+	je _Err2
+	invoke lstrcpyW,ebx,_lpszName
 	invoke lstrcatW,ebx,offset szRecExt
 	invoke _DirFileNameW,ebx
 	or eax,eax
-	je _ErrRR
+	je _Err2
 	invoke CreateFileW,eax,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
 	cmp eax,-1
-	je _ErrRR
+	je _Err2
 	mov @hFile,eax
 	lea edi,@dbHdr
 	invoke ReadFile,@hFile,edi,sizeof _FileRec,offset dwTemp,0
 	assume edi:ptr _FileRec
 	
 	cmp [edi].szMagic,'CERM'
-	jne _ErrRR
+	jne _Err2
 	cmp [edi].nVer,RECORD_VER
-	jB _ErrRR
+	jB _Err2
 	
 	.if _nType==REC_MARKTABLE
 		mov eax,[edi].nLenMT
-		.if lpMarkTable && eax==FileInfo1.nLine
+		.if lpMarkTable && eax==_nLine
 			invoke SetFilePointer,@hFile,[edi].nOffsetMT,0,FILE_BEGIN
 			invoke ReadFile,@hFile,lpMarkTable,[edi].nLenMT,offset dwTemp,0
 		.endif
 		invoke CloseHandle,@hFile
 	.elseif _nType==REC_CHARSET
+		invoke CloseHandle,@hFile
 		mov eax,[edi].nCharSet1
 		mov ecx,[edi].nCharSet2
-		mov FileInfo1.nCharSet,eax
-		mov FileInfo2.nCharSet,ecx
-		invoke CloseHandle,@hFile
 	.elseif _nType==REC_LINEPOS
 		invoke CloseHandle,@hFile
 		mov eax,[edi].nPos
 	.endif
 	assume edi:ptr _nothing
 _ErrRR:
+	ret
+_Err2:
+	xor eax,eax
+	xor ecx,ecx
 	ret
 _ReadRec endp
 

@@ -18,3 +18,6 @@ _ReplaceInMem
 _ReplaceCharsW
 
 _OutputMessage
+
+_ZlibCompress=compress
+_ZlibUncompress=uncompress

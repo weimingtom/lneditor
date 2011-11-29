@@ -705,7 +705,7 @@ _WndSSProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 	mov eax,uMsg
 	.if eax==WM_COMMAND
 		mov eax,wParam
-		.if ax==IDC_SS_TEXT+EN_CHANGE*65536
+		.if eax==IDC_SS_TEXT+EN_CHANGE*65536
 			invoke SendDlgItemMessageW,hwnd,IDC_SS_TEXT,WM_GETTEXTLENGTH,0,0
 			.if eax
 				mov ebx,TRUE
