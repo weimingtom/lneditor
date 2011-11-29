@@ -9,7 +9,7 @@
 #define E_ERROR				-1
 #define E_SUCCESS			0
 #define E_NOMEM				1
-#define E_OVERMEM			2
+#define E_MEMACCESSFAIL			2
 #define E_NOTENOUGHBUFF		3
 #define E_FILEACCESSERROR	4
 #define E_FATALERROR		5
@@ -197,6 +197,9 @@ extern "C" {
 	LPWSTR	__stdcall _ReplaceCharsW(LPCWSTR lpszOri, DWORD dwOptions, DWORD dwReserved);
 
 	MRESULT __stdcall _OutputMessage(DWORD dwType, LPCWSTR lpszPluginName, LPVOID lpParam1, LPVOID lpParam2);
+
+	int		__stdcall _ZlibUncompress(LPVOID lpDest, DWORD* nDestLen, LPVOID lpSrc, DWORD nSrcLen);
+	int		__stdcall _ZlibCompress(LPVOID lpDest, DWORD* nDestLen, LPVOID lpSrc, DWORD nSrcLen);
 }
 
 #ifdef OVERLOAD_NEW

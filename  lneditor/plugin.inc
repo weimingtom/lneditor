@@ -204,3 +204,22 @@ _PreData struct
 	lpHandles		dd		?	;窗口句柄列表指针，指向_Handles结构
 _PreData ends
 
+_StCmdOption struct
+	lpszName		dd		?
+	lpszSName		dd		?
+	lpszValue		dd		?
+_StCmdOption ends
+
+_StCmdOptions struct
+	ScriptName		_StCmdOption		<>
+	Code1			_StCmdOption		<>
+	Code2			_StCmdOption		<>
+	Line				_StCmdOption		<>
+	Plugin			_StCmdOption		<>
+	Filter			_StCmdOption		<>
+	Import			_StCmdOption		<>
+	Export			_StCmdOption		<>
+	ScDir			_StCmdOption		<>
+	TxtDir			_StCmdOption		<>
+	NewDir			_StCmdOption		<>
+_StCmdOptions ends

@@ -23,3 +23,7 @@ _WildcharMatchW		proto :dword,:dword
 _ReplaceInMem		proto :dword,:dword,:dword,:dword,:dword
 _OutputMessage		proto :dword,:dword,:dword,:dword
 _ReplaceCharsW		proto :dword,:dword,:dword
+
+;
+_ZlibCompress		proto :dword,:dword,:dword,:dword
+_ZlibUncompress		proto :dword,:dword,:dword,:dword

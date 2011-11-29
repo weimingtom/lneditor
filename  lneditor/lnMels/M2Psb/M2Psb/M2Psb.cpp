@@ -13,7 +13,7 @@ HINSTANCE g_hInstance;
 void WINAPI InitInfo(LPMEL_INFO lpMelInfo)
 {
 	lpMelInfo->dwInterfaceVersion=INTERFACE_VERSION;
-	lpMelInfo->dwCharacteristic=0;
+	lpMelInfo->dwCharacteristic=MIC_NOPREREAD;
 }
 
 void WINAPI PreProc(LPPRE_DATA lpPreData)
@@ -36,10 +36,12 @@ int WINAPI Match(LPCWSTR lpszName)
 		return MR_ERR;
 	if(sHdr[0]=='\0BSP' && sHdr[1]==2)
 		return MR_YES;
+	if(sHdr[0]=='\0fdm')
+		return MR_YES;
 	return MR_NO;
 }
 
-DWORD GetInt(BYTE* &p, char t)
+DWORD M2GetInt(BYTE* &p, char t)
 {
 	switch(t)
 	{
@@ -70,14 +72,14 @@ DWORD GetInt(BYTE* &p, char t)
 	return 0;
 }
 
-DWORD GetInt(BYTE* &p)
+DWORD M2GetInt(BYTE* &p)
 {
-	return GetInt(p,*p++);
+	return M2GetInt(p,*p++);
 }
 
 char* M2GetStr(BYTE* p, char t, PsbInfo* pInfo)
 {
-	int idx=GetInt(p,t-(0x15-0xd));
+	int idx=M2GetInt(p,t-(0x15-0xd));
 	return pInfo->lpStrRes+pInfo->lpStrOffList[idx];
 }
 char* M2GetStr(BYTE* p, PsbInfo* pInfo)
@@ -86,7 +88,7 @@ char* M2GetStr(BYTE* p, PsbInfo* pInfo)
 	return M2GetStr(p,t,pInfo);
 }
 
-DWORD* CopyArray(BYTE* pOri, DWORD count, int type)
+DWORD* M2CopyArray(BYTE* pOri, DWORD count, int type)
 {
 	DWORD* pArray=new DWORD[count];
 	switch(type)
@@ -125,14 +127,14 @@ DWORD* CopyArray(BYTE* pOri, DWORD count, int type)
 	return pArray;
 }
 
-DWORD* CopyArray(BYTE* p)
+DWORD* M2CopyArray(BYTE* p)
 {
-	DWORD count=GetInt(p);
+	DWORD count=M2GetInt(p);
 	char type=*p++;
-	return CopyArray(p,count,type);
+	return M2CopyArray(p,count,type);
 }
 
-TreeNode* MakeBranchTable(BYTE* pOri, DWORD count, int type)
+TreeNode* M2MakeBranchTable(BYTE* pOri, DWORD count, int type)
 {
 	TreeNode* pTable=new TreeNode[count];
 	for(int i=0;i<count;i++)
@@ -145,7 +147,7 @@ TreeNode* MakeBranchTable(BYTE* pOri, DWORD count, int type)
 	BYTE* p=pOri;
 	for(int i=0;i<count;i++)
 	{
-		val=GetInt(p,type);
+		val=M2GetInt(p,type);
 		pTable[val].pSub.push_back(i);
 		pTable[val].nBranch++;
 	}
@@ -157,7 +159,7 @@ char* tName;
 DWORD* tTree;
 TreeNode* tBranches;
 int tMaxId;
-void TraverseTree(int depth,int node)
+void M2TraverseTree(int depth,int node)
 {
 	if(node==0 && depth!=0)
 		return;
@@ -165,7 +167,7 @@ void TraverseTree(int depth,int node)
 	{
 		tName[depth]=tBranches[node].pSub[i]-tTree[node];
 		if(tName[depth]!=0)
-			TraverseTree(depth+1,tBranches[node].pSub[i]);
+			M2TraverseTree(depth+1,tBranches[node].pSub[i]);
 		else if(tTree[node]<=tMaxId)
 		{
 			tNames[tTree[node]]=new char[depth+1];
@@ -174,7 +176,7 @@ void TraverseTree(int depth,int node)
 	}
 }
 
-int GetIDFromTree(DWORD* tree, int count, char* name)
+int M2GetIDFromTree(DWORD* tree, int count, char* name)
 {
 	int node=0;
 	int len=lstrlenA(name)+1;
@@ -183,13 +185,13 @@ int GetIDFromTree(DWORD* tree, int count, char* name)
 	return tree[node];
 }
 
-BYTE* FindInDict(char* name, BYTE* dict, PsbInfo* pInfo)
+BYTE* M2FindInDict(char* name, BYTE* dict, PsbInfo* pInfo)
 {
 	BYTE* p=dict;
-	DWORD count=GetInt(p);
+	DWORD count=M2GetInt(p);
 	char type=*p++;
-	DWORD* pCases=CopyArray(p,count,type);
-	int id=GetIDFromTree(pInfo->lpTree,pInfo->nTreeSize,name);
+	DWORD* pCases=M2CopyArray(p,count,type);
+	int id=M2GetIDFromTree(pInfo->lpTree,pInfo->nTreeSize,name);
 	DWORD* rslt=(DWORD*)bsearch(&id,pCases,count,4,(int (*)(const void*, const void*))compare4);
 	if(rslt==NULL)
 		__asm int 3
@@ -197,41 +199,41 @@ BYTE* FindInDict(char* name, BYTE* dict, PsbInfo* pInfo)
 	delete[] pCases;
 
 	p+=count*(type-12);
-	count=GetInt(p);
+	count=M2GetInt(p);
 	type=*p++;
 	
 	BYTE* p2=p+id*(type-12);
-	return p+count*(type-12)+GetInt(p2,type);
+	return p+count*(type-12)+M2GetInt(p2,type);
 }
 
-BYTE* FindTag(char* tagname,BYTE* restree,PsbInfo* pInfo)
+BYTE* M2FindTag(char* tagname,BYTE* restree,PsbInfo* pInfo)
 {
 	//未实现根据tagname查找，而是直接查找scenes[texts[*]]
 	BYTE* p=restree;
 	if(*p++!=0x21)
 		__asm int 3
-	p=FindInDict("scenes",p,pInfo);
+	p=M2FindInDict("scenes",p,pInfo);
 	if(*p++!=0x20)
 		__asm int 3
-	DWORD count=GetInt(p);
+	DWORD count=M2GetInt(p);
 	if(count==0)
 		__asm int 3
 	char type=*p++;
-	DWORD off=GetInt(p,type);
+	DWORD off=M2GetInt(p,type);
 	p+=(count-1)*(type-12)+off;
 	if(*p++!=0x21)
 		__asm int 3
-	p=FindInDict("texts",p,pInfo);
+	p=M2FindInDict("texts",p,pInfo);
 	return p;
 }
 
-int AddStr(BYTE* pC,LPFILE_INFO lpFileInfo,int nLine)
+int M2AddStr(BYTE* pC,LPFILE_INFO lpFileInfo,int nLine)
 {
 	char type=*pC++;
 	if(type!=1)
 	{
 		PsbInfo* pInfo=(PsbInfo*)lpFileInfo->lpCustom;
-		DWORD idx=GetInt(pC,type-0x15+0xd);
+		DWORD idx=M2GetInt(pC,type-0x15+0xd);
 		if(idx<pInfo->nStrs)
 		{
 			char* pFinalStr=pInfo->lpStrRes+pInfo->lpStrOffList[idx];
@@ -248,9 +250,46 @@ int AddStr(BYTE* pC,LPFILE_INFO lpFileInfo,int nLine)
 
 MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
 {
+	DWORD magic[2],nBytesRead;
+	SetFilePointer(lpFileInfo->hFile,0,NULL,FILE_BEGIN);
+	BOOL ret=ReadFile(lpFileInfo->hFile,magic,8,&nBytesRead,NULL);
+	DWORD nFileSize=GetFileSize(lpFileInfo->hFile,NULL);
+	BOOL bIsmdf;
+	if(magic[0]=='\0BSP')
+	{
+		bIsmdf=0;
+		SetFilePointer(lpFileInfo->hFile,0,NULL,FILE_BEGIN);
+		lpFileInfo->lpStream=VirtualAlloc(0,nFileSize,MEM_COMMIT,PAGE_READWRITE);
+		ret=ReadFile(lpFileInfo->hFile,lpFileInfo->lpStream,nFileSize,&nBytesRead,NULL);
+		if(!ret)
+			return E_FILEACCESSERROR;
+		lpFileInfo->nStreamSize=nFileSize;
+	}
+	else if(magic[0]=='\0fdm')
+	{
+		bIsmdf=1;
+		BYTE* tmp=(BYTE*)new BYTE[nFileSize-8];
+		ret=ReadFile(lpFileInfo->hFile,tmp,nFileSize-8,&nBytesRead,NULL);
+		if(!ret)
+		{
+			delete[] tmp;
+			return E_FILEACCESSERROR;
+		}
+		lpFileInfo->lpStream=VirtualAlloc(0,magic[1],MEM_COMMIT,PAGE_READWRITE);
+		ret=_ZlibUncompress(lpFileInfo->lpStream,&magic[1],tmp,nFileSize-8);
+		delete[] tmp;
+		if(ret!=0)
+			return E_WRONGFORMAT;
+		lpFileInfo->nStreamSize=magic[1];
+		if(*(DWORD*)lpFileInfo->lpStream!='\0BSP' || *((DWORD*)lpFileInfo->lpStream+1)!=2)
+			return E_WRONGFORMAT;
+	}
+
 	PsbInfo* pInfo=new PsbInfo;
 	memset(pInfo,0,sizeof(PsbInfo));
 	lpFileInfo->lpCustom=pInfo;
+
+	pInfo->bIsCompressed=bIsmdf;
 
 	PsbHeader* pHeader=(PsbHeader*)lpFileInfo->lpStream;
 	if(pHeader->dwMagic!='\0BSP')
@@ -261,19 +300,19 @@ MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
 		return E_CODEFAILED;
 	
 	BYTE* p=(BYTE*)lpFileInfo->lpStream + pHeader->nNameTree;
-	DWORD count=GetInt(p);
+	DWORD count=M2GetInt(p);
 	char type=*p++;
-	tTree=CopyArray(p,count,type);
+	tTree=M2CopyArray(p,count,type);
 	pInfo->lpTree=tTree;
 	pInfo->nTreeSize=count;
 	p+=count*(type-12);
-	count=GetInt(p);
+	count=M2GetInt(p);
 	type=*p++;
-	tBranches=MakeBranchTable(p,count,type);
+	tBranches=M2MakeBranchTable(p,count,type);
 	p+=count*(type-12);
-	count=GetInt(p);
+	count=M2GetInt(p);
 	type=*p++;
-	DWORD* pIDTable=CopyArray(p,count,type);
+	DWORD* pIDTable=M2CopyArray(p,count,type);
 	for(int i=0;i<count;i++)
 		if(pIDTable[i]>tMaxId)
 			tMaxId=pIDTable[i];
@@ -283,7 +322,7 @@ MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
 	pInfo->nNames=tMaxId+1;
 	tName=new char[512];
 
-	TraverseTree(0,0);
+	M2TraverseTree(0,0);
 
 	delete[] tName;
 	delete[] tBranches;
@@ -293,9 +332,9 @@ MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
 	delete[] tNames;
 
 	p=(BYTE*)lpFileInfo->lpStream + pHeader->nStrOffList;
-	count=GetInt(p);
+	count=M2GetInt(p);
 	type=*p++;
-	DWORD* pOff=CopyArray(p,count,type);
+	DWORD* pOff=M2CopyArray(p,count,type);
 	pInfo->lpStrOffList=pOff;
 	pInfo->nStrs=count;
 	
@@ -324,12 +363,12 @@ MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
 	p=(BYTE*)lpFileInfo->lpStream + pHeader->nResIndexTree;
 	if(*p++!=0x21)
 		__asm int 3
-	p=FindInDict("scenes",p,pInfo);
+	p=M2FindInDict("scenes",p,pInfo);
 	if(*p++!=0x20)
 		__asm int 3
-	DWORD scCount=GetInt(p);
+	DWORD scCount=M2GetInt(p);
 	type=*p++;
-	DWORD* pScOff=CopyArray(p,count,type);
+	DWORD* pScOff=M2CopyArray(p,count,type);
 	BYTE* pScStart=p+scCount*(type-12);
 
 	int nLine=0;
@@ -339,30 +378,30 @@ MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
 		p=pScStart+pScOff[k];
 		if(*p++!=0x21)
 			__asm int 3
-		p=FindInDict("texts",p,pInfo);
+		p=M2FindInDict("texts",p,pInfo);
 		if(*p++!=0x20)
 			__asm int 3
-		count=GetInt(p);
+		count=M2GetInt(p);
 		type=*p++;
-		DWORD* textsOffTable=CopyArray(p,count,type);
+		DWORD* textsOffTable=M2CopyArray(p,count,type);
 		BYTE* pStart=p+count*(type-12);
 		for(int i=0;i<count;i++)
 		{
 			p=pStart+textsOffTable[i];
 			if(*p++!=0x20)
 				__asm int 3
-			DWORD cnt=GetInt(p);
+			DWORD cnt=M2GetInt(p);
 			if(cnt<3)
 				__asm int 3
 			type=*p++;
-			DWORD* offsets=CopyArray(p,cnt,type);
+			DWORD* offsets=M2CopyArray(p,cnt,type);
 			p+=cnt*(type-12);
 
-			int nToAdd=AddStr(p+offsets[1],lpFileInfo,nLine);
+			int nToAdd=M2AddStr(p+offsets[1],lpFileInfo,nLine);
 			nLine+=nToAdd;
 			if(!nToAdd)
-				nLine+=AddStr(p+offsets[0],lpFileInfo,nLine);
-			nLine+=AddStr(p+offsets[2],lpFileInfo,nLine);
+				nLine+=M2AddStr(p+offsets[0],lpFileInfo,nLine);
+			nLine+=M2AddStr(p+offsets[2],lpFileInfo,nLine);
 			//DWORD idx;
 			//char* pFinalStr;
 			//BYTE* p2=p+offsets[1];
@@ -470,7 +509,7 @@ MRESULT WINAPI ModifyLine(LPFILE_INFO lpFileInfo, DWORD nLine)
 	return E_SUCCESS;
 }
 
-void CorrectHeader(PsbHeader* pHeader, DWORD off, int nDiff)
+void M2CorrectHeader(PsbHeader* pHeader, DWORD off, int nDiff)
 {
 	DWORD* p=(DWORD*)pHeader+4;
 	for(int i=0;i<sizeof(PsbHeader)/4-4;i++)
@@ -494,11 +533,11 @@ MRESULT WINAPI SaveText(LPFILE_INFO lpFileInfo)
 	}
 
 	int nDiff=pInfo->nTotalStrLen-pInfo->nOriTotalStrLen;
-	CorrectHeader(pHeader,pHeader->nStrRes,nDiff);
-	int nNewStreamSize=lpFileInfo->nStreamSize+nDiff;
+	M2CorrectHeader(pHeader,pHeader->nStrRes,nDiff);
+	DWORD nNewStreamSize=lpFileInfo->nStreamSize+nDiff;
 	
 	BYTE* p=lpTemp+pHeader->nStrOffList;
-	DWORD count=GetInt(p);
+	DWORD count=M2GetInt(p);
 	DWORD nOriOffSize=(*p-12)*count;
 	*p++ = 4+12;
 	ret=_ReplaceInMem(pInfo->lpStrOffList,pInfo->nStrs*4,p,nOriOffSize,
@@ -509,16 +548,45 @@ MRESULT WINAPI SaveText(LPFILE_INFO lpFileInfo)
 		return ret;
 	}
 	nDiff=pInfo->nStrs*4-nOriOffSize;
-	CorrectHeader(pHeader,pHeader->nStrOffList,nDiff);
+	M2CorrectHeader(pHeader,pHeader->nStrOffList,nDiff);
 	nNewStreamSize+=nDiff;
 
-	SetFilePointer(lpFileInfo->hFile,0,0,FILE_BEGIN);
-	DWORD BytesRead;
-	WriteFile(lpFileInfo->hFile,lpTemp,nNewStreamSize,&BytesRead,0);
-	VirtualFree(lpTemp,0,MEM_RELEASE);
-	if(BytesRead!=nNewStreamSize)
-		return E_FILEACCESSERROR;
-	SetEndOfFile(lpFileInfo->hFile);
+	DWORD nBytesRead;
+	if(!pInfo->bIsCompressed)
+	{
+		SetFilePointer(lpFileInfo->hFile,0,0,FILE_BEGIN);
+		WriteFile(lpFileInfo->hFile,lpTemp,nNewStreamSize,&nBytesRead,0);
+		VirtualFree(lpTemp,0,MEM_RELEASE);
+		if(nBytesRead!=nNewStreamSize)
+			return E_FILEACCESSERROR;
+		SetEndOfFile(lpFileInfo->hFile);
+	}
+	else
+	{
+		DWORD magic[2];
+		magic[0]='\0fdm';
+		magic[1]=nNewStreamSize;
+		BYTE* tmp=new BYTE[nNewStreamSize];
+		ret=_ZlibCompress(tmp,&nNewStreamSize,lpTemp,nNewStreamSize);
+		VirtualFree(lpTemp,0,MEM_RELEASE);
+		if(ret!=0)
+		{
+			delete[] tmp;
+			return E_ERROR;
+		}
+		SetFilePointer(lpFileInfo->hFile,0,NULL,FILE_BEGIN);
+		WriteFile(lpFileInfo->hFile,magic,8,&nBytesRead,NULL);
+		if(nBytesRead!=8)
+		{
+			delete[] tmp;
+			return E_FILEACCESSERROR;
+		}
+		WriteFile(lpFileInfo->hFile,tmp,nNewStreamSize,&nBytesRead,NULL);
+		delete[] tmp;
+		if(nBytesRead!=nNewStreamSize)
+			return E_FILEACCESSERROR;
+		SetEndOfFile(lpFileInfo->hFile);
+	}
 	return E_SUCCESS;
 }
 
@@ -559,7 +627,7 @@ int compare2(WORD* arg1, WORD* arg2)
 }
 int compare3(BYTE* arg1, BYTE* arg2)
 {
-	return GetInt(arg1,0xf)-GetInt(arg2,0xf);
+	return M2GetInt(arg1,0xf)-M2GetInt(arg2,0xf);
 }
 int compare4(DWORD* arg1, DWORD* arg2)
 {

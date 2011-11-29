@@ -33,6 +33,7 @@ IDC_CF_OK               equ 1116
 IDC_CF_CANCEL           equ 2
 IDC_CF_SAVEWITHCODE     equ 1117
 IDC_STC18               equ 1118
+IDC_CF_AUTOUPDATE       equ 1119
 IDD_EXPALL              equ 1200
 IDC_GRP1                equ 1201
 IDC_GRP2                equ 1202

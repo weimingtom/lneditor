@@ -34,6 +34,8 @@ _WndConfigProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 			mov dbConf+_Configs.bAutoOpen,eax
 			invoke IsDlgButtonChecked,hwnd,IDC_CF_AUTOSELECT
 			mov dbConf+_Configs.bAutoSelText,eax
+			invoke IsDlgButtonChecked,hwnd,IDC_CF_AUTOUPDATE
+			mov dbConf+_Configs.bAutoUpdate,eax
 			invoke SendDlgItemMessageW,hwnd,IDC_CF_SAVEWITHCODE,CB_GETCURSEL,0,0
 			mov ecx,dword ptr [eax*4+dbCodeTable]
 			mov dbConf+_Configs.nAutoCode,ecx
@@ -56,6 +58,7 @@ _WndConfigProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 		invoke CheckRadioButton,hwnd,IDC_CF_AC_NOT,IDC_CF_AC_HALF,eax
 		invoke CheckDlgButton,hwnd,IDC_CF_AUTOOPEN,dbConf+_Configs.bAutoOpen
 		invoke CheckDlgButton,hwnd,IDC_CF_AUTOSELECT,dbConf+_Configs.bAutoSelText
+		invoke CheckDlgButton,hwnd,IDC_CF_AUTOUPDATE,dbConf+_Configs.bAutoUpdate
 		invoke GetDlgItem,hwnd,IDC_CF_SAVEWITHCODE
 		mov ebx,eax
 		invoke SendMessageW,ebx,CB_ADDSTRING,0,offset szcdNotConvert
@@ -113,7 +116,14 @@ _WndFilterProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 			.endif
 			
 			.if bOpen
-				invoke _RecodeFile,offset FileInfo1,TRUE
+				invoke _GetMelInfo2,nCurMel
+				mov ebx,eax
+				.if _MelInfo2.nCharacteristic[ebx]
+					mov ecx,TRUE
+				.else
+					mov ecx,FALSE
+				.endif
+				invoke _RecodeFile,offset FileInfo1,TRUE,ecx
 				.if eax
 				_FilterErr:
 					mov eax,IDS_FILTERPLUGINERR2
@@ -123,7 +133,12 @@ _WndFilterProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 					invoke PostMessageW,hWinMain,WM_COMMAND,IDM_CLOSE,0
 					jmp _ExitF
 				.endif
-				invoke _RecodeFile,offset FileInfo2,TRUE
+				.if _MelInfo2.nCharacteristic[ebx]
+					mov ecx,TRUE
+				.else
+					mov ecx,FALSE
+				.endif
+				invoke _RecodeFile,offset FileInfo2,TRUE,ecx
 				test eax,eax
 				jnz _FilterErr
 				mov eax,FileInfo1.nLine
@@ -204,7 +219,7 @@ _WndFilterProc proc uses ebx edi esi,hwnd,uMsg,wParam,lParam
 		mov edi,dbConf+_Configs.lpDefaultMef
 		.if word ptr [edi]
 			invoke _FindPlugin,edi,2
-			.if eax!=-1
+			.if eax!=-2 && eax!=-1
 				mov esi,ecx
 				lea ecx,@szStr
 				invoke _GetMelInfo,eax,ecx,VT_FILEDESC

@@ -31,7 +31,15 @@
 	includelib \masm32\lib\msimg32.lib
 	includelib \masm32\lib\urlmon.lib
 	
-
+ifdef _LN_ZLIBDLL
+	includelib bin\zdll.lib
+else
+	includelib bin\zlib.lib
+	includelib "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\Lib\uuid.lib"
+	includelib "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\lib\libcmt.lib"
+	includelib "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\lib\oldnames.lib"
+endif
+	
 	include rsrc.inc
 
 
@@ -130,7 +138,8 @@ _Dev	proto
 ;Misc2
 _MakeStringListFromStream	proto :dword
 _GetStringFromStmPtr	proto :dword,:dword,:dword
-_RecodeFile			proto :dword,:dword
+_RecodeFile			proto :dword,:dword,:dword
+_GetMelInfo2			proto :dword
 _GetCodeIndex		proto :dword
 _AddCodeCombo		proto :dword
 _GetDispLine			proto :dword
@@ -146,12 +155,14 @@ _CalcCheckSum		proto :dword,:dword
 _FindPlugin			proto :dword,:dword
 
 ;Record
-_ReadRec				proto :dword
+_ReadRec			proto :dword,:dword,:dword
 _WriteRec			proto
 
 
 ;Menu Function
 _OpenScript			proto
+_OpenScript2			proto :dword
+_OpenSingleScript		proto :dword,:dword,:dword
 _LoadScript			proto
 _SaveScript			proto
 _SaveAs				proto
@@ -239,6 +250,20 @@ _WndProgBarProc		proto :dword,:dword,:dword,:dword
 _UpdateThd			proto :dword
 _CheckFile			proto :dword,:dword
 
+;cmdmode
+_GetCmdOption		proto :dword
+_GetCmdOptions		proto :dword
+_CmdMain			proto
+
+;zlib
+ifdef _LN_ZLIBDLL
+compress				proto C :dword,:dword,:dword,:dword
+uncompress			proto C :dword,:dword,:dword,:dword
+else
+compress				proto :dword,:dword,:dword,:dword
+uncompress			proto :dword,:dword,:dword,:dword
+endif
+
 ;System Struct
 OFNOTIFY STRUCT
 	hdr				NMHDR		<>
@@ -270,6 +295,16 @@ _MefInfo struct
 	ProcessLine			dd		?
 	RecoverLine			dd		?
 _MefInfo ends
+
+;打开脚本时的参数
+_OpenParameters struct
+	ScriptName		dd		?
+	Code1			dd		?
+	Code2			dd		?
+	Line				dd		?
+	Plugin			dd		?
+	Filter			dd		?
+_OpenParameters ends
 
 ;打开过的脚本的记录文件的文件头
 _FileRec struct
@@ -415,11 +450,12 @@ _UpdateFileInfo ends
 	TW0		' - ',			szGang
 	TW0		'* ',			szXing
 	TW0		'%d/%d',		szLinesFormat
+	TW0		'\r\n',		szCRSymbol
 
 
 .data
 ;Function Table
-	dbFunc		dd	offset _OpenScript
+	dbFunc		dd	offset _OpenScript2
 				dd	offset _LoadScript
 				dd	offset _SaveScript
 				dd	offset _SaveAs

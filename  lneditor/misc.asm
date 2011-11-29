@@ -224,7 +224,7 @@ _DirFileNameW proc uses edi _lpszPath
 		lea eax,[edi+4]
 		ret
 	.endif
-	xor eax,eax
+	mov eax,_lpszPath
 	ret
 _DirFileNameW endp
 
@@ -362,15 +362,7 @@ _AddLines proc uses esi edi ebx _pdb
 	invoke HeapFree,hGlobalHeap,0,_pdb
 	.if ![edi].bReadOnly
 		.if nCurIdx!=-1
-			@@:
 			invoke _SetLineInListbox,nCurIdx,1
-		.else
-			invoke _ReadRec,REC_LINEPOS
-			.if eax==-1
-				inc eax
-			.endif
-			mov nCurIdx,eax
-			jmp @b
 		.endif
 	.endif
 	assume edi:nothing
@@ -399,6 +391,18 @@ _AddLinesToList endp
 _GenName2 proc uses ebx _lpszName1,_lppszName2
 	LOCAL @lpszStr
 	LOCAL @szTemp[SHORT_STRINGLEN]:byte
+	.if dbConf+_Configs.nEditMode==EM_DOUBLE
+		invoke lstrlenW,_lpszName1
+		add eax,5
+		shl eax,1
+		invoke HeapAlloc,hGlobalHeap,0,eax
+		test eax,eax
+		jz _ErrGN
+		mov ecx,_lppszName2
+		mov [ecx],eax
+		invoke lstrcpyW,eax,_lpszName1
+	.endif
+
 	invoke lstrlenW,_lpszName1
 	add eax,20
 	shl eax,1

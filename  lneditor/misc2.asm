@@ -213,7 +213,7 @@ _ExGSFS:
 	ret
 _GetStringFromStmPtr endp
 
-_RecodeFile proc uses esi ebx edi _lpFI,_bReopen
+_RecodeFile proc uses esi ebx edi _lpFI,_bReopen,_bReread
 	LOCAL @ret
 	mov esi,_lpFI
 	assume esi:ptr _FileInfo
@@ -252,6 +252,11 @@ _RecodeFile proc uses esi ebx edi _lpFI,_bReopen
 		mov [esi].lpTextIndex,0
 		invoke VirtualFree,[esi].lpStreamIndex,0,MEM_RELEASE
 		mov [esi].lpStreamIndex,0
+		.if _bReread
+			invoke VirtualFree,[esi].lpStream,0,MEM_RELEASE
+			mov [esi].lpStream,0
+			mov [esi].nStreamSize,0
+		.endif
 		lea eax,@ret
 		push eax
 		push _lpFI
@@ -266,6 +271,20 @@ _RecodeFile proc uses esi ebx edi _lpFI,_bReopen
 _ExRF:
 	ret
 _RecodeFile endp
+
+;
+_GetMelInfo2 proc _idx
+	mov eax,_idx
+	.if eax==-1
+		lea eax,dbMelInfo2
+	.else
+		mov ecx,sizeof _MelInfo
+		mul ecx
+		add eax,lpMels
+		mov eax,_MelInfo.lpMelInfo2[eax]
+	.endif
+	ret
+_GetMelInfo2 endp
 
 ;
 _GetCodeIndex proc _code
@@ -752,6 +771,11 @@ _CalcCheckSum endp
 ;
 _FindPlugin proc uses edi ebx esi _lpszName,_dwType
 	LOCAL @pStr
+	invoke lstrcmpiW,_lpszName,offset szTxt+2
+	.if !eax && _dwType==1
+		mov eax,-1
+		ret
+	.endif
 	invoke HeapAlloc,hGlobalHeap,0,SHORT_STRINGLEN
 	test eax,eax
 	jz _Err
@@ -790,7 +814,7 @@ _FindPlugin proc uses edi ebx esi _lpszName,_dwType
 	.endw
 	invoke HeapFree,hGlobalHeap,0,@pStr
 _Err:
-	or eax,-1
+	mov eax,-2
 	ret
 _Success:
 	invoke HeapFree,hGlobalHeap,0,@pStr

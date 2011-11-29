@@ -27,6 +27,7 @@ struct TreeNode
 
 struct PsbInfo
 {
+	BOOL	bIsCompressed;
 	DWORD*	lpStrOffList;
 	int		nStrs;
 	char*	lpStrRes;

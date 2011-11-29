@@ -1,6 +1,7 @@
 .code
 assume fs:nothing
 
+if 0
 ;
 _OpenScript proc
 	LOCAL @nReturnInfo
@@ -50,7 +51,7 @@ _OpenScript proc
 	.endif
 	
 	@@:
-	invoke _ReadRec,REC_CHARSET
+;	invoke _ReadRec,REC_CHARSET
 	
 	push offset _HandlerOS
 	push fs:[0]
@@ -74,7 +75,7 @@ _OpenScript proc
 			.endif
 			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,FileInfo1.nLine
 			mov lpMarkTable,eax
-			invoke _ReadRec,REC_MARKTABLE
+;			invoke _ReadRec,REC_MARKTABLE
 			.if dbConf+_Configs.bAlwaysFilter
 				invoke _UpdateHideTable,offset FileInfo1
 			.endif
@@ -196,6 +197,204 @@ _HandlerOS:
 	xor eax,eax
 	retn 0ch
 _OpenScript endp
+endif
+
+_OpenScript2 proc uses edi esi ebx _lpOpenPara
+	LOCAL @err
+	LOCAL @pbInfo:_ProgBarInfo
+	mov edi,_lpOpenPara
+	assume edi:ptr _OpenParameters
+	
+	invoke _OpenSingleScript,edi,offset FileInfo1,1
+	mov @err,eax
+	test eax,eax
+	jnz _ErrOS
+	invoke _OpenSingleScript,edi,offset FileInfo2,0
+	mov @err,eax
+	test eax,eax
+	jnz _Err2OS
+	
+	mov eax,FileInfo1.nLine
+	.if eax!=FileInfo2.nLine
+		mov @err,E_LINENOTMATCH
+		jmp _Err3OS
+	.endif
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,FileInfo1.nLine
+	mov lpMarkTable,eax
+	invoke _ReadRec,[edi].ScriptName,REC_MARKTABLE,FileInfo1.nLine
+	.if dbConf+_Configs.bAlwaysFilter
+		invoke _UpdateHideTable,offset FileInfo1
+	.endif
+	
+	mov ecx,dbConf+_Configs.nAutoCode
+	.if ecx && FileInfo2.nCharSet!=CS_UNICODE && FileInfo2.nCharSet!=CS_UTF8
+		mov FileInfo2.nCharSet,ecx
+		xor ebx,ebx
+		xor esi,esi
+		.while ebx<FileInfo2.nLine
+			push ebx
+			push offset FileInfo2
+			call dbSimpFunc+_SimpFunc.ModifyLine
+			or esi,eax
+			inc ebx
+		.endw
+		.if esi
+			mov eax,IDS_CODECVTFAILED
+			invoke _GetConstString
+			invoke MessageBoxW,hWinMain,eax,0,MB_OK or MB_ICONERROR
+		.endif
+	.endif
+	
+	mov eax,[edi].Line
+	mov nCurIdx,eax
+	mov bProgBarStopping1,0
+	mov bProgBarStopping2,0
+	invoke _DirFileNameW,[edi].ScriptName
+	mov @pbInfo.lpszTitle,eax
+	mov @pbInfo.bNoStop,0
+	invoke _AddLinesToList,offset FileInfo1,hList1,offset bProgBarStopping1
+	invoke _AddLinesToList,offset FileInfo2,hList2,offset bProgBarStopping2
+	invoke DialogBoxParamW,hInstance,IDD_PROGBAR,hWinMain,offset _WndProgBarProc,addr @pbInfo
+	
+	invoke _SetOpenState,1
+
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,FileInfo1.nLine
+	mov lpModifyTable,eax
+	
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,MAX_STRINGLEN+SHORT_STRINGLEN
+	or eax,eax
+	je _ExOSS
+	mov ebx,eax
+	invoke _GenWindowTitle,ebx,GWT_FILENAME1
+	invoke SetWindowTextW,hWinMain,ebx
+	invoke HeapFree,hGlobalHeap,0,ebx
+
+	assume edi:nothing
+_ExOSS:
+	ret
+_Err3OS:
+	invoke _ClearAll,offset FileInfo2
+_Err2OS:
+	invoke _ClearAll,offset FileInfo1
+_ErrOS:
+	invoke _OutputMessage,@err,offset szInnerName,0,0
+	ret
+_OpenScript2 endp
+
+_OpenSingleScript proc uses esi edi ebx _lpOpenPara,_lpFI,_bIsLeft
+	LOCAL @nReturnInfo
+	mov edi,_lpOpenPara
+	assume edi:ptr _OpenParameters
+	mov eax,[edi].ScriptName
+	.if !eax
+		mov eax,E_INVALIDPARAMETER
+		jmp _ExOSS
+	.endif
+	
+	.if _bIsLeft
+		invoke HeapAlloc,hGlobalHeap,0,MAX_STRINGLEN
+		.if !eax
+			mov eax,E_NOMEM
+			jmp _ExOSS
+		.endif
+		mov ecx,_lpFI
+		mov _FileInfo.lpszName[ecx],eax
+		mov _FileInfo.bReadOnly[ecx],1
+		mov eax,[edi].Code1
+		mov _FileInfo.nCharSet[ecx],eax
+		invoke lstrcpyW,_FileInfo.lpszName[ecx],[edi].ScriptName
+	.else
+		mov ecx,_lpFI
+		mov _FileInfo.bReadOnly[ecx],0
+		mov eax,[edi].Code2
+		mov _FileInfo.nCharSet[ecx],eax
+		invoke _GenName2,[edi].ScriptName,addr _FileInfo.lpszName[ecx]
+		.if !eax
+			mov eax,E_NOMEM
+			jmp _ExOSS
+		.endif
+	.endif
+	
+	mov eax,[edi].Plugin
+	.if eax!=-1
+		mov esi,lpMels
+		mov bx,sizeof _MelInfo
+		mul bx
+		add esi,eax
+		mov ebx,_MelInfo.lpMelInfo2[esi]
+	.else
+		mov eax,[edi].Filter
+		mov nCurMef,eax
+		mov ebx,offset dbMelInfo2
+	.endif
+	.if _bIsLeft
+		invoke _LoadFile,_lpFI,LM_NONE,ebx
+		@@:
+		.if !eax
+			mov eax,E_FILEACCESSERROR
+			jmp _ErrDll2OSS
+		.endif
+	.else
+		invoke _LoadFile,_lpFI,LM_HALF,ebx
+		.if !eax
+			invoke GetLastError
+			.if eax==ERROR_FILE_NOT_FOUND
+				mov ecx,_lpFI
+				invoke CopyFileW,[edi].ScriptName,_FileInfo.lpszName[ecx],FALSE
+				invoke _LoadFile,offset FileInfo2,LM_HALF,ebx
+				jmp @B
+			.endif
+			mov eax,E_FILEACCESSERROR
+			jmp _ErrDll2OSS
+		.endif
+	.endif
+	push offset _HandlerOSS
+	push fs:[0]
+	mov fs:[0],esp
+	lea eax,@nReturnInfo
+	push eax
+	push _lpFI
+	call dword ptr [dbSimpFunc+_SimpFunc.GetText]
+	test eax,eax
+	jnz _ErrDllOSS
+	mov ecx,_lpFI
+	.if _FileInfo.nMemoryType[ecx]==MT_POINTERONLY
+		invoke _MakeStringListFromStream,_lpFI
+		test eax,eax
+		jnz _ErrDllOSS
+	.endif
+	
+	assume edi:nothing
+_Ex2OSS:
+	pop fs:[0]
+	add esp,4
+_ExOSS:
+	ret
+_ErrDllOSS:
+	pop fs:[0]
+	add esp,4
+_ErrDll2OSS:
+	mov ebx,eax
+	invoke _ClearAll,_lpFI
+	mov eax,ebx
+	ret
+_HandlerOSS:
+	mov edx,[esp+0ch]
+	mov [edx+0b8h],offset _ErrDllOSS
+	mov ecx,[esp+8]
+	mov [edx+0c4h],ecx
+	mov ecx,[esp+4]
+	mov eax,[ecx]
+	.if eax==STATUS_BREAKPOINT ;8..3
+		mov dword ptr [edx+0b0h],E_ANALYSISFAILED
+	.elseif eax==STATUS_ACCESS_VIOLATION ;c..5
+		mov dword ptr [edx+0b0h],E_OVERMEM
+	.else
+		mov dword ptr [edx+0b0h],E_PLUGINERROR
+	.endif
+	xor eax,eax
+	retn 0ch
+_OpenSingleScript endp
 
 ;
 _LoadScript proc
@@ -440,16 +639,25 @@ _SetCode endp
 
 
 _WndCodeProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
+	LOCAL @lpMelInfo2
 	mov eax,uMsg
 	.if eax==WM_COMMAND
 		mov eax,wParam
 		.if ax==IDC_CODE_OK
+			invoke _GetMelInfo2,nCurMel
+			mov @lpMelInfo2,eax
 			invoke SendDlgItemMessageW,hwnd,IDC_CODE_OPEN1,CB_GETCURSEL,0,0
 			mov ecx,dword ptr [eax*4+dbCodeTable]
 			mov ebx,FileInfo1.nCharSet
 			.if ecx!=ebx
 				mov FileInfo1.nCharSet,ecx
-				invoke _RecodeFile,offset FileInfo1,FALSE
+				mov eax,@lpMelInfo2
+				.if _MelInfo2.nCharacteristic[eax] & MIC_NOPREREAD
+					mov ecx,TRUE
+				.else
+					mov ecx,FALSE
+				.endif
+				invoke _RecodeFile,offset FileInfo1,FALSE,ecx
 				.if eax
 					.if eax==E_FATALERROR
 						mov bModified,0
@@ -467,7 +675,13 @@ _WndCodeProc proc uses edi esi ebx hwnd,uMsg,wParam,lParam
 			mov ebx,FileInfo2.nCharSet
 			.if ecx!=ebx
 				mov FileInfo2.nCharSet,ecx
-				invoke _RecodeFile,offset FileInfo2,FALSE
+				mov eax,@lpMelInfo2
+				.if _MelInfo2.nCharacteristic[eax] & MIC_NOPREREAD
+					mov ecx,TRUE
+				.else
+					mov ecx,FALSE
+				.endif
+				invoke _RecodeFile,offset FileInfo2,FALSE,ecx
 				.if eax
 					.if eax==E_FATALERROR
 						mov bModified,0

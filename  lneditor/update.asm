@@ -1,6 +1,7 @@
 UPDATE_LIST_VERSION			equ		1
 
 .data
+bIsUpdatingProgram		dd		?
 TW		'http://lneditor.googlecode.com/',		szGoogleCode
 TW0		'svn/trunk/ lneditor/',
 TW0		'bin/update.lst',			szUpdateListFile
@@ -14,6 +15,15 @@ _UpdateThd proc uses esi edi ebx _lparam
 	LOCAL @lpList,@nListSize,@nListFile,@lpTempName,@lpNewFileName
 	LOCAL @FInfo:_UpdateFileInfo
 	LOCAL @ft:FILETIME
+	LOCAL @st:SYSTEMTIME,@st2:SYSTEMTIME
+	
+	invoke GetFileTime,hLogFile,0,0,addr @ft
+	invoke FileTimeToSystemTime,addr @ft,addr @st
+	invoke GetSystemTime,addr @st2
+	mov ax,@st2.wDay
+	cmp ax,@st.wDay
+	je _ExUT
+	mov bIsUpdatingProgram,1
 	
 	lea ebx,@szUrl
 	invoke lstrcpyW,ebx,offset szGoogleCode
@@ -136,14 +146,17 @@ _UpdateThd proc uses esi edi ebx _lparam
 			lea ebx,@szFileName
 			invoke lstrcpyW,@lpTempName,ebx
 			invoke lstrcatW,@lpTempName,$CTW0('.bak')
-			invoke MoveFileExW,ebx,@lpTempName,MOVEFILE_REPLACE_EXISTING
-			.if !eax
-				_lbl2:
-				invoke DeleteFileW,@lpNewFileName
-				invoke _WriteLog,WLT_UPDATEERR,offset szInnerName,offset szWltEUpdate4,@FInfo.lpszName
-				jmp _NextFileUT
+			invoke GetFileAttributesW,ebx
+			.if eax!=-1
+				invoke MoveFileExW,ebx,@lpTempName,MOVEFILE_REPLACE_EXISTING
+				.if !eax
+					_lbl2:
+					invoke DeleteFileW,@lpNewFileName
+					invoke _WriteLog,WLT_UPDATEERR,offset szInnerName,offset szWltEUpdate4,@FInfo.lpszName
+					jmp _NextFileUT
+				.endif
 			.endif
-			invoke MoveFileExW,@lpNewFileName,ebx,MOVEFILE_REPLACE_EXISTING
+			invoke MoveFileExW,@lpNewFileName,ebx,MOVEFILE_REPLACE_EXISTING or MOVEFILE_COPY_ALLOWED
 			.if !eax
 				invoke MoveFileExW,@lpTempName,ebx,MOVEFILE_REPLACE_EXISTING
 				jmp _lbl2
@@ -162,6 +175,10 @@ _Ex3UT:
 _Ex2UT:
 	invoke HeapFree,hGlobalHeap,0,@lpList
 _ExUT:
+	invoke GetSystemTime,addr @st
+	invoke SystemTimeToFileTime,addr @st,addr @ft
+	invoke SetFileTime,hLogFile,0,0,addr @ft
+	mov bIsUpdatingProgram,0
 	ret
 _UpdateThd endp
 
