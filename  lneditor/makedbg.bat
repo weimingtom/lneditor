@@ -22,7 +22,7 @@ if errorlevel 1 goto errasm
 :set path of VS2010 common tools
 set path=C:\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE
 :path of linker of VS2010
-"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\Link.exe" /ltcg  /SUBSYSTEM:WINDOWS /DEBUG /DEBUGTYPE:CV /DEF:export.def lnedit.obj lnrc.obj
+"C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\Link.exe" /ltcg  /SUBSYSTEM:WINDOWS /DEBUG /DEBUGTYPE:CV /DEF:export.def lnedit.obj lnrc.obj lnedit2.lib
 if errorlevel 1 goto errlink
 dir lnedit.*
 incver.exe

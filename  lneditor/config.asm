@@ -3,6 +3,13 @@
 ;‘ÿ»Îlnedit.ini
 _LoadConfig proc uses ebx
 	LOCAL @s[32]:byte
+	
+	invoke HeapAlloc,hGlobalHeap,0,MAX_STRINGLEN
+	or eax,eax
+	je _NomemLC
+	mov lpszConfigFile,eax
+	invoke GetFullPathNameW,offset szcfFileName,MAX_STRINGLEN/2,eax,0
+	
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,SHORT_STRINGLEN
 	or eax,eax
 	je _NomemLC

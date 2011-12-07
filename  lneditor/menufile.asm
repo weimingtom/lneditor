@@ -299,7 +299,11 @@ _OpenSingleScript proc uses esi edi ebx _lpOpenPara,_lpFI,_bIsLeft
 		.endif
 		mov ecx,_lpFI
 		mov _FileInfo.lpszName[ecx],eax
-		mov _FileInfo.bReadOnly[ecx],1
+		.if nUIStatus&UIS_CONSOLE
+			mov _FileInfo.bReadOnly[ecx],0
+		.else
+			mov _FileInfo.bReadOnly[ecx],1
+		.endif
 		mov eax,[edi].Code1
 		mov _FileInfo.nCharSet[ecx],eax
 		invoke lstrcpyW,_FileInfo.lpszName[ecx],[edi].ScriptName
@@ -328,7 +332,11 @@ _OpenSingleScript proc uses esi edi ebx _lpOpenPara,_lpFI,_bIsLeft
 		mov ebx,offset dbMelInfo2
 	.endif
 	.if _bIsLeft
-		invoke _LoadFile,_lpFI,LM_NONE,ebx
+		.if nUIStatus&UIS_CONSOLE
+			invoke _LoadFile,_lpFI,LM_ONE,ebx
+		.else
+			invoke _LoadFile,_lpFI,LM_NONE,ebx
+		.endif
 		@@:
 		.if !eax
 			mov eax,E_FILEACCESSERROR
@@ -1012,7 +1020,6 @@ _NomemIT:
 			.endif
 			
 		.endif
-				
 		
 		invoke CloseHandle,@hTxtFile
 		invoke InvalidateRect,hWinMain,0,TRUE
