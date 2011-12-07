@@ -59,11 +59,11 @@ pWltError2	dd	offset szWltELineExist,offset szWltELineLong,offset szWltECode,off
 .code
 
 _OpenLog proc
-	invoke CreateFileW,offset szLogFileName,GENERIC_WRITE,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
+	invoke CreateFileW,offset szLogFileName,GENERIC_WRITE,FILE_SHARE_READ or FILE_SHARE_WRITE,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
 	mov hLogFile,eax
 	.if eax==-1
-		invoke CreateFileW,offset szLogFileName,GENERIC_WRITE,FILE_SHARE_READ,0,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0
-		.if eax==-1
+		invoke CreateFileW,offset szLogFileName,GENERIC_WRITE,FILE_SHARE_READ or FILE_SHARE_WRITE,0,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,0
+		.if eax==-1 && !(nUIStatus&UIS_CONSOLE)
 			mov eax,IDS_LOGFILEOPENNOT
 			invoke _GetConstString
 			invoke MessageBoxW,0,eax,0,MB_OK or MB_ICONERROR
@@ -148,7 +148,13 @@ _GetLogString endp
 _OutputMessage proc _nType,_lpszName,para1,para2
 	LOCAL @szStr[MAX_STRINGLEN]:byte
 	.if nUIStatus & UIS_CONSOLE
-		
+		.if _nType<10000h
+			invoke _GetGeneralErrorString,_nType
+			invoke lstrcpyW,addr @szStr,eax
+			invoke lstrcatW,addr @szStr,offset szCRSymbol
+			invoke lstrlenW,addr @szStr
+			invoke WriteConsoleW,hStdOutput,addr @szStr,eax,offset dwTemp,0
+		.endif
 	.else ;UIS_WINDOW
 		.if nUIStatus & UIS_BUSY
 			invoke _WriteLog,_nType,_lpszName,para1,para2

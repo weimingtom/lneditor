@@ -24,6 +24,7 @@ TW0		'newdir',		szOptionNewDir
 TW0		'nd',			szOptionNewDirS
 
 TW0		'con',		szOptionConsole
+TW0		'help',		szOptionHelp
 
 coCmdOptions\
 	_StCmdOption		<offset szOptionScriptName,offset szOptionScriptNameS,0>
@@ -63,8 +64,8 @@ _GetCmdOption proc uses esi edi ebx _lpName
 			jmp _CtnGCO
 		.endif
 		cmp word ptr [esi],'/'
-		je _CtnGCO
-		inc esi
+		jne _CtnGCO
+		add esi,2
 		mov edx,esi
 		.while word ptr [edx]
 			.break .if word ptr [edx]=='='
@@ -105,11 +106,12 @@ _GetCmdOptions proc uses edi ebx _lpOptions
 		inc ebx
 	.endw
 	assume edi:nothing
+	mov edi,_lpOptions
 	.if _StCmdOptions.ScriptName.lpszValue[edi]==0
 		invoke _GetCmdOption,0
 		mov _StCmdOptions.ScriptName.lpszValue[edi],eax
 	.endif
-	mov ebx,_StCmdOptions.ScriptName.lpszName[edi]
+	mov ebx,_StCmdOptions.ScriptName.lpszValue[edi]
 	.if ebx!=0
 		invoke HeapAlloc,hGlobalHeap,0,MAX_STRINGLEN
 		test eax,eax
@@ -120,7 +122,9 @@ _GetCmdOptions proc uses edi ebx _lpOptions
 _ExGCO:
 	ret
 _GetCmdOptions endp
-
-_CmdMain proc
-	ret
-_CmdMain endp
+;
+;_CmdMain proc
+;;	mov edi,_lpOptions
+;;	invoke _GetCmdOption,offset szOptionHelp
+;	ret
+;_CmdMain endp

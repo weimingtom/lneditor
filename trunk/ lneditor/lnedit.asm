@@ -9,6 +9,8 @@ include lnedit.inc
 include macros.inc
 include com.inc
 
+include globalvars.asm
+
 include _browsefolder.asm
 include _CreateDIBitmap.asm
 include progbar.asm
@@ -64,30 +66,36 @@ xor ebx,ebx
 invoke GetCommandLineW
 invoke CommandLineToArgvW,eax,offset nArgc
 mov lpArgTbl,eax
-mov ebx,[eax]
-invoke lstrlenW,ebx
-shl eax,1
-add eax,20
-invoke HeapAlloc,hGlobalHeap,0,eax
-or eax,eax
-je _FinalMemErr
-mov lpszConfigFile,eax
-invoke lstrcpyW,eax,ebx
-invoke _DirBackW,lpszConfigFile
-invoke _DirCatW,lpszConfigFile,offset szcfFileName
+;mov ebx,[eax]
+;invoke lstrlenW,ebx
+;shl eax,1
+;add eax,20
+;invoke HeapAlloc,hGlobalHeap,0,eax
+;or eax,eax
+;je _FinalMemErr
+;mov lpszConfigFile,eax
+;invoke lstrcpyW,eax,ebx
+;invoke _DirBackW,lpszConfigFile
+;invoke _DirCatW,lpszConfigFile,offset szcfFileName
+
+invoke _GetCmdOption,offset szOptionConsole
+mov ebx,eax
+invoke _GetCmdOption,offset szOptionHelp
+.if eax || ebx
+	or nUIStatus,UIS_CONSOLE
+.endif
 
 invoke _OpenLog
 invoke _LoadConfig
 invoke _GetCmdOptions,offset coCmdOptions
 
-invoke _GetCmdOption,offset szOptionConsole
-.if eax
+.if nUIStatus & UIS_CONSOLE
 	invoke _CmdMain
 .else
 	invoke _WinMain
 .endif
 _FinalExit:
-invoke ExitProcess,NULL
+invoke ExitProcess,0
 
 invoke compress,1,1,1,1
 
@@ -463,6 +471,7 @@ _PaintMain:
 		mov [eax].lpSimpFuncs,offset dbSimpFunc
 		mov [eax].lpTxtFuncs,offset dbTxtFunc
 		mov [eax].lpHandles,offset hWinMain
+		mov [eax].lpCmdOptions,offset coCmdOptions
 		assume eax:nothing
 		
 		invoke HeapAlloc,hGlobalHeap,0,sizeof _Functions+sizeof _SimpFunc+sizeof _TxtFunc
@@ -623,15 +632,76 @@ _InitWindow proc hwnd
 	ret
 _InitWindow endp
 
+_LoadSingleMel proc uses edi esi ebx _lpMel,_lpName
+	invoke _DirFileNameW,_lpName
+	mov edi,eax
+	mov ebx,eax
+	invoke lstrlenW,edi
+	.if eax>=SHORT_STRINGLEN/2
+		mov eax,E_ERROR
+		jmp _ExLSM
+	.endif
+	invoke LoadLibraryW,_lpName
+	mov esi,_lpMel
+	assume esi:ptr _MelInfo
+	.if eax
+		mov [esi].hModule,eax
+		invoke lstrcpyW,esi,edi
+		invoke GetProcAddress,[esi].hModule,offset szFMatch
+		.if !eax
+		_BadMel:
+			invoke FreeLibrary,[esi].hModule
+			invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,edi,offset szWltEMel1
+			mov eax,E_ERROR
+			jmp _ExLSM
+		.endif
+		mov [esi].pMatch,eax
+		invoke GetProcAddress,[esi].hModule,offset szFInitInfo
+		or eax,eax
+		je _BadMel
+		mov edi,eax
+		invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,sizeof _MelInfo2
+		.if !eax
+			invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,ebx,offset szWltEMem1
+			mov eax,E_ERROR
+			jmp _ExLSM
+		.endif
+		mov [esi].lpMelInfo2,eax
+		push eax
+		call edi
+		mov ecx,[esi].lpMelInfo2
+		mov eax,_MelInfo2.nInterfaceVer[ecx]
+		shr eax,16
+		.if eax!=(INTERFACE_VER shr 16)
+			invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,ebx,offset szWltEMel2
+			mov eax,E_ERROR
+			jmp _ExLSM
+		.endif
+		xor eax,eax
+	.else
+		mov eax,E_ERROR
+	.endif
+_ExLSM:
+	ret
+_LoadSingleMel endp
+
 ;载入所有文本提取插件，每个插件使用一个MelInfo结构，依次储存在lpMels里面
 _LoadMel proc uses edi esi ebx _lParam
 	LOCAL @szStr[MAX_STRINGLEN]:byte
 	LOCAL @stFindData:WIN32_FIND_DATAW
 	LOCAL @hFind
+	LOCAL @lpOldDir
 	
 	invoke GetModuleFileNameW,0,addr @szStr,MAX_STRINGLEN/2
 	invoke _DirBackW,addr @szStr
 	invoke _DirCatW,addr @szStr,offset szDLLDir
+	invoke HeapAlloc,hGlobalHeap,0,MAX_STRINGLEN
+	.if !eax
+		mov eax,E_NOMEM
+		ret
+	.endif
+	mov @lpOldDir,eax
+	invoke GetCurrentDirectoryW,MAX_STRINGLEN/2,eax
 	invoke SetCurrentDirectoryW,addr @szStr
 	mov lpMels,0
 	.if eax
@@ -650,47 +720,11 @@ _LoadMel proc uses edi esi ebx _lParam
 			xor ebx,ebx
 			assume esi:ptr _MelInfo
 			.repeat
-				lea edi,@stFindData.cFileName
-				invoke lstrlenW,edi
-				cmp eax,SHORT_STRINGLEN/2
-				jae _CtnLM
-				invoke LoadLibraryW,edi
-				.if eax
-					mov [esi].hModule,eax
-					invoke lstrcpyW,esi,edi
-					invoke GetProcAddress,[esi].hModule,offset szFMatch
-					.if !eax
-					_BadMel:
-						invoke FreeLibrary,[esi].hModule
-						invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,edi,offset szWltEMel1
-						jmp _CtnLM
-					.endif
-					mov [esi].pMatch,eax
-					invoke GetProcAddress,[esi].hModule,offset szFInitInfo
-					or eax,eax
-					je _BadMel
-					mov edi,eax
-					invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,sizeof _MelInfo2
-					.if !eax
-						lea ecx,@stFindData.cFileName
-						invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,ecx,offset szWltEMem1
-						jmp _CtnLM
-					.endif
-					mov [esi].lpMelInfo2,eax
-					push eax
-					call edi
-					mov ecx,[esi].lpMelInfo2
-					mov eax,_MelInfo2.nInterfaceVer[ecx]
-					shr eax,16
-					.if eax!=(INTERFACE_VER shr 16)
-						lea ecx,@stFindData.cFileName
-						invoke _WriteLog,WLT_LOADMELERR,offset szInnerName,ecx,offset szWltEMel2
-						jmp _CtnLM
-					.endif
+				invoke _LoadSingleMel,esi,addr @stFindData.cFileName
+				.if !eax
+					add esi,sizeof _MelInfo
+					inc ebx
 				.endif
-				add esi,sizeof _MelInfo
-				inc ebx
-_CtnLM:
 				invoke FindNextFileW,@hFind,addr @stFindData
 			.until eax==FALSE || ebx>=MAX_MELCOUNT-1
 			mov nMels,ebx
@@ -700,7 +734,8 @@ _Ex2LM:
 		.endif
 	.endif
 _ExLM:
-	
+	invoke SetCurrentDirectoryW,@lpOldDir
+	invoke HeapFree,hGlobalHeap,0,@lpOldDir
 	xor eax,eax
 	ret
 _LoadMel endp

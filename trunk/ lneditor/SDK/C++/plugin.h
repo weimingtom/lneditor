@@ -65,6 +65,12 @@ typedef unsigned long MRESULT;
 #define ST_TXTENDA			0x10
 #define ST_TXTENDW			0x11
 
+//UI Status
+#define	UIS_GUI				0x00000000
+#define UIS_CONSOLE			0x00000001
+#define UIS_IDLE			0x00000000
+#define	UIS_BUSY			0x00000002
+
 #include<windows.h>
 
 #pragma pack(1)
@@ -110,15 +116,15 @@ typedef struct _FILE_INFO {
 #define MIC_NOBATCHIMP			0x00020000
 #define MIC_NOHALFANGLE			0x00040000
 
-typedef struct _MEL_INFO {
+typedef struct _MEL_INFO2 {
 	DWORD	dwInterfaceVersion;
 	DWORD	dwCharacteristic;
-} MEL_INFO, *LPMEL_INFO;
+} MEL_INFO2, *LPMEL_INFO2;
 
-typedef struct _MEF_INFO {
+typedef struct _MEF_INFO2 {
 	DWORD	dwInterfaceVersion;
 	DWORD	dwCharacteristic;
-} MEF_INFO, *LPMEF_INFO;
+} MEF_INFO2, *LPMEF_INFO2;
 
 //Select range for edit control
 typedef struct _SEL_RANGE {
@@ -156,6 +162,26 @@ typedef struct _WINDOW_HANDLES {
 	HANDLE		hStatus;
 } WINDOW_HANDLES, *LPWINDOW_HANDLES;
 
+typedef struct _CMD_OPTION {
+	LPWSTR			lpszTag;
+	LPWSTR			lpszShortTag;
+	LPWSTR			lpszValue;
+} CMD_OPTION, *LPCMD_OPTION;
+
+typedef struct _CMD_OPTIONS {
+	CMD_OPTION	ScriptName;
+	CMD_OPTION	Code1;
+	CMD_OPTION	Code2;
+	CMD_OPTION	Line;
+	CMD_OPTION	Plugin;
+	CMD_OPTION	Filter;
+	CMD_OPTION	Import;
+	CMD_OPTION	Export;
+	CMD_OPTION	ScriptDir;
+	CMD_OPTION	TxtDir;
+	CMD_OPTION	NewDir;
+} CMD_OPTIONS, *LPCMD_OPTIONS;
+
 //Basic data used with PreProc callback function
 typedef struct _PRE_DATA {
 	HANDLE				hGlobalHeap;
@@ -167,6 +193,7 @@ typedef struct _PRE_DATA {
 	LPVOID				lpTxtFuncs;
 
 	LPWINDOW_HANDLES	lpHandles;
+	LPCMD_OPTIONS		lpCmdOptions;
 } PRE_DATA, *LPPRE_DATA;
 
 #pragma pack(1)
@@ -182,6 +209,14 @@ typedef struct _TEXT_FILTER {
 	LPCWSTR		lpszTrimTail;
 } TEXT_FILTER, *LPTEXT_FILTER;
 
+typedef struct _OPEN_PARAMETERS {
+	LPWSTR		ScriptName;
+	DWORD		Code1;
+	DWORD		Code2;
+	DWORD		Line;
+	DWORD		Plugin;
+	DWORD		Filter;
+} OPEN_PARAMETERS, *LPOPEN_PARAMETERS;
 
 extern "C" {
 //Exported Functions of lnedit

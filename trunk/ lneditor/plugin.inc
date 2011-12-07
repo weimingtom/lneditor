@@ -67,6 +67,12 @@ ST_SPECLEN				EQU		4	;由lpStreamIndex.nStringLen决定长度
 ST_TXTENDA				EQU		10h
 ST_TXTENDW				EQU		11h
 
+;UI状态
+UIS_GUI					EQU		00000000H
+UIS_CONSOLE				EQU		00000001H
+UIS_IDLE					EQU		00000000H
+UIS_BUSY					EQU		00000002H
+
 _StreamEntry struct
 	lpStart				dd		?	;字符串起始
 	nStringLen			dd		?	;字符串长度(以字节计算)，可选
@@ -202,6 +208,7 @@ _PreData struct
 	lpTxtFuncs		dd		?	;纯文本处理函数表指针，指向_TxtFunc结构
 	
 	lpHandles		dd		?	;窗口句柄列表指针，指向_Handles结构
+	lpCmdOptions	dd		?
 _PreData ends
 
 _StCmdOption struct
