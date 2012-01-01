@@ -165,6 +165,7 @@ GetText endp
 ;
 ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	LOCAL @pNewStr,@nNewLen,@nOldLen
+	LOCAL @lpOffset2
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
 	mov ecx,[edi].lpStreamIndex
@@ -232,30 +233,38 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		mov edi,eax
 		sub edi,esi
 		mov eax,[esi+6]
-		sub edi,eax
-		or eax,eax
-		jz _Success
-		add eax,esi
-		add esi,11
-		.while esi<eax
-			.if dword ptr [esi+4]>edi
-				add dword ptr [esi+4],ebx
+		sub edi,dword ptr [esi+2]
+		lea edx,[esi+eax+0ah]
+		mov @lpOffset2,edx
+		mov ecx,38e38e39h
+		mul ecx
+		shr edx,1
+		test edx,edx
+		jz _Cr2
+		add esi,0ah+5
+		.while edx
+			.if dword ptr [esi]>edi
+				add dword ptr [esi],ebx
 			.endif
 			add esi,09
+			dec edx
 		.endw
-		.if dword ptr [esi+4]>edi
-			add dword ptr [esi+4],ebx
-		.endif
-		add esi,13
-		mov ecx,_lpFI
-		mov edx,_FileInfo.lpStream[ecx]
-		mov eax,[edx+2]
-		add eax,edx
-		.while esi<eax
-			.if dword ptr [esi+4]>edi
-				add dword ptr [esi+4],ebx
+		
+	_Cr2:
+		mov esi,@lpOffset2
+		mov eax,[esi]
+		add esi,9
+		mov ecx,38e38e39h
+		mul ecx
+		shr edx,1
+		test edx,edx
+		jz _Success
+		.while edx
+			.if dword ptr [esi]>edi
+				add dword ptr [esi],ebx
 			.endif
 			add esi,09
+			dec edx
 		.endw
 		
 	.endif

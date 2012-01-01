@@ -829,7 +829,7 @@ _ReplaceCharsW proc uses esi edi ebx  _lpStr,_nOption,_lpReserved
 	mov @lpNew,0
 	mov eax,_nOption
 	and eax,0ffffh
-	.if eax&1
+	.if eax&RCH_ENTERS
 		mov esi,_lpStr
 		invoke lstrlenW,esi
 		lea ebx,[eax+1]
@@ -852,8 +852,7 @@ _ReplaceCharsW proc uses esi edi ebx  _lpStr,_nOption,_lpReserved
 		mov edi,eax
 		
 		mov eax,_nOption
-		shr eax,16
-		.if eax&1
+		.if eax&RCH_TOESCAPE
 			xor ecx,ecx
 			.while ecx<ebx
 				mov ax,[esi+ecx*2]

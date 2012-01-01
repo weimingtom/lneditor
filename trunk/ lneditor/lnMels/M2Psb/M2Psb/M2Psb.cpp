@@ -1,4 +1,4 @@
-#include<Windows.h>
+ï»¿#include<Windows.h>
 #include<vector>
 #include<algorithm>
 
@@ -10,7 +10,7 @@ HANDLE g_hHeap;
 
 HINSTANCE g_hInstance;
 
-void WINAPI InitInfo(LPMEL_INFO lpMelInfo)
+void WINAPI InitInfo(LPMEL_INFO2 lpMelInfo)
 {
 	lpMelInfo->dwInterfaceVersion=INTERFACE_VERSION;
 	lpMelInfo->dwCharacteristic=MIC_NOPREREAD;
@@ -208,7 +208,7 @@ BYTE* M2FindInDict(char* name, BYTE* dict, PsbInfo* pInfo)
 
 BYTE* M2FindTag(char* tagname,BYTE* restree,PsbInfo* pInfo)
 {
-	//Î´ÊµÏÖ¸ù¾İtagname²éÕÒ£¬¶øÊÇÖ±½Ó²éÕÒscenes[texts[*]]
+	//æœªå®ç°æ ¹æ®tagnameæŸ¥æ‰¾ï¼Œè€Œæ˜¯ç›´æ¥æŸ¥æ‰¾scenes[texts[*]]
 	BYTE* p=restree;
 	if(*p++!=0x21)
 		__asm int 3
@@ -456,7 +456,7 @@ MRESULT WINAPI GetStr(LPFILE_INFO lpFileInfo,LPWSTR* pPos,LPSTREAM_ENTRY lpStrea
 		delete[] pTemp;
 		return E_NOTENOUGHBUFF;
 	}
-	*pPos=_ReplaceCharsW(pTemp,0x00010001,0);
+	*pPos=_ReplaceCharsW(pTemp,RCH_ENTERS | RCH_TOESCAPE,0);
 	delete[] pTemp;
 	if(*pPos==0)
 		return E_NOMEM;

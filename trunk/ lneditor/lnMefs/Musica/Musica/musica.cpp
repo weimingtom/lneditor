@@ -3,7 +3,7 @@
 #include "\masm32\lneditor\SDK\C++\plugin.h"
 
 
-void WINAPI InitInfo(LPMEL_INFO lpMelInfo)
+void WINAPI InitInfo(LPMEL_INFO2 lpMelInfo)
 {
 	lpMelInfo->dwInterfaceVersion=TXTINTERFACE_VERSION;
 	lpMelInfo->dwCharacteristic=0;

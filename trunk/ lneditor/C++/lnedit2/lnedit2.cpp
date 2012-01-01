@@ -13,7 +13,10 @@ using namespace std;
 #include"lnedit.h"
 #include "..\..\SDK\C++\plugin.h"
 
-#pragma warning(disable:4995)
+#pragma warning(disable:4995) //deprecated警告：wcscpy的安全性警告
+
+//全局变量
+LN_OPTIONS lpLnOptions;
 
 void* operator new(size_t size)
 {
@@ -82,7 +85,7 @@ void PrintMels(DWORD* lpIdxes, DWORD nCount)
 	delete[] lpszOut;
 }
 
-void ParseOptions(LPOPEN_PARAMETERS lpOpp,LPCMD_OPTIONS lpCmd)
+void ParseOptionsToOpp(LPOPEN_PARAMETERS lpOpp,LPCMD_OPTIONS lpCmd)
 {
 	lpOpp->ScriptName=new wchar_t[wcslen(lpCmd->ScriptName.lpszValue)+10];
 	wcscpy(lpOpp->ScriptName,lpCmd->ScriptName.lpszValue);
@@ -90,6 +93,13 @@ void ParseOptions(LPOPEN_PARAMETERS lpOpp,LPCMD_OPTIONS lpCmd)
 		lpOpp->Code1=_wtoi(lpCmd->Code1.lpszValue);
 	if(lpCmd->Code2.lpszValue)
 		lpOpp->Code2=_wtoi(lpCmd->Code2.lpszValue);
+}
+void ParseOptions(LPLN_OPTIONS lpOptions,LPCMD_OPTIONS lpCmd)
+{
+	lpOptions->ScriptName=new wchar_t[wcslen(lpCmd->ScriptName.lpszValue)+1];
+	wcscpy(lpOptions->ScriptName,lpCmd->ScriptName.lpszValue);
+	lpOptions->Code=_wtoi(lpCmd->Code1.lpszValue);
+	lpOptions->ExportFile=new wchar_t[MAX_STRINGLEN/2];
 }
 
 DWORD TryMatch(LPCWSTR lpName)
@@ -148,7 +158,7 @@ void SingleFile()
 	RtlZeroMemory(&opp,sizeof(opp));
 	opp.Filter=-1;
 
-	ParseOptions(&opp,&coCmdOptions);
+	ParseOptionsToOpp(&opp,&coCmdOptions);
 
 	if(coCmdOptions.Import.lpszValue && coCmdOptions.Export.lpszValue)
 	{
