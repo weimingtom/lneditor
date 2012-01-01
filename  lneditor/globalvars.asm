@@ -76,7 +76,7 @@
 	TW0			'lnedit',			szInnerName
 	TW0			'defaultedit',		szDefaultPluginName
 	TW0			' v2.1',			szDisplayVer
-	TW0			'2.1.1.583',		szFullVer
+	TW0			'2.1.2.678',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0
@@ -214,12 +214,12 @@
 					dd			00ff0000h
 					dd			00ffcc99h
 					dd			0000ff12h
-					LOGFONT	<-14,0,0,0,190h,0,0,0,86h,3,2,1,22h,'®_oÅ–Ñž'>
+					LOGFONT	<-14,0,0,0,190h,0,0,0,86h,3,2,4,22h,'®_oÅ–Ñž'>
 					db	32	dup(0)
-					LOGFONT	<-14,0,0,0,190h,0,0,0,86h,3,2,1,22h,'®_oÅ–Ñž'>
+					LOGFONT	<-14,0,0,0,190h,0,0,0,86h,3,2,4,22h,'®_oÅ–Ñž'>
 					db	32	dup(0)
-;					LOGFONT	<-12,0,0,0,190h,0,0,0,86h,3,2,1,22h,'‹[SO'>
-;					LOGFONT	<-12,0,0,0,190h,0,0,0,86h,3,2,1,22h,'‹[SO'>
+;					LOGFONT	<-12,0,0,0,190h,0,0,0,86h,3,2,0,22h,'‹[SO'>
+;					LOGFONT	<-12,0,0,0,190h,0,0,0,86h,3,2,0,22h,'‹[SO'>
 					
 					RECT		<CW_USEDEFAULT,CW_USEDEFAULT,800,600>
 					RECT		<10,15,370,400>

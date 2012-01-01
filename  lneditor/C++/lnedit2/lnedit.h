@@ -23,6 +23,20 @@ typedef struct _MEL_INFO {
 	LPMEL_INFO2		lpMelInfo2;
 } MEL_INFO, *LPMEL_INFO;
 
+typedef struct _LN_OPTIONS {
+	LPWSTR			ScriptName;
+	DWORD			Code;
+	DWORD			Plugin;
+	LPWSTR			ImportFile;
+	LPWSTR			ExportFile;
+
+	LPWSTR			SourceDir;
+	LPWSTR			TxtDir;
+	LPWSTR			NewDir;
+	LPWSTR			NameFilter;
+	BOOL			IsRecursive;
+} LN_OPTIONS, *LPLN_OPTIONS;
+
 extern "C" {
 	extern	HANDLE			hGlobalHeap;
 	extern	HANDLE			hStdOutput;

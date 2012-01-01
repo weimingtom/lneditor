@@ -71,6 +71,11 @@ typedef unsigned long MRESULT;
 #define UIS_IDLE			0x00000000
 #define	UIS_BUSY			0x00000002
 
+//Used in _ReplaceCharsW function
+#define	RCH_ENTERS			0x00000001
+#define RCH_TOESCAPE		0x00010000
+#define RCH_FROMESCAPE		0x00000000
+
 #include<windows.h>
 
 #pragma pack(1)
@@ -217,6 +222,7 @@ typedef struct _OPEN_PARAMETERS {
 	DWORD		Plugin;
 	DWORD		Filter;
 } OPEN_PARAMETERS, *LPOPEN_PARAMETERS;
+#pragma pack()
 
 extern "C" {
 //Exported Functions of lnedit
