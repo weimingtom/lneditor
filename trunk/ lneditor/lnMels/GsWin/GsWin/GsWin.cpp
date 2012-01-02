@@ -219,6 +219,18 @@ int GsReadStr(DWORD* &p,STREAM_ENTRY* lpse)
 	return strcount;
 }
 
+void GsStepInt(BYTE* &p)
+{
+	if(*(WORD*)p!=0xff00)
+		return;
+	DWORD count=*((WORD*)p+1);
+	p+=4;
+	for(DWORD i=0;i<count;i++)
+	{
+		p+=8;
+	}
+}
+
 MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
 {
 	GsProcessHeader(lpFileInfo);
@@ -252,6 +264,11 @@ MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
 				ret=GsReadStr(*(DWORD**)&p,&lpFileInfo->lpStreamIndex[nLine]);
 				nLine+=ret;
 			}
+			break;
+		case 0x1a9:
+			GsStepInt(p);
+			ret=GsReadStr(*(DWORD**)&p,&lpFileInfo->lpStreamIndex[nLine]);
+			nLine+=ret;
 			break;
 		case 0x1ce:
 			ret=GsReadStr(*(DWORD**)&p,&lpFileInfo->lpStreamIndex[nLine]);
@@ -289,6 +306,8 @@ MRESULT WINAPI GetStr(LPFILE_INFO lpFileInfo,LPWSTR* lppStr,LPSTREAM_ENTRY lpStr
 MRESULT WINAPI ModifyLine(LPFILE_INFO lpFileInfo, DWORD nLine)
 {
 	wchar_t* pwstr=_GetStringInList(lpFileInfo,nLine);
+
+	//替换\n转义符
 	pwstr=_ReplaceCharsW(pwstr,RCH_ENTERS | RCH_FROMESCAPE,0);
 	DWORD nlen=WideCharToMultiByte(lpFileInfo->dwCharSet,0,pwstr,-1,0,0,0,0);
 	char* pnstr=new char[nlen];
@@ -305,11 +324,13 @@ MRESULT WINAPI ModifyLine(LPFILE_INFO lpFileInfo, DWORD nLine)
 
 	if(nlen<=pinfo->pStrTable[idx].length)
 	{
+		//若小于等于原始字符串长度，直接覆盖
 		memcpy(pinfo->pStrs+pinfo->pStrTable[idx].offset,pnstr,nlen);
 		pinfo->pStrTable[idx].length=nlen;
 	}
 	else
 	{
+		//若大于原始长度，附到最后面
 		if(pinfo->nStrsLen+nlen>pinfo->nStrsMaxLen)
 		{
 			delete[] pnstr;
@@ -332,8 +353,10 @@ MRESULT WINAPI SaveText(LPFILE_INFO lpFileInfo)
 	SetFilePointer(lpFileInfo->hFile,0,0,FILE_BEGIN);
 	ScwHeader hdr;
 	memcpy(&hdr,lpFileInfo->lpStream,sizeof(ScwHeader));
+	//保存时不再压缩
 	hdr.is_compr=0;
 	hdr.string_data_length=pinfo->nStrsLen;
+	//计算新的长度
 	hdr.uncomprlen=(hdr.instruction_table_entries+
 					hdr.string_table_entries+
 					hdr.unknown_table_entries)*sizeof(ScwIndexEntry)+
@@ -343,6 +366,7 @@ MRESULT WINAPI SaveText(LPFILE_INFO lpFileInfo)
 	hdr.comprlen=hdr.uncomprlen;
 	WriteFile(lpFileInfo->hFile,&hdr,sizeof(hdr),&nWritten,0);
 
+	//重构文件
 	BYTE* finalbf=new BYTE[hdr.uncomprlen];
 	BYTE* p=finalbf;
 	memcpy(p,pinfo->pInstTable,pinfo->nInstCount*sizeof(ScwIndexEntry));
