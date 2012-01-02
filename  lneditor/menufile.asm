@@ -356,6 +356,7 @@ _OpenSingleScript proc uses esi edi ebx _lpOpenPara,_lpFI,_bIsLeft
 			jmp _ErrDll2OSS
 		.endif
 	.endif
+	push ebp
 	push offset _HandlerOSS
 	push fs:[0]
 	mov fs:[0],esp
@@ -375,12 +376,12 @@ _OpenSingleScript proc uses esi edi ebx _lpOpenPara,_lpFI,_bIsLeft
 	assume edi:nothing
 _Ex2OSS:
 	pop fs:[0]
-	add esp,4
+	add esp,8
 _ExOSS:
 	ret
 _ErrDllOSS:
 	pop fs:[0]
-	add esp,4
+	add esp,8
 _ErrDll2OSS:
 	mov ebx,eax
 	invoke _ClearAll,_lpFI
@@ -391,6 +392,8 @@ _HandlerOSS:
 	mov [edx+0b8h],offset _ErrDllOSS
 	mov ecx,[esp+8]
 	mov [edx+0c4h],ecx
+	mov eax,[ecx+8]
+	mov [edx+0b4h],eax
 	mov ecx,[esp+4]
 	mov eax,[ecx]
 	.if eax==STATUS_BREAKPOINT ;8..3
