@@ -2,7 +2,7 @@
 .model flat,stdcall
 option casemap:none
 
-include Circus.inc
+include Circus2.inc
 
 .code
 
@@ -68,14 +68,8 @@ Match proc uses esi _lpszName
 	cmp eax,0ffffh
 	ja _Maybe
 	mov eax,[esi]
-	mov ecx,[esi+4]
-	mov edx,[esi+8]
-	cmp eax,ecx
-	jae _Maybe
-	cmp ecx,edx
-	jae _Maybe
-	cmp edx,dword ptr [esi+12]
-	jae _Maybe
+	cmp eax,3
+	jne _Maybe
 	mov eax,MR_YES
 	ret
 _Maybe:
@@ -192,10 +186,11 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	.while ebx<@nIndex
 		mov ecx,@lpIndex
 		mov esi,[ecx+ebx*4]
+		and esi,7fffffffh
 		add esi,@lpContent
 	_Cntline:
 		lodsb
-		.if al>40h && al<50h
+		.if al>50h && al<60h
 			mov byte ptr @nInst,al
 			invoke CircusGetLine,esi,[edi].nCharSet
 			or eax,eax
@@ -225,14 +220,14 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				mov _StreamEntry.lpStart[ecx+edx*4],esi
 				inc @nLine
 			.endif
-		.elseif al>30h
+		.elseif al>40h
 			invoke lstrlenA,esi
 			lea esi,[esi+eax+1]
 			jmp _Cntline
 		.elseif al==8
 			add esi,2
 			lodsb
-			.while al>=40h && al<=50h
+			.while al>=50h && al<=60h
 				invoke lstrlenA,esi
 				lea esi,[esi+eax+2]
 				invoke CircusGetLine,esi,[edi].nCharSet
@@ -417,7 +412,9 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 		add eax,esi
 		sub edx,eax
 		@@:
-			.if dword ptr [esi]>edx
+			mov eax,dword ptr [esi]
+			and eax,7fffffffh
+			.if eax>edx
 				add dword ptr [esi],ebx
 			.endif
 			add esi,4
