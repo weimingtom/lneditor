@@ -183,6 +183,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	
 	xor ebx,ebx
 	mov @nLine,ebx
+	mov @nInst,ebx
 	.while ebx<@nIndex
 		mov ecx,@lpIndex
 		mov esi,[ecx+ebx*4]
@@ -206,6 +207,13 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			invoke lstrlenA,esi
 			lea esi,[esi+eax+1]
 			lodsb
+			mov cl,byte ptr [@nInst+1]
+			inc cl
+			.if al==cl
+				invoke lstrlenA,esi
+				lea esi,[esi+eax+1]
+				lodsb
+			.endif
 			mov cl,byte ptr @nInst
 			inc cl
 			.if al==cl
@@ -221,8 +229,16 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				inc @nLine
 			.endif
 		.elseif al>40h
+			mov byte ptr [@nInst+1],al
 			invoke lstrlenA,esi
 			lea esi,[esi+eax+1]
+			mov al,byte ptr [@nInst+1]
+			inc al
+			.if byte ptr [esi]==al
+				invoke lstrlenA,esi
+				lea esi,[esi+eax+1]
+				mov byte ptr [@nInst+1],0
+			.endif
 			jmp _Cntline
 		.elseif al==8
 			add esi,2
@@ -326,6 +342,10 @@ CircusCheckLine proc _lpStr
 			.continue
 		.endif
 		.if ax=='$' && word ptr [esi]=='n'
+			add esi,2
+			.continue
+		.endif
+		.if ax=='@' && word ptr [esi]=='K'
 			add esi,2
 			.continue
 		.endif
