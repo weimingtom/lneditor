@@ -359,7 +359,7 @@ void Traverse(LPCWSTR subdir)
 			}
 			else
 			{
-				if(!lprFilter || _WildCharMatchW(lprFilter,pfd->cFileName))
+//				if(!lprFilter || _WildCharMatchW(lprFilter,pfd->cFileName))
 				{
 					pProcess(pfd->cFileName);
 				}
@@ -380,10 +380,10 @@ void Folders()
 
 extern "C" void WINAPI _CmdMain()
 {
-	//BOOL ret=AttachConsole(ATTACH_PARENT_PROCESS);
-	//if(ret==0)
-	//	AllocConsole();
-	AllocConsole();
+	BOOL ret=AttachConsole(ATTACH_PARENT_PROCESS);
+	if(ret==0)
+		AllocConsole();
+	//AllocConsole();
 	hStdOutput=GetStdHandle(STD_OUTPUT_HANDLE);
 	hStdInput=GetStdHandle(STD_INPUT_HANDLE);
 	_wfreopen(L"CONOUT$", L"w", stdout);
