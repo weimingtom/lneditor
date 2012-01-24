@@ -4,7 +4,7 @@
 
 HANDLE g_hHeap;
 #define OVERLOAD_NEW
-#include "\masm32\lneditor\SDK\C++\plugin.h"
+#include "..\..\..\SDK\C++\plugin.h"
 
 #include"Psb.h"
 
@@ -176,25 +176,35 @@ void M2TraverseTree(int depth,int node)
 	}
 }
 
-int M2GetIDFromTree(DWORD* tree, int count, char* name)
+int M2GetIDFromTree(DWORD* tree, DWORD* vtree, int count, char* name)
 {
 	int node=0;
 	int len=lstrlenA(name)+1;
 	for(int i=0;i<len;i++)
+	{
+		int p=node;
 		node=tree[node]+name[i];
+		if(vtree[node]!=p)
+			return -1;
+	}
 	return tree[node];
 }
 
 BYTE* M2FindInDict(char* name, BYTE* dict, PsbInfo* pInfo)
 {
+	int id=M2GetIDFromTree(pInfo->lpTree,pInfo->lpVerifyTree,pInfo->nTreeSize,name);
+	if(id==-1)
+		return NULL;
 	BYTE* p=dict;
 	DWORD count=M2GetInt(p);
 	char type=*p++;
 	DWORD* pCases=M2CopyArray(p,count,type);
-	int id=M2GetIDFromTree(pInfo->lpTree,pInfo->nTreeSize,name);
 	DWORD* rslt=(DWORD*)bsearch(&id,pCases,count,4,(int (*)(const void*, const void*))compare4);
 	if(rslt==NULL)
-		__asm int 3
+	{
+		delete[] pCases;
+		return NULL;
+	}
 	id=rslt-pCases;
 	delete[] pCases;
 
@@ -205,7 +215,7 @@ BYTE* M2FindInDict(char* name, BYTE* dict, PsbInfo* pInfo)
 	BYTE* p2=p+id*(type-12);
 	return p+count*(type-12)+M2GetInt(p2,type);
 }
-
+/*
 BYTE* M2FindTag(char* tagname,BYTE* restree,PsbInfo* pInfo)
 {
 	//未实现根据tagname查找，而是直接查找scenes[texts[*]]
@@ -226,7 +236,7 @@ BYTE* M2FindTag(char* tagname,BYTE* restree,PsbInfo* pInfo)
 	p=M2FindInDict("texts",p,pInfo);
 	return p;
 }
-
+*/
 int M2AddStr(BYTE* pC,LPFILE_INFO lpFileInfo,int nLine)
 {
 	char type=*pC++;
@@ -246,6 +256,114 @@ int M2AddStr(BYTE* pC,LPFILE_INFO lpFileInfo,int nLine)
 		}
 	}
 	return 0;
+}
+
+int M2GetScenes(BYTE* pStart,PsbInfo* pInfo,LPFILE_INFO lpFileInfo)
+{
+	BYTE* p=pStart;
+	DWORD type,count;
+	if(*p++!=PSBVALTYPE_DICT)
+		__asm int 3
+	p=M2FindInDict("scenes",p,pInfo);
+	if(p==NULL)
+		return 0;
+	if(*p++!=PSBVALTYPE_ARRAY)
+		__asm int 3
+	DWORD scCount=M2GetInt(p);
+	type=*p++;
+	DWORD* pScOff=M2CopyArray(p,scCount,type);
+	BYTE* pScStart=p+scCount*(type-12);
+
+	int nLine=lpFileInfo->nLine;
+
+	for(int k=0;k<scCount;k++)
+	{
+		p=pScStart+pScOff[k];
+		if(*p++!=PSBVALTYPE_DICT)
+			__asm int 3
+		p=M2FindInDict("texts",p,pInfo);
+		if(p==NULL)
+			continue;
+		if(*p==PSBVALTYPE_ARRAY)
+		{
+			p++;
+			count=M2GetInt(p);
+			type=*p++;
+			DWORD* textsOffTable=M2CopyArray(p,count,type);
+			BYTE* pStart=p+count*(type-12);
+			for(int i=0;i<count;i++)
+			{
+				p=pStart+textsOffTable[i];
+				if(*p++==PSBVALTYPE_ARRAY)
+				{
+					DWORD cnt=M2GetInt(p);
+					if(cnt<3)
+						continue;
+					type=*p++;
+					DWORD* offsets=M2CopyArray(p,cnt,type);
+					p+=cnt*(type-12);
+
+					int nToAdd=M2AddStr(p+offsets[1],lpFileInfo,nLine);
+					nLine+=nToAdd;
+					if(!nToAdd)
+						nLine+=M2AddStr(p+offsets[0],lpFileInfo,nLine);
+					nLine+=M2AddStr(p+offsets[2],lpFileInfo,nLine);
+					delete[] offsets;
+				}
+				else
+				{
+					__asm int 3
+				}
+			}
+			delete[] textsOffTable;
+		}
+		else
+		{
+			//nLine+=M2AddStr(p,lpFileInfo,nLine);
+		}
+	}
+	delete[] pScOff;
+
+	count=lpFileInfo->nLine;
+	lpFileInfo->nLine=nLine;
+	return nLine-count;
+}
+
+int M2GetLists(BYTE* pStart,PsbInfo* pInfo,LPFILE_INFO lpFileInfo)
+{
+	BYTE* p=pStart;
+	DWORD type,count;
+	if(*p++!=PSBVALTYPE_DICT)
+		__asm int 3
+	p=M2FindInDict("list",p,pInfo);
+	if(p==NULL)
+		return 0;
+	if(*p++!=PSBVALTYPE_ARRAY)
+		__asm int 3
+	DWORD scCount=M2GetInt(p);
+	type=*p++;
+	DWORD* pScOff=M2CopyArray(p,scCount,type);
+	BYTE* pScStart=p+scCount*(type-12);
+
+	int nLine=lpFileInfo->nLine;
+
+	for(int k=0;k<scCount;k++)
+	{
+		p=pScStart+pScOff[k];
+		if(*p++!=PSBVALTYPE_DICT)
+			__asm int 3
+		p=M2FindInDict("title",p,pInfo);
+		if(p==NULL)
+			continue;
+
+		int nToAdd=M2AddStr(p,lpFileInfo,nLine);
+		nLine+=nToAdd;
+	}
+	delete[] pScOff;
+
+	count=lpFileInfo->nLine;
+	lpFileInfo->nLine=nLine;
+	return nLine-count;
 }
 
 MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
@@ -309,6 +427,7 @@ MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
 	count=M2GetInt(p);
 	type=*p++;
 	tBranches=M2MakeBranchTable(p,count,type);
+	pInfo->lpVerifyTree=M2CopyArray(p,count,type);
 	p+=count*(type-12);
 	count=M2GetInt(p);
 	type=*p++;
@@ -361,79 +480,11 @@ MRESULT WINAPI GetText(LPFILE_INFO lpFileInfo, LPDWORD lpdwRInfo)
 		pInfo->nStrs*2*sizeof(STREAM_ENTRY),MEM_COMMIT,PAGE_READWRITE);
 
 	p=(BYTE*)lpFileInfo->lpStream + pHeader->nResIndexTree;
-	if(*p++!=0x21)
-		__asm int 3
-	p=M2FindInDict("scenes",p,pInfo);
-	if(*p++!=0x20)
-		__asm int 3
-	DWORD scCount=M2GetInt(p);
-	type=*p++;
-	DWORD* pScOff=M2CopyArray(p,count,type);
-	BYTE* pScStart=p+scCount*(type-12);
-
-	int nLine=0;
-
-	for(int k=0;k<scCount;k++)
-	{
-		p=pScStart+pScOff[k];
-		if(*p++!=0x21)
-			__asm int 3
-		p=M2FindInDict("texts",p,pInfo);
-		if(*p++!=0x20)
-			__asm int 3
-		count=M2GetInt(p);
-		type=*p++;
-		DWORD* textsOffTable=M2CopyArray(p,count,type);
-		BYTE* pStart=p+count*(type-12);
-		for(int i=0;i<count;i++)
-		{
-			p=pStart+textsOffTable[i];
-			if(*p++!=0x20)
-				__asm int 3
-			DWORD cnt=M2GetInt(p);
-			if(cnt<3)
-				__asm int 3
-			type=*p++;
-			DWORD* offsets=M2CopyArray(p,cnt,type);
-			p+=cnt*(type-12);
-
-			int nToAdd=M2AddStr(p+offsets[1],lpFileInfo,nLine);
-			nLine+=nToAdd;
-			if(!nToAdd)
-				nLine+=M2AddStr(p+offsets[0],lpFileInfo,nLine);
-			nLine+=M2AddStr(p+offsets[2],lpFileInfo,nLine);
-			//DWORD idx;
-			//char* pFinalStr;
-			//BYTE* p2=p+offsets[1];
-			//type=*p2++;
-			//if(type!=1)
-			//{
-			//	idx=GetInt(p2,type-(0x15-0xd));
-			//	pFinalStr=pInfo->lpStrRes+pInfo->lpStrOffList[idx];
-			//	if(*pFinalStr!=0)
-			//	{
-			//		lpFileInfo->lpStreamIndex[nLine].lpStart=pFinalStr;
-			//		lpFileInfo->lpStreamIndex[nLine++].lpInformation=(LPVOID)idx;
-			//	}
-			//}
-			//p2=p+offsets[2];
-			//type=*p2++;
-			//idx=GetInt(p2,type-(0x15-0xd));
-			//pFinalStr=pInfo->lpStrRes+pInfo->lpStrOffList[idx];
-			//if(*pFinalStr!=0)
-			//{
-			//	lpFileInfo->lpStreamIndex[nLine].lpStart=pFinalStr;
-			//	lpFileInfo->lpStreamIndex[nLine++].lpInformation=(LPVOID)idx;
-			//}
-			delete[] offsets;
-		}
-		delete[] textsOffTable;
-	}
-	delete[] pScOff;
+	M2GetScenes(p,pInfo,lpFileInfo);
+	M2GetLists(p,pInfo,lpFileInfo);
 
 	lpFileInfo->dwMemoryType=MT_POINTERONLY;
 	lpFileInfo->dwStringType=ST_ENDWITHZERO;
-	lpFileInfo->nLine=nLine;
 	*lpdwRInfo=RI_SUC_LINEONLY;
 
 	return E_SUCCESS;
@@ -602,6 +653,10 @@ MRESULT WINAPI Release(LPFILE_INFO lpFileInfo)
 		//			delete[] p->lpNamesTable[i];
 		//	delete[] p->lpNamesTable;
 		//}
+		if(p->lpVerifyTree)
+			delete[] p->lpVerifyTree;
+		if(p->lpTree)
+			delete[] p->lpTree;
 		if(p->lpStrOffList)
 			delete[] p->lpStrOffList;
 		if(p->lpStrRes)

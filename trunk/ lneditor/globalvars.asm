@@ -8,11 +8,11 @@
 	hBackDC			dd		?	;窗口的背景dc
 	hBackBmp		dd		?	;窗口的背景图片句柄
 	
-	lpszConfigFile		dd		?	;配置文件的全路径
-	lpArgTbl			dd		?
+	lpszConfigFile	dd		?	;配置文件的全路径
+	lpArgTbl		dd		?
 	nArgc			dd		?
 	
-	lpStrings			dd		?	;全局常量字符串表指针
+	lpStrings		dd		?	;全局常量字符串表指针
 	lpMels			dd		?	;文本提取插件信息表指针
 	lpMefs			dd		?	;过滤插件信息表指针
 	lpUndo			dd		?	;撤销列表指针
@@ -21,7 +21,7 @@
 	
 	lpMarkTable		dd		?	;对每行的标记表，存储在record文件中
 	lpDisp2Real		dd		?	;显示出来的行与实际行数的对应表
-	lpModifyTable		dd		?	;本次编辑修改过的行的标记表
+	lpModifyTable	dd		?	;本次编辑修改过的行的标记表
 	nStartTime		dd		?	;启动编辑器以来的时间
 	nFileOpenTime	dd		?	;本文件打开以来的时间
 	
@@ -32,9 +32,9 @@
 	
 	bOpen			dd		?	;编辑器是否打开了文件
 	bModified		dd		?	;文件本次打开是否被修改过
-	nUIStatus			dd		?	;UI状态,UIS_XXX
+	nUIStatus		dd		?	;UI状态,UIS_XXX
 
-	hLogFile			dd		?	;日志文件句柄
+	hLogFile		dd		?	;日志文件句柄
 	
 ;当前文件信息
 	FileInfo1			_FileInfo	<>
@@ -59,7 +59,7 @@
 	hStdOutput		dd		?
 
 ;字体句柄
-	hFontList			dd		?
+	hFontList		dd		?
 	hFontEdit		dd		?
 	
 ;哦呵呵
@@ -76,7 +76,7 @@
 	TW0			'lnedit',			szInnerName
 	TW0			'defaultedit',		szDefaultPluginName
 	TW0			' v2.1',			szDisplayVer
-	TW0			'2.1.2.679',		szFullVer
+	TW0			'2.1.2.680',		szFullVer
 	szMemErr		dw		'N','o','t',' ','e','n','o','u','g','h',' ','m','e','m','o','r','y','!',0
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0
@@ -110,7 +110,7 @@
 	szFSetLine		db		'SetLine',0
 	szFRetLine		db		'RetLine',0
 	szFRelease		db		'Release',0
-	szFGetStr			db		'GetStr',0
+	szFGetStr		db		'GetStr',0
 	
 	szFProcessLine	db		'ProcessLine',0
 
@@ -236,25 +236,25 @@
 .data
 	TW0		'lnedit.ini',		szcfFileName
 	
-	TW0		'Settings',		szcfSett
+	TW0		'Settings',			szcfSett
 	TW0		'TXTFilter',		szcfTxtFlt
 	TW0		'UserInterface',	szcfUI
 	
-	TW0		'EditMode',		szcfEM
-	TW0		'AutoSaveTime',	szcfAST
-	TW0		'AutoCode',		szcfACD
-	TW0		'NewScSaveLoc',	szcfNSSL
+	TW0		'EditMode',			szcfEM
+	TW0		'AutoSaveTime',		szcfAST
+	TW0		'AutoCode',			szcfACD
+	TW0		'NewScSaveLoc',		szcfNSSL
 	TW0		'SaveInChangingLine',	szcfSCL
 	TW0		'AutoSelectText',	szcfASL
-	TW0		'AutoConvert',	szcfAC
+	TW0		'AutoConvert',		szcfAC
 	TW0		'AutoOpenOldFile',	szcfAO
 	TW0		'AutoUpdate',		szcfAutoUpdate
 	
 	TW0		'DefaultMel',		szcfDM
 	TW0		'InitDir1',			szcfID1
 	TW0		'InitDir2',			szcfID2
-	TW0		'NewScDir',		szcfNSD
-	TW0		'OldFileName',	szcfPF
+	TW0		'NewScDir',			szcfNSD
+	TW0		'OldFileName',		szcfPF
 	
 	TW0		'TextColorS',		szcfTCS
 	TW0		'TextColorD',		szcfTCD
@@ -263,9 +263,9 @@
 	TW0		'ListboxFont',		szcfLF
 	TW0		'HighlightColorDefault',	szcfHCD
 	TW0		'HighlightColorMarked',	szcfHCM
-	TW0		'EditFont',		szcfEF
+	TW0		'EditFont',			szcfEF
 	TW0		'BackPicture',		szcfBP
-	TW0		'WindowsLoc',	szcfWL
+	TW0		'WindowsLoc',		szcfWL
 	
 	TW0		'AlwaysFilter',		szcfAlwaysFlt
 	TW0		'IncludeOn',		szcfInOn
@@ -278,7 +278,7 @@
 	TW0		'TrimTailPattern',	szcfTailPtn
 	
 	TW0		'AlwaysFilterPlugin',	szcfAlwaysFltPlugin
-	TW0		'FilterPluginOn',		szcfFltPluginOn
+	TW0		'FilterPluginOn',	szcfFltPluginOn
 	TW0		'FilterPlugin',		szcfFltPlugin
 	
 	dbConfigsOfTxtFilter	dd	offset szcfInOn,offset szcfInPtn
@@ -289,9 +289,9 @@
 .data
 	TW0		'Not Convert',		szcdNotConvert
 	
-	TW0		'UNKNOWN(0)',	szcdDefault
-	TW0		'GBK(936)',		szcdGBK
-	TW0		'Shift-JIS(932)',		szcdSJIS
+	TW0		'UNKNOWN(0)',		szcdDefault
+	TW0		'GBK(936)',			szcdGBK
+	TW0		'Shift-JIS(932)',	szcdSJIS
 	TW0		'BIG5(950)',		szcdBig5
 	TW0		'UTF-8(65001)',		szcdUTF8
 	TW0		'UNICODE(-1)',		szcdUnicode

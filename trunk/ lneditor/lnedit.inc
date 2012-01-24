@@ -35,7 +35,7 @@ ifdef _LN_ZLIBDLL
 	includelib bin\zdll.lib
 else
 	includelib bin\zlib.lib
-	includelib "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\Lib\uuid.lib"
+	includelib "C:\Program Files\Microsoft SDKs\Windows\v7.0A\Lib\uuid.lib"
 	includelib "D:\WinDDK\7600.16385.1\lib\Crt\i386\msvcrt.lib"
 	includelib "D:\WinDDK\7600.16385.1\lib\Crt\i386\msvcprt.lib"
 ;	includelib "D:\WinDDK\7600.16385.1\lib\Mfc\i386\mfc42u.lib"
@@ -43,7 +43,7 @@ else
 ;	includelib "D:\WinDDK\7600.16385.1\lib\wxp\i386\winspool.lib"
 ;	includelib "D:\WinDDK\7600.16385.1\lib\wxp\i386\olepro32.lib"
 ;	includelib "D:\WinDDK\7600.16385.1\lib\atl\i386\atlthunk.lib"
-	includelib "C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\lib\oldnames.lib"
+	includelib "C:\Program Files\Microsoft Visual Studio 10.0\VC\lib\oldnames.lib"
 endif
 	
 	include rsrc.inc
