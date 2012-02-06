@@ -9,6 +9,7 @@
 	hBackBmp		dd		?	;窗口的背景图片句柄
 	
 	lpszConfigFile	dd		?	;配置文件的全路径
+	lpszImagePath	dd		?
 	lpArgTbl		dd		?
 	nArgc			dd		?
 	
