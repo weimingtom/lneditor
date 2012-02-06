@@ -2,6 +2,7 @@
 .model flat,stdcall
 option casemap:none
 
+include windows.inc
 
 include plugin.inc
 include config.inc
@@ -36,7 +37,7 @@ include cmdmode.asm
 .code
 
 assume fs:nothing
-start:
+start proc
 ;
 invoke GetModuleHandleW,NULL
 mov hInstance,eax
@@ -66,16 +67,20 @@ xor ebx,ebx
 invoke GetCommandLineW
 invoke CommandLineToArgvW,eax,offset nArgc
 mov lpArgTbl,eax
-invoke GetModuleFileNameW,0,0,0
+mov eax,fs:[30h]
+mov ecx,[eax+10h]
+lea esi,[ecx+56]
+xor eax,eax
+mov ax,UNICODE_STRING.woLength[esi]
 add eax,2
-shl eax,1
-mov ebx,eax
 invoke HeapAlloc,hGlobalHeap,0,eax
 test eax,eax
 jz _FinalMemErr
-mov eax,lpszExePath
-invoke GetModuleFileNameW,0,eax,ebx
-add eax,lpszExePath
+mov lpszImagePath,eax
+invoke lstrcpyW,eax,UNICODE_STRING.Buffer[esi]
+xor eax,eax
+mov ax,UNICODE_STRING.woLength[esi]
+add eax,lpszImagePath
 .while word ptr [eax]!='\'
 	sub eax,2
 .endw
@@ -92,15 +97,20 @@ invoke _OpenLog
 invoke _LoadConfig
 invoke _GetCmdOptions,offset coCmdOptions
 
+ifndef _LN_NOCONSOLE
 .if nUIStatus & UIS_CONSOLE
 	invoke _CmdMain
 .else
+endif
 	invoke _WinMain
+ifndef _LN_NOCONSOLE
 .endif
+endif
 _FinalExit:
 invoke ExitProcess,0
-
 invoke compress,1,1,1,1
+
+start endp
 
 ;
 _WinMain proc
@@ -359,21 +369,29 @@ _LoadMain:
 			invoke CreateCompatibleBitmap,wParam,dbConf+_Configs.windowRect[WRI_MAIN]+RECT.right,dbConf+_Configs.windowRect[WRI_MAIN]+RECT.bottom
 			mov hBackBmp,eax
 			invoke SelectObject,hBackDC,hBackBmp
-			invoke lstrlenW,lpszConfigFile
-			inc eax
-			shl eax,1
-			invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
-			or eax,eax
-			je @F
-			mov ebx,eax
-			invoke lstrcpyW,ebx,lpszConfigFile
-			invoke _DirBackW,ebx
-			invoke SetCurrentDirectoryW,ebx
-			invoke HeapFree,hGlobalHeap,0,ebx
-			@@:
-			invoke _ShowPic,hBackDC,dbConf+_Configs.lpBackName
-			or eax,eax
-			je _PaintMain
+			
+			invoke _IsRelativePath,dbConf+_Configs.lpBackName
+			.if eax
+				invoke lstrlenW,lpszImagePath
+				lea ebx,[eax*2]
+				invoke lstrlenW,dbConf+_Configs.lpBackName
+				lea ebx,[ebx+eax*2+10]
+				invoke HeapAlloc,hGlobalHeap,0,ebx
+				or eax,eax
+				je _PaintMain
+				mov ebx,eax
+				invoke lstrcpyW,ebx,lpszImagePath
+				invoke lstrcatW,ebx,dbConf+_Configs.lpBackName
+				invoke _ShowPic,hBackDC,ebx
+				mov esi,eax
+				invoke HeapFree,hGlobalHeap,0,ebx
+				test esi,esi
+				je _PaintMain
+			.else
+				invoke _ShowPic,hBackDC,dbConf+_Configs.lpBackName
+				or eax,eax
+				je _PaintMain
+			.endif
 			invoke SendMessageW,hList1,WM_LBUPDATE,0,0
 			invoke SendMessageW,hList2,WM_LBUPDATE,0,0
 		.endif

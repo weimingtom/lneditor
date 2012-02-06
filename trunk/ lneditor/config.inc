@@ -1,5 +1,3 @@
-;Pre-Defined CONST
-      include \masm32\include\windows.inc
 
 ;Edit Mode
 EM_SINGLE			EQU 	1

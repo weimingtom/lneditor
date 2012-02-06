@@ -1,51 +1,53 @@
-;      include \masm32\include\windows.inc
-      include \masm32\include\masm32.inc
-      include \masm32\include\gdi32.inc
-      include \masm32\include\user32.inc
-      include \masm32\include\kernel32.inc
-      include \masm32\include\Comctl32.inc
-      include \masm32\include\comdlg32.inc
-      include \masm32\include\shell32.inc
-      include \masm32\include\oleaut32.inc
-      include \masm32\include\msvcrt.inc
-      include \masm32\include\version.inc
-      include \masm32\include\shlwapi.inc
-      include \masm32\include\ntdll.inc
-      include \masm32\include\urlmon.inc
-      include \masm32\macros\macros.asm
-      include \masm32\macros\strings.mac
-	include \masm32\include\ole32.inc
-	include \masm32\include\msimg32.inc
-
-      includelib \masm32\lib\masm32.lib
-      includelib \masm32\lib\gdi32.lib
-      includelib \masm32\lib\user32.lib
-      includelib \masm32\lib\kernel32.lib
-      includelib \masm32\lib\Comctl32.lib
-      includelib \masm32\lib\comdlg32.lib
-      includelib \masm32\lib\shell32.lib
-      includelib \masm32\lib\oleaut32.lib
-      includelib \masm32\lib\version.lib
-      includelib \masm32\lib\ntdll.lib
-      includelib \masm32\lib\shlwapi.lib
-      includelib \masm32\lib\advapi32.lib
-	includelib \masm32\lib\ole32.lib
-	includelib \masm32\lib\msimg32.lib
-	includelib \masm32\lib\urlmon.lib
+;	include windows.inc
+	include masm32.inc
+	include gdi32.inc
+	include user32.inc
+	include kernel32.inc
+	include Comctl32.inc
+	include comdlg32.inc
+	include shell32.inc
+	include oleaut32.inc
+	include msvcrt.inc
+	include version.inc
+	include shlwapi.inc
+	include ntdll.inc
+;	include ntddk.inc
+	include urlmon.inc
+	include macros.asm
+	include strings.mac
+	include ole32.inc
+	include msimg32.inc
+	
+	includelib masm32.lib
+	includelib gdi32.lib
+	includelib user32.lib
+	includelib kernel32.lib
+	includelib Comctl32.lib
+	includelib comdlg32.lib
+	includelib shell32.lib
+	includelib oleaut32.lib
+	includelib version.lib
+	includelib ntdll.lib
+	includelib shlwapi.lib
+	includelib advapi32.lib
+	includelib ole32.lib
+	includelib msimg32.lib
+	includelib urlmon.lib
 	
 ifdef _LN_ZLIBDLL
 	includelib bin\zdll.lib
 else
 	includelib bin\zlib.lib
-	includelib "C:\Program Files\Microsoft SDKs\Windows\v7.0A\Lib\uuid.lib"
-	includelib "D:\WinDDK\7600.16385.1\lib\Crt\i386\msvcrt.lib"
-	includelib "D:\WinDDK\7600.16385.1\lib\Crt\i386\msvcprt.lib"
-;	includelib "D:\WinDDK\7600.16385.1\lib\Mfc\i386\mfc42u.lib"
-;	includelib "D:\WinDDK\7600.16385.1\lib\Mfc\i386\mfcs42u.lib"
-;	includelib "D:\WinDDK\7600.16385.1\lib\wxp\i386\winspool.lib"
-;	includelib "D:\WinDDK\7600.16385.1\lib\wxp\i386\olepro32.lib"
-;	includelib "D:\WinDDK\7600.16385.1\lib\atl\i386\atlthunk.lib"
-	includelib "C:\Program Files\Microsoft Visual Studio 10.0\VC\lib\oldnames.lib"
+	
+;	includelib uuid.lib
+;	includelib msvcrt.lib
+;	includelib msvcprt.lib
+;;	includelib "D:\WinDDK\7600.16385.1\lib\Mfc\i386\mfc42u.lib"
+;;	includelib "D:\WinDDK\7600.16385.1\lib\Mfc\i386\mfcs42u.lib"
+;;	includelib "D:\WinDDK\7600.16385.1\lib\wxp\i386\winspool.lib"
+;;	includelib "D:\WinDDK\7600.16385.1\lib\wxp\i386\olepro32.lib"
+;;	includelib "D:\WinDDK\7600.16385.1\lib\atl\i386\atlthunk.lib"
+;	includelib oldnames.lib
 endif
 	
 	include rsrc.inc
@@ -156,6 +158,7 @@ _MakeFile			proto :dword
 _MakePath			proto :dword
 _CalcCheckSum		proto :dword,:dword
 _FindPlugin			proto :dword,:dword
+_IsRelativePath		proto :dword
 
 ;Record
 _ReadRec			proto :dword,:dword,:dword
@@ -273,6 +276,8 @@ OFNOTIFY STRUCT
 	lpOFN			dd		?
 	pszFile			dd		?
 OFNOTIFY ends
+
+
 
 ;≤È’“ÃÊªª–≈œ¢
 _FindInfo struct

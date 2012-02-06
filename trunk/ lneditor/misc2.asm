@@ -906,3 +906,12 @@ _ExRC:
 	xor eax,eax
 	ret
 _ReplaceCharsW endp
+
+_IsRelativePath proc _lpszPath
+	mov eax,1
+	mov ecx,_lpszPath
+	.if word ptr [ecx+2]==':' || word ptr [ecx]=='\'
+		xor eax,eax
+	.endif
+	ret
+_IsRelativePath endp

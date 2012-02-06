@@ -1,45 +1,34 @@
 @echo off
+set CURPATH=%CD%
+cd ..
+call pvarsasm.bat
+cd "%CURPATH%"
+if %PATH_ERROR%==1 goto errpath
+
 : -------------------------------
 : if resources exist, build them
 : -------------------------------
 if not exist rsrc.rc goto over1
-\MASM32\BIN\Rc.exe /v rsrc.rc
-\MASM32\BIN\Cvtres.exe /machine:ix86 rsrc.res
+Rc.exe /v rsrc.rc
+Cvtres.exe /machine:ix86 rsrc.res
 :over1
 
-if exist %1.obj del j_list.obj
-if exist %1.dll del j_list.dll
 
 : -----------------------------------------
 : assemble j_list.asm into an OBJ file
 : -----------------------------------------
-\MASM32\BIN\Ml.exe /c /coff j_list.asm
+Ml.exe /c /coff j_list.asm
 if errorlevel 1 goto errasm
-
-if not exist rsrc.obj goto nores
 
 : --------------------------------------------------
 : link the main OBJ file with the resource OBJ file
 : --------------------------------------------------
-\MASM32\BIN\Link.exe /SUBSYSTEM:WINDOWS /Dll /Def:j_list.def /section:.bss,S /out:j_list.mel j_list.obj rsrc.obj
+Link.exe /SUBSYSTEM:WINDOWS /Dll /Def:j_list.def /section:.bss,S /out:j_list.mel j_list.obj rsrc.obj
 if errorlevel 1 goto errlink
-if not exist \masm32\lneditor\mel\j_list.mel goto ohehe
-del \masm32\lneditor\mel\j_list.mel
+if not exist ..\..\mel\j_list.mel goto ohehe
+del ..\..\mel\j_list.mel
 :ohehe
-copy j_list.mel \masm32\lneditor\mel
-dir j_list.*
-goto TheEnd
-
-:nores
-: -----------------------
-: link the main OBJ file
-: -----------------------
-\MASM32\BIN\Link.exe /SUBSYSTEM:WINDOWS /Dll /Def:j_list.def /section:.bss,S /out:j_list.mel j_list.obj
-if errorlevel 1 goto errlink
-if not exist \masm32\lneditor\mel\j_list.mel goto ohehe2
-del \masm32\lneditor\mel\j_list.mel
-:ohehe2
-copy j_list.mel \masm32\lneditor\mel
+copy j_list.mel ..\..\mel
 dir j_list.*
 goto TheEnd
 
@@ -61,6 +50,13 @@ echo There has been an error while assembling this j_list.
 echo.
 goto TheEnd
 
+:errpath
+echo.
+echo Path Error!
+echo.
+goto TheEnd
+
 :TheEnd
+
 
 pause
