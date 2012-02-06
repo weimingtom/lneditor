@@ -1,33 +1,34 @@
-      include \masm32\include\windows.inc
-      include \masm32\include\masm32.inc      
-      include \masm32\include\gdi32.inc
-      include \masm32\include\user32.inc
-      include \masm32\include\kernel32.inc
-      include \masm32\include\Comctl32.inc
-      include \masm32\include\comdlg32.inc
-      include \masm32\include\shell32.inc
-      include \masm32\include\oleaut32.inc
-      include \masm32\include\msvcrt.inc
-      include \masm32\include\shlwapi.inc
-      include \masm32\macros\macros.asm
-      include \masm32\macros\strings.mac
-
-      includelib \masm32\lib\masm32.lib
-      includelib \masm32\lib\gdi32.lib
-      includelib \masm32\lib\user32.lib
-      includelib \masm32\lib\kernel32.lib
-      includelib \masm32\lib\Comctl32.lib
-      includelib \masm32\lib\comdlg32.lib
-      includelib \masm32\lib\shell32.lib
-      includelib \masm32\lib\oleaut32.lib
-      includelib \masm32\lib\shlwapi.lib
-      includelib \masm32\lib\msvcrt.lib
+      include windows.inc
+      include masm32.inc      
+      include gdi32.inc
+      include user32.inc
+      include kernel32.inc
+      include Comctl32.inc
+      include comdlg32.inc
+      include shell32.inc
+      include oleaut32.inc
+      include msvcrt.inc
+      include shlwapi.inc
       
-	include \masm32\lneditor\plugin.inc
-	include \masm32\lneditor\export.inc
-	include \masm32\lneditor\rsrc.inc
-	include \masm32\lneditor\config.inc
-	includelib \masm32\lneditor\lnedit.lib
+      include macros.asm
+      include strings.mac
+
+      includelib masm32.lib
+      includelib gdi32.lib
+      includelib user32.lib
+      includelib kernel32.lib
+      includelib Comctl32.lib
+      includelib comdlg32.lib
+      includelib shell32.lib
+      includelib oleaut32.lib
+      includelib shlwapi.lib
+      includelib msvcrt.lib
+      
+	include plugin.inc
+	include export.inc
+	include rsrc.inc
+	include config.inc
+	includelib lnedit.lib
 	
 JlistIndexData struc
 	lpDist		dd		?
@@ -54,7 +55,7 @@ JlistIndexData ends
 		dd		0fch,2,3,1,1,2,2,3,3,1,1,1,3,1,1,0fch
 		dd		0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch		;9
 		dd		0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch
-		dd		0fch,5,0ff02h,2,0ch,2,0ff02h,0ff05h,3,0fch,0ff04h,1,4,2,1,0fch
+		dd		0fch,5,0ff02h,2,0ch,2,0fe02h,0ff05h,3,0fch,0ff04h,1,4,2,1,0fch
 		dd		0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch		;c
 		dd		0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch
 		dd		0ffh,0fch,1,1,2,1,2,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch
@@ -72,7 +73,7 @@ JlistIndexData ends
 		dd		0fch,2,3,1,1,2,2,3,3,1,1,1,3,1,1,0fch
 		dd		0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch		;9
 		dd		0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch
-		dd		0fch,5,0ff02h,2,0fch,2,0ff02h,0ff05h,3,0fch,0ff04h,1,4,2,1,0fch
+		dd		0fch,5,0ff02h,2,0fch,2,0fe02h,0ff05h,3,0fch,0ff04h,1,4,2,1,0fch
 		dd		0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch		;c
 		dd		0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch
 		dd		0ffh,0fch,1,1,2,1,2,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch,0fch

@@ -39,6 +39,20 @@ PreProc endp
 Match proc uses esi _lpszName
 	LOCAL @szMagic[5]:dword
 	LOCAL @sExtend[2]:dword
+	invoke lstrlenW,_lpszName
+	mov ecx,_lpszName
+	lea ecx,[ecx+eax*2-8]
+	lea edx,@sExtend
+	mov eax,[ecx]
+	mov [edx],eax
+	mov eax,[ecx+4]
+	mov [edx+4],eax
+	and dword ptr [edx],0ffdfffffh
+	and dword ptr [edx+4],0ffdfffdfh
+	.if dword ptr [edx]==57002eh && dword ptr [edx+4]==0430053h
+		mov eax,MR_MAYBE
+		ret
+	.endif
 	mov eax,MR_NO
 	ret
 _ErrMatch:
@@ -121,7 +135,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov @pEnd,eax
 	.while esi<@pEnd
 		xor eax,eax
-		lodsb
+		mov al,[esi]
+		inc esi
 		mov ebx,ddTable[eax*4]
 		.repeat
 			cmp bl,0
@@ -209,7 +224,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				int 3
 			.endif
 			_Add:
-				movzx eax,bl
+				xor eax,eax
+				mov al,bl
 				add esi,eax
 			_Ctn:
 			shr ebx,8

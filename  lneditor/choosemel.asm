@@ -109,7 +109,7 @@ _WndCMProc endp
 
 ;
 _GetMelInfo proc uses esi ebx _lpMel,_lpszTitle,_nType
-	LOCAL @lpVer,@puLen,@pStr
+	LOCAL @lpVer,@puLen,@pStr,@pMelPath
 	LOCAL @szResType[128]:byte
 	.if _lpMel==-1
 		mov eax,_nType
@@ -120,16 +120,36 @@ _GetMelInfo proc uses esi ebx _lpMel,_lpszTitle,_nType
 	.endif
 	mov esi,_lpMel
 	assume esi:ptr _MelInfo
-	cmp [esi].hModule,0
-	je _FileNameGMT
-	invoke FindResourceW,[esi].hModule,1,RT_VERSION
-	or eax,eax
-	je _FileNameGMT
-	invoke LoadResource,[esi].hModule,eax
-	or eax,eax
-	je _FileNameGMT
-	invoke LockResource,eax
+	invoke lstrlenW,lpszImagePath
+	shl eax,1
+	add eax,SHORT_STRINGLEN+12
+	invoke HeapAlloc,hGlobalHeap,0,eax
+	test eax,eax
+	jz _FileNameGMT
+	mov @pMelPath,eax
+	invoke lstrcpyW,eax,lpszImagePath
+	invoke lstrcatW,@pMelPath,offset szDLLDir2
+	invoke lstrcatW,@pMelPath,addr [esi].szName
+	invoke GetFileVersionInfoSizeW,@pMelPath,0
+	.if !eax
+_FreeGMI:
+		invoke HeapFree,hGlobalHeap,0,@pMelPath
+		jmp _FileNameGMT
+	.endif
+	
+	mov ebx,eax
+	invoke HeapAlloc,hGlobalHeap,0,eax
+	test eax,eax
+	jz _FreeGMI
 	mov @lpVer,eax
+	invoke GetFileVersionInfoW,@pMelPath,0,ebx,@lpVer
+	mov ebx,eax
+	invoke HeapFree,hGlobalHeap,0,@pMelPath
+	.if !eax
+		invoke HeapFree,hGlobalHeap,0,@lpVer
+		jmp _FileNameGMT
+	.endif
+	
 	assume esi:nothing
 	
 	lea ebx,@szResType
@@ -146,8 +166,10 @@ _GetMelInfo proc uses esi ebx _lpMel,_lpszTitle,_nType
 		invoke lstrcatW,ebx,offset szVerFormat
 	.endif
 	invoke VerQueryValueW,@lpVer,addr @szResType,addr @pStr,addr @puLen
-	or eax,eax
-	je _FileNameGMT
+	mov ebx,eax
+	invoke HeapFree,hGlobalHeap,0,@lpVer
+	test ebx,ebx
+	jz _FileNameGMT
 	invoke lstrcpyW,_lpszTitle,@pStr
 	ret
 _FileNameGMT:

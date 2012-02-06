@@ -82,9 +82,10 @@
 	szOpenFilter		dw		'A','l','l',' ','F','i','l','e','s','(','*','.','*',')',0,'*','.','*',0,0
 	szTxtFilter		dw		'T','X','T',' ','F','i','l','e','(','*','.','t','x','t',')',0,'*','.','t','x','t',0,0
 	TW			'Image File\{*.bmp;*.jpg,*.',		szImageFilter
-	TW0			'gif\}\0*.bmp;*.jpg;*.gif\0',	
-	szDLLDir			dw		'm','e','l',0
-	szMelFile			dw		'*','.','m','e','l',0
+	TW0			'gif\}\0*.bmp;*.jpg;*.gif\0'
+	TW0			'mel',			szDLLDir
+	TW0			'mel\\',		szDLLDir2
+	TW0			'*.mel',		szMelFile
 	TW0			'*.mef',		szMefFile
 	szTxt			dw		'.','t','x','t',0
 	TW0			'Rec',			szRecDir
