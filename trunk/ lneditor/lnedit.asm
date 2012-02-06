@@ -66,17 +66,20 @@ xor ebx,ebx
 invoke GetCommandLineW
 invoke CommandLineToArgvW,eax,offset nArgc
 mov lpArgTbl,eax
-;mov ebx,[eax]
-;invoke lstrlenW,ebx
-;shl eax,1
-;add eax,20
-;invoke HeapAlloc,hGlobalHeap,0,eax
-;or eax,eax
-;je _FinalMemErr
-;mov lpszConfigFile,eax
-;invoke lstrcpyW,eax,ebx
-;invoke _DirBackW,lpszConfigFile
-;invoke _DirCatW,lpszConfigFile,offset szcfFileName
+invoke GetModuleFileNameW,0,0,0
+add eax,2
+shl eax,1
+mov ebx,eax
+invoke HeapAlloc,hGlobalHeap,0,eax
+test eax,eax
+jz _FinalMemErr
+mov eax,lpszExePath
+invoke GetModuleFileNameW,0,eax,ebx
+add eax,lpszExePath
+.while word ptr [eax]!='\'
+	sub eax,2
+.endw
+mov word ptr [eax+2],0
 
 invoke _GetCmdOption,offset szOptionConsole
 mov ebx,eax

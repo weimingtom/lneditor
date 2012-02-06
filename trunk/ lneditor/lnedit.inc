@@ -10,6 +10,7 @@
       include \masm32\include\msvcrt.inc
       include \masm32\include\version.inc
       include \masm32\include\shlwapi.inc
+      include \masm32\include\ntdll.inc
       include \masm32\include\urlmon.inc
       include \masm32\macros\macros.asm
       include \masm32\macros\strings.mac
@@ -25,6 +26,7 @@
       includelib \masm32\lib\shell32.lib
       includelib \masm32\lib\oleaut32.lib
       includelib \masm32\lib\version.lib
+      includelib \masm32\lib\ntdll.lib
       includelib \masm32\lib\shlwapi.lib
       includelib \masm32\lib\advapi32.lib
 	includelib \masm32\lib\ole32.lib
