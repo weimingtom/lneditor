@@ -1,10 +1,10 @@
 @echo off
 rem Set asm env vars.
-set "WINDDKDIR=E:\WinDDK\7600.16385.1"
+set "WINDDKDIR=D:\WinDDK\7600.16385.1"
 set "MASMPATH=\masm32"
-set "COMPILERPATH=F:\Software\VC6\VC10" rem Need ml.exe and link.exe in VC++10
-set "ADDITIONALDLLPATH=%COMPILERPATH%" rem Need mspdb100.dll and so on
-set "RESCOMPILERPATH=F:\Software\VC6\Common\MSDev98\Bin" rem Need rc.exe
+set "COMPILERPATH=C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin" rem Need ml.exe and link.exe in VC++10
+set "ADDITIONALDLLPATH=C:\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE" rem Need mspdb100.dll and so on
+set "RESCOMPILERPATH=C:\Program Files (x86)\Microsoft SDKs\Windows\v7.0A\Bin" rem Need rc.exe
 
 set "LNEDITDIR=%CD%"
 
@@ -17,7 +17,7 @@ set "LIB=%WINDDKDIR%\lib\wxp\i386;%WINDDKDIR%\lib\crt\i386;%MASMPATH%\lib"
 
 set "LIBPATH=%LIB%"
 
-set "INCLUDE=%MASMPATH%\include;%MASMPATH%\macros;%MASMPATH%\include\w2k"
+set "INCLUDE=%MASMPATH%\include;%MASMPATH%\macros"
 
 set "PATH=%COMPILERPATH%;%ADDITIONALDLLPATH%;%RESCOMPILERPATH%;%PATH%"
 
