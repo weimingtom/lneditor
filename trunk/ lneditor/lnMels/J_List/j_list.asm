@@ -102,7 +102,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov [edi].lpCustom,eax
 	
 	mov eax,[edi].nStreamSize
-	shr eax,3
+	shr eax,1
 	invoke HeapAlloc,hHeap,0,eax
 	or eax,eax
 	je _Nomem
@@ -110,7 +110,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov JlistIndexData.lpDist[ecx],eax
 	
 	mov eax,[edi].nStreamSize
-	shr eax,3
+	shr eax,1
 	invoke HeapAlloc,hHeap,0,eax
 	or eax,eax
 	je _Nomem
