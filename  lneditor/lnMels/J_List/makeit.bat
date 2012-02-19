@@ -1,8 +1,8 @@
 @echo off
-set CURPATH=%CD%
-cd ..
+pushd ..
 call pvarsasm.bat
-cd "%CURPATH%"
+popd
+echo %PATH_ERROR%
 if %PATH_ERROR%==1 goto errpath
 
 : -------------------------------
