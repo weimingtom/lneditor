@@ -1,16 +1,16 @@
-﻿#include<Windows.h>
-#include<strsafe.h>
-#include<stdio.h>
-#include<locale.h>
-#include<conio.h>
+﻿#include <Windows.h>
+#include <strsafe.h>
+#include <stdio.h>
+#include <locale.h>
+#include <conio.h>
 
 //#define _STL70_
 //#include<string>
-#include<vector>
+#include <vector>
 //#include<algorithm>
 using namespace std;
 
-#include"lnedit.h"
+#include "lnedit.h"
 #include "..\..\SDK\C++\plugin.h"
 
 #pragma warning(disable:4995) //deprecated警告：wcscpy的安全性警告
@@ -454,4 +454,11 @@ extern "C" void WINAPI _CmdMain()
 		Folders();
 
 	PressExit();
+}
+
+extern CRITICAL_SECTION RegLockA;
+extern CRITICAL_SECTION RegLockW;
+
+extern "C" void WINAPI _CppInitialize()
+{
 }

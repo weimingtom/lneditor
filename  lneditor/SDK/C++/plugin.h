@@ -77,6 +77,7 @@ typedef unsigned long MRESULT;
 #define RCH_FROMESCAPE		0x00000000
 
 #include<windows.h>
+#include "deelx.h"
 
 #pragma pack(1)
 typedef struct _STREAM_ENTRY {
@@ -222,6 +223,17 @@ typedef struct _OPEN_PARAMETERS {
 	DWORD		Plugin;
 	DWORD		Filter;
 } OPEN_PARAMETERS, *LPOPEN_PARAMETERS;
+
+#define REG_MAX_GROUPS 8
+
+typedef struct _SEL_RANGE REGEXP_RANGE, *LPREGEXP_RANGE;
+
+typedef struct _REGEXP_RESULT {
+	BOOL			bIsMatched;
+	REGEXP_RANGE	rBase;
+	ULONG			nGroups;
+	REGEXP_RANGE	rGroups[REG_MAX_GROUPS];
+} REGEXP_RESULT, *LPREGEXP_RESULT;
 #pragma pack()
 
 extern "C" {
@@ -241,6 +253,11 @@ extern "C" {
 
 	int		__stdcall _ZlibUncompress(LPVOID lpDest, DWORD* nDestLen, LPVOID lpSrc, DWORD nSrcLen);
 	int		__stdcall _ZlibCompress(LPVOID lpDest, DWORD* nDestLen, LPVOID lpSrc, DWORD nSrcLen);
+
+	MRESULT		WINAPI _RegCreateInstanceA(CRegexpA** lpReg);
+	MRESULT		WINAPI _RegCreateInstanceW(CRegexpW** lpReg);
+	MRESULT		WINAPI _RegReleaseA(CRegexpA* lpReg);
+	MRESULT		WINAPI _RegReleaseW(CRegexpW* lpReg);
 }
 
 #ifdef OVERLOAD_NEW

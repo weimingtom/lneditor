@@ -84,12 +84,12 @@ _FileInfo struct
 	lpszName			dd		?						;文件名(含路径)
 	hFile				dd		?						;文件句柄，该句柄直到脚本关闭才会释放。
 	
-	lpStream				dd		?						;文件直接读入内存后的指针，若插件有MIC_NOPREREAD属性，此指针不会被自动填写。
+	lpStream			dd		?						;文件直接读入内存后的指针，若插件有MIC_NOPREREAD属性，此指针不会被自动填写。
 
-	nMemoryType			dd		?					;字符串表的填写方式。具体参见MT_XXX的说明。
+	nMemoryType			dd		?						;字符串表的填写方式。具体参见MT_XXX的说明。
 
 	lpTextIndex			dd		?						;纯文本字符串索引表指针。本表中的字符串显示在列表框中。
-	lpStreamIndex			dd		?						;可选，原始脚本字符串索引表指针，指向_StreamEntry数组。若为POINTERONLY存储类型，此项必须。
+	lpStreamIndex		dd		?						;可选，原始脚本字符串索引表指针，指向_StreamEntry数组。若为POINTERONLY存储类型，此项必须。
 	;以上两个域使用的内存必须由VirtualAlloc(0,...)申请。
 	
 	nStringType			dd		?						;字符串类型。如C字符串、PASCAL字符串等。参见ST_XXX。
@@ -97,10 +97,10 @@ _FileInfo struct
 	nLine				dd		?						;文本行数。
 	
 	bReadOnly			dd		?						;指定该文件是否为只读（是否在列表框左侧）
-	nCharSet				dd		?						;指示将此文件中字符串解释为何种字符集，用户可以设定，否则插件可自行填写。
+	nCharSet			dd		?						;指示将此文件中字符串解释为何种字符集，用户可以设定，否则插件可自行填写。
 	
-	lpCustom				dd		?						;插件自行使用。分配的内存可放在此处。
-	Reserved				dd		2		dup(?)
+	lpCustom			dd		?						;插件自行使用。分配的内存可放在此处。
+	Reserved			dd		2		dup(?)
 _FileInfo ends
 
 ;插件特征
@@ -116,12 +116,12 @@ MIC_NOHALFANGLE		EQU		00040000H	;不支持半角字符
 
 _MelInfo2 struct
 	nInterfaceVer			dd		?			;接口版本
-	nCharacteristic		dd		?			;插件特征信息
+	nCharacteristic			dd		?			;插件特征信息
 _MelInfo2 ends
 
 _MefInfo2 struct
 	nInterfaceVer			dd		?			;接口版本
-	nCharacteristic		dd		?			;插件特征信息
+	nCharacteristic			dd		?			;插件特征信息
 _MefInfo2 ends
 
 ;菜单项的处理函数，其中OpenScript之前经过了一些处理，其余均为直接调用。均可被插件重载。
@@ -132,30 +132,30 @@ _Functions struct
 	SaveAs				dd		?
 	CloseScipt			dd		?
 	SetCode				dd		?
-	ExportTxt				dd		?
+	ExportTxt			dd		?
 	ImportTxt			dd		?
-	Exit					dd		?
+	Exit				dd		?
 	dd	?
 	Undo				dd		?
 	Redo				dd		?
 	Modify				dd		?
-	PrevLine				dd		?
-	NextLine				dd		?
-	MarkLine				dd		?
+	PrevLine			dd		?
+	NextLine			dd		?
+	MarkLine			dd		?
 	PrevMark			dd		?
 	NextMark			dd		?
-	Find					dd		?
+	Find				dd		?
 	Replace				dd		?
 	SummaryFind			dd		?
-	GotoLine				dd		?
+	GotoLine			dd		?
 	dd	?
 	SetFont				dd		?
 	SetBackground		dd		?
 	CustomUI			dd		?
 	RecoverUI			dd		?
 	dd	?
-	ExportAll				dd		?
-	ImportAll				dd		?
+	ExportAll			dd		?
+	ImportAll			dd		?
 	SummaryFindAll		dd		?
 	dd	?
 	Config				dd		?
@@ -165,15 +165,15 @@ _Functions struct
 	ToFull				dd		?
 	ToHalf				dd		?
 	UnmarkAll			dd		?
-	Progress				dd		?		;10040
-	TxtFilter				dd		?
-	Reserved				dd		10		dup(?)
+	Progress			dd		?		;10040
+	TxtFilter			dd		?
+	Reserved			dd		10		dup(?)
 _Functions ends
 
 ;由插件实现简易功能的函数
 _SimpFunc struct
 	GetText		dd		?	;将脚本中的纯文本按FileInfo结构要求写入
-	SaveText		dd		?	;可选，保存文件，如果不实现则通过lpStream和nStreamSize默认保存
+	SaveText	dd		?	;可选，保存文件，如果不实现则通过lpStream和nStreamSize默认保存
 	ModifyLine	dd		?	;将修改的行写入脚本
 	SetLine		dd		?	;可选，内存中的一行文本被该函数处理之后再显示到编辑框中
 	RetLine		dd		?	;可选，编辑框中的一行文本被该函数处理之后再写回内存中
@@ -200,8 +200,8 @@ _Handles ends
 _PreData struct
 	hGlobalHeap		dd		?	;全局堆
 	
-	lpszConfigFile		dd		?	;配置文件名，包含全路径
-	lpConfigs			dd		?	;配置
+	lpszConfigFile	dd		?	;配置文件名，包含全路径
+	lpConfigs		dd		?	;配置
 	
 	lpMenuFuncs		dd		?	;菜单函数表指针，指向_Functions结构
 	lpSimpFuncs		dd		?	;简易处理函数表指针，指向_SimpFunc结构
@@ -221,7 +221,7 @@ _StCmdOptions struct
 	ScriptName		_StCmdOption		<>
 	Code1			_StCmdOption		<>
 	Code2			_StCmdOption		<>
-	Line				_StCmdOption		<>
+	Line			_StCmdOption		<>
 	Plugin			_StCmdOption		<>
 	Filter			_StCmdOption		<>
 	Import			_StCmdOption		<>
