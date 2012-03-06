@@ -70,6 +70,7 @@
 
 .data
 	nCurMef			dd		-1	;当前使用的过滤器索引
+	hRegSelText		dd		-1	;匹配文本框选区的句柄
 
 .data
 	szNULL			dd		0

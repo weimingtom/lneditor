@@ -1,6 +1,6 @@
 .code
 
-
+comment ~
 ;
 _GetText2 proc uses esi edi ebx _pFI,_lpRI
 	LOCAL @pEndO,@pEndN,@lpCur,@bIsUnicode
@@ -114,7 +114,7 @@ _NomemGT2:
 	or eax,E_ERROR
 	ret
 _GetText2 endp
-
+commentend~
 ;
 _GetText proc uses esi edi ebx _pFI,_lpRI
 	LOCAL @pEndO,@pEndN,@lpCur,@bIsUnicode
@@ -440,137 +440,6 @@ _HandlerGSFM:
 _GetStringInTxt endp
 
 ;
-_GetStringInTxt2 proc uses esi edi _lppString,_lppBuff,_nCharSet
-	LOCAL @nStrLen,@lpTmpBuff
-	mov eax,_lppBuff
-	mov eax,[eax]
-	mov ecx,_nCharSet
-	.if ecx==CS_UNICODE
-		cmp word ptr [eax],0dh
-		jne @F
-		mov ecx,_lppBuff
-		add dword ptr [ecx],4
-	.else
-		.if word ptr [eax]==0a0dh
-			mov ecx,_lppBuff
-			add dword ptr [ecx],2
-			jmp _NullStrGSFM
-		.endif
-		cmp byte ptr [eax],0
-		jne @F
-	.endif
-	_NullStrGSFM:
-	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,4
-	mov ecx,_lppString
-	mov [ecx],eax
-	xor eax,eax
-	jmp _ExGSFM
-	@@:
-	push offset _HandlerGSFM	;防止lpbuff内存越界访问
-	push fs:[0]
-	mov fs:[0],esp
-	mov edx,_nCharSet
-	mov eax,_lppBuff
-	mov edi,[eax]
-	.if edx==CS_UNICODE
-		xor ecx,ecx
-		.while word ptr [edi]!=0dh
-			.break .if !word ptr [edi]
-			add edi,2
-			add ecx,2
-		.endw
-		mov @nStrLen,ecx
-		add ecx,2
-;		mov eax,MAX_STRINGLEN
-;		.if ecx>eax
-;			mov eax,ecx
-;		.endif
-		invoke HeapAlloc,hGlobalHeap,0,ecx
-		.if !eax
-			pop fs:[0]
-			add esp,4
-			mov eax,E_NOMEM
-			jmp _ExGSFM
-		.endif
-		mov edx,_lppString
-		mov [edx],eax
-		mov ecx,@nStrLen
-		shr ecx,1
-		mov edi,eax
-		mov eax,_lppBuff
-		mov esi,[eax]
-		rep movsw
-		mov word ptr [edi],0
-		add esi,4
-		mov ecx,_lppBuff
-		mov [ecx],esi
-		pop fs:[0]
-		add esp,4
-	.else
-		xor ecx,ecx
-		.while word ptr [edi]!=0a0dh
-			.break .if !byte ptr [edi]
-			inc edi
-			inc ecx
-		.endw
-		lea eax,[edi+2]
-		mov @lpTmpBuff,eax
-		pop fs:[0]
-		add esp,4
-		mov @nStrLen,ecx
-		inc ecx
-		shl ecx,1
-		mov eax,ecx
-;		mov eax,MAX_STRINGLEN
-;		.if ecx>eax
-;			mov eax,ecx
-;		.endif
-;		mov ecx,eax
-		shr ecx,1
-		push ecx
-		invoke HeapAlloc,hGlobalHeap,0,eax
-		.if !eax
-			add esp,4
-			mov eax,E_NOMEM
-			jmp _ExGSFM
-		.endif
-		mov ecx,_lppString
-		mov [ecx],eax
-		push eax
-		push @nStrLen
-		mov eax,_lppBuff
-		push [eax]
-		push 0
-		push _nCharSet
-		call MultiByteToWideChar
-		.if !eax
-			mov eax,E_NOTENOUGHBUFF
-			jmp _ExGSFM
-		.endif
-		mov ecx,_lppString
-		mov edx,[ecx]
-		mov word ptr [edx+eax*2],0
-		mov ecx,_lppBuff
-		mov eax,@lpTmpBuff
-		mov [ecx],eax
-	.endif
-	
-	xor eax,eax
-_ExGSFM:
-	ret
-_ErrOverMemGSFM:
-	pop fs:[0]
-	pop ecx
-	mov eax,E_OVERMEM
-	jmp _ExGSFM
-_HandlerGSFM:
-	mov eax,[esp+0ch]
-	mov [eax+0b8h],offset _ErrOverMemGSFM
-	xor eax,eax
-	ret
-_GetStringInTxt2 endp
-
-;
 _ReplaceInMem proc uses esi edi _lpNew,_nNewLen,_lpOriPos,_nOriLen,_nLeftLen
 	mov eax,_nNewLen
 	.if eax==_nOriLen || !_nLeftLen
@@ -623,7 +492,7 @@ _ExRIM:
 _ReplaceInMem endp
 
 ;
-_SetLine proc uses esi ebx _lpsz,_lpRange
+_SetLine2 proc uses esi ebx _lpsz,_lpRange
 	cmp _lpRange,0
 	je _ExSL
 	mov esi,_lpsz
@@ -659,6 +528,26 @@ _SetLine proc uses esi ebx _lpsz,_lpRange
 		.endif
 	.endw
 
+_ExSL:
+	ret
+_SetLine2 endp
+
+_SetLine proc uses esi ebx _lpsz,_lpRange
+	LOCAL @mr:_RegexpResult
+	cmp _lpRange,0
+	je _ExSL
+	.if hRegSelText==-1
+		invoke _RegInitW,offset szPatQuotes,0,offset hRegSelText
+	.endif
+	mov @mr.bIsMatched,FALSE
+	invoke _RegMatchW,hRegSelText,_lpsz,0,addr @mr
+	.if @mr.bIsMatched
+		mov ecx,_lpRange
+		mov eax,dword ptr @mr.rGroups[0]
+		mov [ecx],eax
+		mov eax,dword ptr @mr.rGroups[4]
+		mov [ecx+4],eax
+	.endif
 _ExSL:
 	ret
 _SetLine endp

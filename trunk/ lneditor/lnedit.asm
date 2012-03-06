@@ -9,6 +9,7 @@ include config.inc
 include lnedit.inc
 include macros.inc
 include com.inc
+include cppimp.inc
 
 include globalvars.asm
 
@@ -63,6 +64,8 @@ xor ebx,ebx
 	invoke LoadStringW,hInstance,ebx,eax,MAX_STRINGLEN/2
 	inc ebx
 .endw
+
+invoke _CppInitialize
 
 invoke GetCommandLineW
 invoke CommandLineToArgvW,eax,offset nArgc

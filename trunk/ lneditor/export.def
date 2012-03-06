@@ -1,6 +1,5 @@
 EXPORTS
 _GetConstString
-_Int2Str
 _DisplayStatus
 _GetStringInList
 
@@ -21,3 +20,8 @@ _OutputMessage
 
 _ZlibCompress=compress
 _ZlibUncompress=uncompress
+
+_RegCreateInstanceA
+_RegReleaseA
+_RegCreateInstanceW
+_RegReleaseW

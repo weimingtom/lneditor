@@ -45,7 +45,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>D:\WinDDK\7600.16385.1\inc\atl71;D:\WinDDK\7600.16385.1\inc\api;D:\WinDDK\7600.16385.1\inc\ddk;D:\WinDDK\7600.16385.1\inc\mfc42;D:\WinDDK\7600.16385.1\inc\api\crt\stl60;D:\WinDDK\7600.16385.1\inc\crt</IncludePath>
-    <LibraryPath>D:\WinDDK\7600.16385.1\lib\wxp\i386;D:\WinDDK\7600.16385.1\lib\Mfc\i386;D:\WinDDK\7600.16385.1\lib\ATL\i386;D:\WinDDK\7600.16385.1\lib\Crt\i386</LibraryPath>
+    <LibraryPath>F:\Software\VC6\2600\lib\wxp\i386;D:\WinDDK\7600.16385.1\lib\wxp\i386;D:\WinDDK\7600.16385.1\lib\Mfc\i386;D:\WinDDK\7600.16385.1\lib\ATL\i386;D:\WinDDK\7600.16385.1\lib\Crt\i386</LibraryPath>
     <CustomBuildAfterTargets>
     </CustomBuildAfterTargets>
     <OutDir>$(SolutionDir)$\..\..\</OutDir>
@@ -98,8 +98,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="lnedit2.cpp" />
+    <ClCompile Include="regexp.cpp" />
+    <ClCompile Include="Strings.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="deelx.h" />
     <ClInclude Include="lnedit.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
