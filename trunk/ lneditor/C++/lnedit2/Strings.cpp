@@ -4,5 +4,5 @@
 
 extern "C" 
 {
-	extern const WCHAR szPatQuotes[]=L"[（「『](.*)[）」』]";
+	extern const WCHAR szPatQuotes[]=L"(?:[（「『]|(　+))(.*)(?(1).*|[）」』])";
 }
