@@ -543,9 +543,9 @@ _SetLine proc uses esi ebx _lpsz,_lpRange
 	invoke _RegMatchW,hRegSelText,_lpsz,0,addr @mr
 	.if @mr.bIsMatched
 		mov ecx,_lpRange
-		mov eax,dword ptr @mr.rGroups[0]
+		mov eax,dword ptr @mr.rGroups[8]
 		mov [ecx],eax
-		mov eax,dword ptr @mr.rGroups[4]
+		mov eax,dword ptr @mr.rGroups[12]
 		mov [ecx+4],eax
 	.endif
 _ExSL:
