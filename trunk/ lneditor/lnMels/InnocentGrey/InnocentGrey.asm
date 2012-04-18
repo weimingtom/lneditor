@@ -59,6 +59,18 @@ _ErrMatch:
 Match endp
 
 ;
+_Decode proc _buff,_size
+	mov eax,_buff
+	mov ecx,_size
+	_lbl1:
+	xor byte ptr [eax],0ffh
+	inc eax
+	dec ecx
+	jnz _lbl1
+	ret
+_Decode endp
+
+;
 GetText proc uses esi ebx edi _lpFI,_lpRI
 	LOCAL @pEnd
 	LOCAL @lpIndex,@nIndex
@@ -68,6 +80,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
 	mov esi,[edi].lpStream
+	
+	invoke _Decode,esi,[edi].nStreamSize
 	
 	mov eax,[edi].nStreamSize
 	shr eax,2
@@ -102,12 +116,15 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	.while esi<@pEnd
 		xor eax,eax
 		mov al,[esi]
-		.if eax>0a6h
+		.if eax>0b2h
 			int 3
 			mov eax,E_WRONGFORMAT
 			jmp _Ex
 		.endif
-		mov al,[eax+OpTypeTable]
+		mov al,[eax+OpTypeTable2]
+		.if al==-1
+			int 3
+		.endif
 		jmp dword ptr [eax*4+_JmpTable1]
 	_case0:	;ÆäËû
 		mov al,[esi+1]
@@ -379,8 +396,15 @@ _Ex:
 ModifyLine endp
 
 ;
-SaveText proc
-	jmp _SaveText
+SaveText proc _lpFI
+	mov eax,_lpFI
+	invoke _Decode,_FileInfo.lpStream[eax],_FileInfo.nStreamSize[eax]
+	invoke _SaveText,_lpFI
+	push eax
+	mov eax,_lpFI
+	invoke _Decode,_FileInfo.lpStream[eax],_FileInfo.nStreamSize[eax]
+	pop eax
+	ret
 SaveText endp
 
 ;

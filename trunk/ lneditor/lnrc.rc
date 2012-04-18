@@ -328,14 +328,14 @@ BEGIN
   BEGIN
     MENUITEM "字体与颜色(&F)...",IDM_FONT
     MENUITEM "背景(&B)...",IDM_BACKGROUND
-    MENUITEM "界面定制(&C)...",IDM_CUSTOMUI
-    MENUITEM "界面还原(&R)",IDM_RECOVERUI
+    MENUITEM "界面定制(&C)...",IDM_CUSTOMUI,GRAYED
+    MENUITEM "界面还原(&R)",IDM_RECOVERUI,GRAYED
   END
   POPUP "批量(&M)"
   BEGIN
     MENUITEM "批量导出TXT(&E)...",IDM_EXALL
     MENUITEM "批量导入(&I)...",IDM_IMALL
-    MENUITEM "批量处理(&P)...",IDM_SUMALL
+    MENUITEM "批量处理(&P)...",IDM_SUMALL,GRAYED
   END
   POPUP "选项(&O)"
   BEGIN
@@ -413,8 +413,8 @@ BEGIN
 END
 
 IDR_VERSION1 VERSIONINFO
-FILEVERSION 2,1,2,680
-PRODUCTVERSION 2,1,2,680
+FILEVERSION 2,1,2,698
+PRODUCTVERSION 2,1,2,698
 FILEOS 0x00000004
 FILETYPE 0x00000001
 BEGIN
@@ -422,8 +422,8 @@ BEGIN
   BEGIN
     BLOCK "080404B0"
     BEGIN
-      VALUE "FileVersion", "2.1.2.680\0"
-      VALUE "ProductVersion", "2.1.2.680\0"
+      VALUE "FileVersion", "2.1.2.698\0"
+      VALUE "ProductVersion", "2.1.2.698\0"
       VALUE "FileDescription", "A General Script Editor for Galgame.\0"
       VALUE "InternalName", "lnedit\0"
       VALUE "OriginalFilename", "lnedit.exe\0"
