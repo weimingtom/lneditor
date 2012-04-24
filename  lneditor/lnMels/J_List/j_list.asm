@@ -439,8 +439,23 @@ SaveText proc _lpFI
 SaveText endp
 
 ;
-SetLine proc
-	jmp _SetLine
+SetLine proc uses esi ebx _lpsz,_lpRange
+	cmp _lpRange,0
+	je _ExSL
+	invoke lstrlenW,_lpsz
+	.if eax<=4
+		ret
+	.endif
+	mov esi,_lpsz
+	lea esi,[esi+eax*2]
+	.if dword ptr [esi-4]==500025h && dword ptr [esi-8]==4b0025h
+		mov ecx,_lpRange
+		sub eax,4
+		mov [ecx+4],eax
+	.endif
+	invoke _SetLine,_lpsz,_lpRange
+_ExSL:
+	ret
 SetLine endp
 
 end DllMain
