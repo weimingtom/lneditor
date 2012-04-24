@@ -2,7 +2,7 @@
 .model flat,stdcall
 option casemap:none
 
-include yuka.inc
+include yukapsp.inc
 
 .code
 
@@ -37,7 +37,7 @@ Match proc _lpszName
 	je _ErrMatch
 	invoke CloseHandle,@hFile
 	lea eax,@buff
-	.if dword ptr [eax]==30534b59h && word ptr [eax+6]<=1
+	.if dword ptr [eax]==736b79h && dword ptr [eax+4]==302e31h
 		mov eax,MR_YES
 		ret
 	.endif
@@ -60,7 +60,7 @@ PreProc endp
 
 ;
 GetText proc uses edi ebx esi _lpFI,_lpRI
-	LOCAL @ddn,@pEnd,@bInLeft,@bFirstCreate
+	LOCAL @ddn,@pEnd,@bFirstCreate
 	LOCAL @pStreamList,@pTextList,@pStrInList
 	LOCAL @nLine
 	mov edi,_lpFI
@@ -70,47 +70,59 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 	je _NoMemGT
 	mov [edi].lpCustom,eax
 	mov ebx,eax
+	assume ebx:ptr YukaStruct
 	mov esi,[edi].lpStream
-	mov eax,[esi+14h]
+	assume esi:ptr YukaHeader
+	mov eax,[esi].PrgCount
 	shl eax,2
-	mov [ebx+4],eax
+	mov [ebx].nPrgLen,eax
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
 	or eax,eax
 	je _GotorelGT
-	mov [ebx],eax
+	mov [ebx].lpPrg,eax
 	
-	mov eax,[esi+1ch]
+	mov eax,[esi].CmdCount
 	shl eax,4
-	mov [ebx+0ch],eax
+	mov [ebx].nCmdLen,eax
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
 	.if !eax
 _GotorelGT:
 		invoke Release,_lpFI
 		jmp _NoMemGT
 	.endif
-	mov [ebx+8],eax
+	mov [ebx].lpCmd,eax
 	
-	mov eax,[esi+24h]
-	mov [ebx+14h],eax
-	.if ![edi].bReadOnly
-		shl eax,1
-		mov @bInLeft,0
-	.else
-		mov @bInLeft,1
-	.endif
+	mov eax,[esi].ResSize
+	mov [ebx].nResLen,eax
+	shl eax,1
 	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
 	or eax,eax
 	je _GotorelGT
-	mov [ebx+10h],eax
+	mov [ebx].lpRes,eax
 	
-	mov eax,[ebx+4]
+	mov eax,[esi].UnkCount
+	shl eax,1
+	mov [ebx].nUnkLen,eax
+	invoke HeapAlloc,hGlobalHeap,HEAP_ZERO_MEMORY,eax
+	test eax,eax
+	jz _GotorelGT
+	mov [ebx].lpUnk,eax
+	
+	mov eax,[esi].UnkVals[0]
+	mov ecx,[esi].UnkVals[4]
+	mov edx,[esi].UnkVals[8]
+	mov [ebx].nUnkVals[0],eax
+	mov [ebx].nUnkVals[4],ecx
+	mov [ebx].nUnkVals[8],edx
+	
+	mov eax,[ebx].nPrgLen
 	lea eax,[eax+eax*2]
 	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _GotorelGT
 	mov [edi].lpStreamIndex,eax
 	mov @pStreamList,eax
-	invoke VirtualAlloc,0,[ebx+4],MEM_COMMIT,PAGE_READWRITE
+	invoke VirtualAlloc,0,[ebx].nPrgLen,MEM_COMMIT,PAGE_READWRITE
 	or eax,eax
 	je _GotorelGT
 	mov [edi].lpTextIndex,eax
@@ -123,42 +135,34 @@ _GotorelGT:
 
 	mov @ddn,0
 	mov edx,edi
-	.while @ddn<3
+	.while @ddn<4
 		mov edi,edx
 		mov esi,[edi].lpStream
 		mov eax,@ddn
-		add esi,dword ptr [esi+eax*8+10h]
-		mov edi,[ebx+eax*8]
-		mov ecx,[ebx+eax*8+4]
+		add esi,dword ptr [esi+eax*8+14h]
+		mov edi,dword ptr [ebx+eax*8]
+		mov ecx,dword ptr [ebx+eax*8+4]
 		invoke _memcpy
 		inc @ddn
 	.endw
 	mov edi,edx
 	
-	invoke _IsEncode,ebx
-	.if eax
-		invoke _Encode,[ebx+10h],[ebx+14h]
-		mov YukaStruct.bIsCrypted[ebx],1
-	.else
-		mov YukaStruct.bIsCrypted[ebx],0
-	.endif
-	
 	assume edi:nothing
-	
+	assume esi:nothing
 	
 	mov @nLine,0
-	mov esi,[ebx]
+	mov esi,[ebx].lpPrg
 	mov eax,esi
-	add eax,dword ptr [ebx+4]
+	add eax,dword ptr [ebx].nPrgLen
 	mov @pEnd,eax
 	.while esi<@pEnd
 		lodsd
 		mov ecx,eax
 		lodsd
 		shl ecx,4
-		mov edi,[ebx+8]
+		mov edi,[ebx].lpCmd
 		add edi,ecx
-		.if dword ptr [edi]
+		.if word ptr [edi]
 			sub esi,4
 			.continue
 		.endif
@@ -166,7 +170,7 @@ _GotorelGT:
 			int 3
 		.endif
 		mov ecx,[edi+4]
-		mov edi,[ebx+10h]
+		mov edi,[ebx].lpRes
 		add edi,ecx
 		push eax
 		invoke _CmpStrOut,edi
@@ -181,18 +185,18 @@ _GotorelGT:
 		.endif
 		pop eax
 _GetStringGT:
-		mov edi,[ebx+8]
+		mov edi,[ebx].lpCmd
 		lodsd
 		shl eax,4
 		add edi,eax
-		.if dword ptr [edi]!=5
+		.if word ptr [edi]!=5
 			int 3
 		.endif
 		mov eax,@pStreamList
 		mov _StreamEntry.lpStart[eax],edi
 		add @pStreamList,sizeof _StreamEntry
 		mov ecx,[edi+8]
-		mov edi,[ebx+10h]
+		mov edi,[ebx].lpRes
 		add edi,ecx
 		invoke lstrlenA,edi
 		inc eax
@@ -214,6 +218,7 @@ _GetStringGT:
 	.endw
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
+	assume ebx:nothing
 	mov eax,@nLine
 	mov [edi].nLine,eax
 	
@@ -237,32 +242,33 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	mov ebx,[edi].lpCustom
 	or ebx,ebx
 	je _ErrML
+	assume ebx:ptr YukaStruct
 	invoke _GetStringInList,_lpFI,_nLine
 	mov @pStr,eax
 	mov eax,[edi].lpStreamIndex
 	mov ecx,_nLine
 	lea ecx,[ecx+ecx*2]
 	mov esi,_StreamEntry.lpStart[eax+ecx*4]
-	cmp dword ptr [esi],5
+	cmp word ptr [esi],5
 	jne _ErrML
-	mov eax,[ebx+10h]
-	add eax,dword ptr [ebx+14h]
+	mov eax,[ebx].lpRes
+	add eax,dword ptr [ebx].nResLen
 	mov @pToNewStr,eax
 	invoke WideCharToMultiByte,[edi].nCharSet,0,@pStr,-1,eax,0,0,0
 	mov @nNewLen,eax
 	mov eax,[esi+8]
-	add eax,dword ptr [ebx+10h]
-	invoke lstrlen,eax
+	add eax,dword ptr [ebx].lpRes
+	invoke lstrlenA,eax
 	inc eax
 	.if eax<@nNewLen
 		mov ecx,[edi].lpStream
-		mov ecx,[ecx+24h]
+		mov ecx,YukaHeader.ResSize[ecx]
 		shl ecx,1
-		sub ecx,dword ptr [ebx+14h]
+		sub ecx,dword ptr [ebx].nResLen
 		mov @bNeedExpand,TRUE
 	.else
 		mov ecx,[esi+8]
-		add ecx,dword ptr [ebx+10h]
+		add ecx,dword ptr [ebx].lpRes
 		mov @pToNewStr,ecx
 		mov ecx,eax
 		mov @bNeedExpand,FALSE
@@ -271,13 +277,14 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	or eax,eax
 	je _ErrML
 	.if @bNeedExpand
-		add [ebx+14h],eax
+		add [ebx].nResLen,eax
 		add [edi].nStreamSize,eax
 		mov ecx,@pToNewStr
-		sub ecx,[ebx+10h]
+		sub ecx,[ebx].lpRes
 		mov [esi+8],ecx
 	.endif
 	assume edi:nothing
+	assume ebx:nothing
 	xor eax,eax
 	ret
 _ErrML:
@@ -287,32 +294,61 @@ ModifyLine endp
 
 ;
 SaveText proc uses edi ebx esi _lpFI
-	LOCAL @dbHdr[30h]:byte,@dwTemp
+	LOCAL @dbHdr:YukaHeader,@dwTemp
+	LOCAL @nCur
 	mov edi,_lpFI
 	assume edi:ptr _FileInfo
 	cmp [edi].bReadOnly,1
 	je _ErrST
-	mov esi,[edi].lpStream
+	lea esi,szHeader
 	mov edx,edi
 	lea edi,@dbHdr
-	mov ecx,30h
+	mov ecx,14h
 	invoke _memcpy
 	mov edi,edx
 	mov ebx,[edi].lpCustom
-	mov ecx,[ebx+14h]
-	mov dword ptr [@dbHdr+24h],ecx
+	assume ebx:ptr YukaStruct
+	mov esi,sizeof(YukaHeader)
+	mov @dbHdr.PrgOff,esi
+	mov eax,[ebx].nPrgLen
+	add esi,eax
+	shr eax,2
+	mov @dbHdr.PrgCount,eax
+	mov @dbHdr.CmdOff,esi
+	mov eax,[ebx].nCmdLen
+	add esi,eax
+	shr eax,4
+	mov @dbHdr.CmdCount,eax
+	mov @dbHdr.ResOff,esi
+	mov eax,[ebx].nResLen
+	add esi,eax
+	mov @dbHdr.ResSize,eax
+	mov @dbHdr.UnkOff,esi
+	mov eax,[ebx].nUnkLen
+	shr eax,1
+	mov @dbHdr.UnkCount,eax
+	mov eax,[ebx].nUnkVals[0]
+	mov ecx,[ebx].nUnkVals[4]
+	mov edx,[ebx].nUnkVals[8]
+	mov @dbHdr.UnkVals[0],eax
+	mov @dbHdr.UnkVals[4],ecx
+	mov @dbHdr.UnkVals[8],edx
+	
 	invoke SetFilePointer,[edi].hFile,0,0,FILE_BEGIN
-	invoke WriteFile,[edi].hFile,addr @dbHdr,30h,addr @dwTemp,0
+	invoke WriteFile,[edi].hFile,addr @dbHdr,sizeof @dbHdr,addr @dwTemp,0
 	mov esi,eax
-	invoke WriteFile,[edi].hFile,[ebx],[ebx+4],addr @dwTemp,0
+	invoke WriteFile,[edi].hFile,[ebx].lpPrg,[ebx].nPrgLen,addr @dwTemp,0
 	and esi,eax
-	invoke WriteFile,[edi].hFile,[ebx+8],[ebx+0ch],addr @dwTemp,0
+	invoke WriteFile,[edi].hFile,[ebx].lpCmd,[ebx].nCmdLen,addr @dwTemp,0
 	and esi,eax
-	invoke WriteFile,[edi].hFile,[ebx+10h],[ebx+14h],addr @dwTemp,0
+	invoke WriteFile,[edi].hFile,[ebx].lpRes,[ebx].nResLen,addr @dwTemp,0
+	and esi,eax
+	invoke WriteFile,[edi].hFile,[ebx].lpUnk,[ebx].nUnkLen,addr @dwTemp,0
 	and eax,esi
 	je _ErrST
 	invoke SetEndOfFile,[edi].hFile
 	assume edi:nothing
+	assume ebx:nothing
 	mov eax,1
 	ret
 _ErrST:
@@ -333,7 +369,7 @@ Release proc uses ebx _lpFI
 	mov [eax].lpCustom,0
 	assume eax:nothing
 	.if ebx
-		mov ecx,3
+		mov ecx,4
 		@@:
 		mov eax,[ebx]
 		.if eax
