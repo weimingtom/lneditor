@@ -137,7 +137,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 		xor eax,eax
 		mov al,[esi]
 		inc esi
-		mov ebx,ddTable[eax*4]
+		mov ebx,ddTable2[eax*4]
 		.repeat
 			cmp bl,0
 			jge _Add
@@ -221,6 +221,11 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 					jmp _Ctn
 				.endif
 			.elseif bl==-4
+				mov ecx,@pEnd
+				sub ecx,esi
+				.if al==0ffh && ecx<=10
+					jmp _Break1
+				.endif
 				int 3
 			.endif
 			_Add:
@@ -231,6 +236,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			shr ebx,8
 		.until !bl
 	.endw
+	_Break1:
 	
 	mov eax,@nDist
 	mov edx,[edi].lpCustom
