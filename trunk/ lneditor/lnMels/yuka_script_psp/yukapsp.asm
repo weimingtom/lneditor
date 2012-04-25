@@ -349,10 +349,10 @@ SaveText proc uses edi ebx esi _lpFI
 	invoke SetEndOfFile,[edi].hFile
 	assume edi:nothing
 	assume ebx:nothing
-	mov eax,1
+	xor eax,eax
 	ret
 _ErrST:
-	xor eax,eax
+	or eax,-1
 	ret
 SaveText endp
 
