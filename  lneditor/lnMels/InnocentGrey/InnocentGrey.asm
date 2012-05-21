@@ -121,7 +121,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			mov eax,E_WRONGFORMAT
 			jmp _Ex
 		.endif
-		mov al,[eax+OpTypeTable2]
+		mov al,[eax+OpTypeTable]
 		.if al==-1
 			int 3
 		.endif

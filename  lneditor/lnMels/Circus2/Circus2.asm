@@ -192,7 +192,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 		add esi,@lpContent
 	_Cntline:
 		lodsb
-		.if al>=50h && al<=60h
+		.if al>=4fh && al<=60h
 			mov byte ptr @nInst,al
 			invoke CircusGetLine,esi,[edi].nCharSet
 			or eax,eax
@@ -229,7 +229,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				mov _StreamEntry.lpStart[ecx+edx*4],esi
 				inc @nLine
 			.endif
-		.elseif al>45h
+		.elseif al>=37h
 			mov byte ptr [@nInst+1],al
 			invoke lstrlenA,esi
 			lea esi,[esi+eax+1]
@@ -244,7 +244,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 		.elseif al==8
 			add esi,2
 			lodsb
-			.while al>=50h && al<=60h
+			.while al>=4fh && al<=60h
 				invoke lstrlenA,esi
 				lea esi,[esi+eax+2]
 				invoke CircusGetLine,esi,[edi].nCharSet

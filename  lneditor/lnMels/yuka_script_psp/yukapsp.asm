@@ -259,6 +259,16 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	mov eax,[esi+8]
 	add eax,dword ptr [ebx].lpRes
 	invoke lstrlenA,eax
+	
+	;Ìî³äÎª0
+	xor ecx,ecx
+	mov edx,[esi+8]
+	add edx,[ebx].lpRes
+	.while ecx<eax
+		mov byte ptr [edx+ecx],20h
+		inc ecx
+	.endw
+	
 	inc eax
 	.if eax<@nNewLen
 		mov ecx,[edi].lpStream
