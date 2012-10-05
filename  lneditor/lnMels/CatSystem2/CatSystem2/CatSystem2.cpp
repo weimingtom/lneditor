@@ -151,6 +151,7 @@ MRESULT WINAPI ModifyLine(LPFILE_INFO lpFileInfo, DWORD nLine)
 		csHdr->sceneLen+=newLen+2;
 
 	}
+	delete[] newStr;
 
 	return E_SUCCESS;
 }
@@ -170,6 +171,7 @@ MRESULT WINAPI SaveText(LPFILE_INFO lpFileInfo)
 	SetFilePointer(lpFileInfo->hFile,0,0,FILE_BEGIN);
 	ret=WriteFile(lpFileInfo->hFile,&origHdr,sizeof(origHdr),&nRead,0);
 	ret&=WriteFile(lpFileInfo->hFile,buff,origHdr.comprLen,&nRead,0);
+	delete[] buff;
 	if(!ret)
 		return E_FILEWRITEERROR;
 	return E_SUCCESS;
