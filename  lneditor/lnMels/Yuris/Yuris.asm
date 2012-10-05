@@ -120,45 +120,74 @@ _Ex:
 YurisGetLine endp
 
 ;
-YurisCmpFuncName proc uses esi edi _lpRes,_nLen
+YurisCmpFuncName proc uses ebx esi edi _lpRes,_nLen
+	LOCAL @pStr
 	mov esi,_lpRes
-	mov ecx,_nLen
-	.if ecx==sizeof dbFSel
-		lea edi,dbFSel
-		repe cmpsb
-		.if ZERO?
-			mov eax,FUNC_SEL
-			jmp _Ex
-		.endif
+	.if byte ptr [esi]!='M'
+		xor eax,eax
+		ret
 	.endif
 	mov ecx,_nLen
-	.if ecx==sizeof dbFMarkSet
-		lea edi,dbFMarkSet
-		repe cmpsb
-		.if ZERO?
-			mov eax,FUNC_MARKSET
-			jmp _Ex
-		.endif
-	.endif
+	inc ecx
+	invoke HeapAlloc,hHeap,HEAP_ZERO_MEMORY,ecx
+	test eax,eax
+	jz _Ex
+	mov @pStr,eax
+	add esi,3
+	mov edi,eax
 	mov ecx,_nLen
-	.if ecx==sizeof dbFCharName
-		lea edi,dbFCharName
-		repe cmpsb
-		.if ZERO?
-			mov eax,FUNC_CHARNAME
-			jmp _Ex
-		.endif
+	sub ecx,3
+	_loop1:
+		mov al,[esi]
+		inc esi
+		or al,20h
+		mov [edi],al
+		inc edi
+		dec ecx
+		jnz _loop1
+	
+	mov ebx,_nLen
+	sub ebx,3
+	
+	mov ecx,ebx
+	mov esi,@pStr
+	lea edi,dbFSel
+	repe cmpsb
+	.if ZERO?
+		mov ebx,FUNC_SEL
+		jmp _out
 	.endif
-	mov ecx,_nLen
-	.if ecx==sizeof dbFInputStr
-		lea edi,dbFInputStr
-		repe cmpsb
-		.if ZERO?
-			mov eax,FUNC_INPUTSTR
-			jmp _Ex
-		.endif
+	
+	mov ecx,ebx
+	mov esi,@pStr
+	lea edi,dbFMarkSet
+	repe cmpsb
+	.if ZERO?
+		mov ebx,FUNC_MARKSET
+		jmp _out
 	.endif
-	xor eax,eax
+	
+	mov ecx,ebx
+	mov esi,@pStr
+	lea edi,dbFCharName
+	repe cmpsb
+	.if ZERO?
+		mov ebx,FUNC_CHARNAME
+		jmp _out
+	.endif
+	
+	mov ecx,ebx
+	mov esi,@pStr
+	lea edi,dbFInputStr
+	repe cmpsb
+	.if ZERO?
+		mov ebx,FUNC_INPUTSTR
+		jmp _out
+	.endif
+	xor ebx,ebx
+_out:
+	invoke HeapFree,hHeap,0,@pStr
+	mov eax,ebx
 _Ex:
 	ret
 YurisCmpFuncName endp
@@ -166,7 +195,7 @@ YurisCmpFuncName endp
 ;
 GetText proc uses esi ebx edi _lpFI,_lpRI
 	LOCAL @nTemp,@opMsg,@opCall
-	LOCAL @pCode,@pArg,@lpRes
+	LOCAL @pCode,@pArg,@lpRes,@pInstEnd
 	LOCAL @nInst
 	LOCAL @nLine
 	LOCAL @hdr:YurisHdr
@@ -200,7 +229,124 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	.endif
 	assume esi:nothing
 	
-	mov eax,@hdr.nArgSize
+	cmp @hdr.nVersion,124h
+	ja _NewVer
+_OldVer:
+	mov eax,@hdr.segInfo.s2.nInstSize
+	shr eax,1
+	mov ebx,eax
+	lea eax,[eax+eax*2]
+	invoke VirtualAlloc,0,eax,MEM_COMMIT,PAGE_READWRITE
+	or eax,eax
+	je _Nomem
+	mov [edi].lpStreamIndex,eax
+	invoke VirtualAlloc,0,ebx,MEM_COMMIT,PAGE_READWRITE
+	or eax,eax
+	je _Nomem
+	mov [edi].lpTextIndex,eax
+	
+	mov esi,[edi].lpStream
+	add esi,sizeof YurisHdr
+	mov @pCode,esi
+	mov ecx,esi
+	add ecx,@hdr.segInfo.s2.nInstSize
+	mov @pInstEnd,ecx
+	mov eax,@hdr.segInfo.s2.nResOff
+	add eax,[edi].lpStream
+	mov @lpRes,eax
+	
+	xor ebx,ebx
+	.while esi<@pInstEnd
+		mov ax,[esi]
+		add esi,6
+		.if al==38h
+			add esi,4
+			.continue
+		.elseif ax==word ptr @opMsg
+			mov edx,esi
+			mov @pArg,esi
+			assume edx:ptr YurisArg
+			add esi,12
+			.continue .if [edx].len1==0
+			mov eax,[edx].offset1
+			add eax,@lpRes
+			.if [edx].type1!=0
+				int 3
+			.endif
+			invoke YurisGetLine,eax,[edx].len1,[edi].nCharSet
+			or eax,eax
+			je _Nomem
+			assume edx:nothing
+			mov edx,[edi].lpTextIndex
+			mov [edx+ebx*4],eax
+			mov edx,[edi].lpStreamIndex
+			mov eax,@pArg
+			lea ecx,[ebx+ebx*2]
+			mov _StreamEntry.lpStart[edx+ecx*4],eax
+			inc ebx
+		.elseif al==byte ptr @opCall && ah!=0
+			mov @pArg,esi
+			mov edx,esi
+			mov ecx,YurisArg.offset1[edx]
+			add ecx,@lpRes
+			movzx eax,ah
+			mov @nTemp,eax
+			invoke YurisCmpFuncName,ecx,YurisArg.len1[edx]
+			.if !eax
+				mov al,byte ptr @nTemp
+				shl ax,8
+				jmp _Default2
+			.endif
+			dec @nTemp
+			add esi,12
+			.repeat
+				assume edx:ptr YurisArg
+				mov edx,esi
+				cmp [edx].len1,0
+				je _Ctn22
+				mov eax,[edx].offset1
+				add eax,@lpRes
+				.if [edx].type1==3
+					movzx ecx,word ptr [eax+1]
+					or ecx,ecx
+					je _Ctn22
+					.if byte ptr [eax]!=4dh
+						int 3
+					.endif
+					add eax,3
+					cmp word ptr [eax],"''"
+					je _Ctn22
+					cmp word ptr [eax],'""'
+					je _Ctn22
+					invoke YurisGetLine,eax,ecx,[edi].nCharSet
+					or eax,eax
+					je _Nomem
+					assume edx:nothing
+					mov edx,[edi].lpTextIndex
+					mov [edx+ebx*4],eax
+					mov edx,[edi].lpStreamIndex
+					lea ecx,[ebx+ebx*2]
+					mov _StreamEntry.lpStart[edx+ecx*4],esi
+					inc ebx
+				.endif
+			_Ctn22:
+				dec @nTemp
+				add esi,12
+			.until @nTemp==0
+		.else
+	_Default2:
+			movzx eax,ah
+			shl eax,2
+			lea ecx,[eax+eax*2]
+			add esi,ecx
+		.endif
+	.endw
+	mov [edi].nLine,ebx
+	mov [edi].nMemoryType,MT_EVERYSTRING
+	jmp _End
+	
+_NewVer:
+	mov eax,@hdr.segInfo.s1.nArgSize
 	shr eax,1
 	mov ebx,eax
 	lea eax,[eax+eax*2]
@@ -217,14 +363,14 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	add esi,sizeof YurisHdr
 	mov @pCode,esi
 	mov eax,esi
-	add eax,@hdr.nCodeSize
+	add eax,@hdr.segInfo.s1.nCodeSize
 	mov @pArg,eax
-	add eax,@hdr.nArgSize
+	add eax,@hdr.segInfo.s1.nArgSize
 	mov @lpRes,eax
 	
 	xor ebx,ebx
 	mov @nLine,ebx
-	.while ebx<@hdr.nCount
+	.while ebx<@hdr.segInfo.s1.nCount
 		lodsd
 		.if ax==word ptr @opMsg
 			mov edx,@pArg
@@ -312,7 +458,8 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	mov eax,@nLine
 	mov [edi].nLine,eax
 	mov [edi].nMemoryType,MT_EVERYSTRING
-	
+
+_End:
 	assume edi:nothing
 	mov ecx,_lpRI
 	xor eax,eax
@@ -396,8 +543,13 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	mov ecx,sizeof YurisHdr/4
 	rep movsd
 	mov edi,_lpFI
-	add esi,@hdr.nCodeSize
-	add esi,@hdr.nArgSize
+	.if @hdr.nVersion<=124h
+		mov esi,[edi].lpStream
+		add esi,@hdr.segInfo.s2.nResOff
+	.else
+		add esi,@hdr.segInfo.s1.nCodeSize
+		add esi,@hdr.segInfo.s1.nArgSize
+	.endif
 	mov @lpRes,esi
 	
 	mov ecx,[edi].lpStreamIndex
@@ -436,9 +588,15 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 ;		mov ecx,[edi].nStreamSize
 ;		add ecx,[edi].lpStream
 		mov eax,@lpRes
-		add eax,@hdr.nResSize
+		.if @hdr.nVersion<=124h
+			add eax,@hdr.segInfo.s2.nResSize
+			xor ecx,ecx
+		.else
+			add eax,@hdr.segInfo.s1.nResSize
+			mov ecx,@hdr.segInfo.s1.nOffSize
+		.endif
 ;		sub ecx,eax
-		invoke _ReplaceInMem,@pNewStr,@nNewLen,eax,0,@hdr.nOffSize
+		invoke _ReplaceInMem,@pNewStr,@nNewLen,eax,0,ecx
 		.if eax
 			mov ebx,eax
 			invoke HeapFree,hHeap,0,@pNewStr
@@ -446,15 +604,27 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 			jmp _Ex
 		.endif
 		
-		mov eax,@nNewLen
-		mov [esi].len1,eax
-		mov ecx,@hdr.nResSize
-		mov [esi].offset1,ecx
-		
-		add [edi].nStreamSize,eax
-		mov ebx,[edi].lpStream
-		assume ebx:ptr YurisHdr
-		add [ebx].nResSize,eax
+		.if @hdr.nVersion<=124h
+			mov eax,@nNewLen
+			mov [esi].len1,eax
+			mov ecx,@hdr.segInfo.s2.nResSize
+			mov [esi].offset1,ecx
+			
+			add [edi].nStreamSize,eax
+			mov ebx,[edi].lpStream
+			assume ebx:ptr YurisHdr
+			add [ebx].segInfo.s2.nResSize,eax
+		.else
+			mov eax,@nNewLen
+			mov [esi].len1,eax
+			mov ecx,@hdr.segInfo.s1.nResSize
+			mov [esi].offset1,ecx
+			
+			add [edi].nStreamSize,eax
+			mov ebx,[edi].lpStream
+			assume ebx:ptr YurisHdr
+			add [ebx].segInfo.s1.nResSize,eax
+		.endif
 		assume ebx:nothing
 		
 	.endif

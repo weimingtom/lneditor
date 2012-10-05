@@ -28,17 +28,40 @@
 	include \masm32\lneditor\rsrc.inc
 	include \masm32\lneditor\config.inc
 	includelib \masm32\lneditor\lnedit.lib
-	
-YurisHdr struct
-	sMagic		dd		?
-	nVersion		dd		?
+
+SegInfo1 struct
 	nCount		dd		?
 	nCodeSize		dd		?
 	nArgSize		dd		?
 	nResSize		dd		?
 	nOffSize		dd		?
 	dwResvd		dd		?
+SegInfo1 ends
+SegInfo2 struct
+	nInstSize	dd		?
+	nResSize	dd		?
+	nResOff		dd		?
+	dwResvd		dd		3	dup(?)
+SegInfo2 ends
+SegInfo union
+	s1	SegInfo1	<>
+	s2	SegInfo2	<>
+SegInfo ends
+
+YurisHdr struct
+	sMagic		dd		?
+	nVersion		dd		?
+	segInfo		SegInfo		<>
 YurisHdr ends
+
+YurisHdr2 struct
+	sMagic		dd		?
+	nVersion	dd		?
+	nInstSize	dd		?
+	nResSize	dd		?
+	nResOff		dd		?
+	dwResvd		dd		3	dup(?)
+YurisHdr2 ends
 
 YurisArg struct
 	value		dw		?
@@ -65,16 +88,17 @@ FUNC_INPUTSTR	EQU		4
 
 	dwTemp		dd		?
 .const
-	dbFSel			db		4Dh,0Ch,0,'"ES.SEL.SET"'
+	dbFSel			db		'"es.sel.set"'
 align 4
-	dbFMarkSet		db		4dh,17h,0,'"es.CHAR.NAME.MARK.SET"'
+	dbFMarkSet		db		'"es.char.name.mark.set"'
 align 4
-	dbFCharName	db		4dh,0eh,0,'"es.CHAR.NAME"'
+	dbFCharName	db		'"es.char.name"'
 align 4
-	dbFInputStr		db		4dh,12h,0,'"es.INPUT.STR.SET"'
+	dbFInputStr		db		'"es.input.str.set"'
 	
 	
 	VerTable\
+				YurisVerInfo		<124h,124h,0154h,19h>
 				YurisVerInfo		<12ch,199h,015ah,1dh>
 				YurisVerInfo		<1f4h,1f4h,015ah,1dh>
 				YurisVerInfo		<1c2h,226h,015bh,1dh>
