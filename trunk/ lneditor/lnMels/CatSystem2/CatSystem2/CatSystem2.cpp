@@ -163,6 +163,8 @@ MRESULT WINAPI SaveText(LPFILE_INFO lpFileInfo)
 	memcpy(origHdr.dwMagic,"CatScene",8);
 	origHdr.comprLen=origHdr.uncomprLen=csHdr->sceneLen+sizeof(CS_HDR);
 	BYTE* buff=new BYTE[origHdr.uncomprLen];
+	if(!buff)
+		return E_NOMEM;
 	int ret=_ZlibCompress(buff,&origHdr.comprLen,csHdr,origHdr.uncomprLen);
 	if(ret)
 		return E_ERROR;
