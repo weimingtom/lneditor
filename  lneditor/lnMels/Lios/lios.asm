@@ -216,6 +216,7 @@ _i51GT:
 				add edi,sizeof _StreamEntry
 			dec ecx
 			jnz @B
+			lea edx,[edx+edx*2]
 			shl edx,2
 			add @pSIdx,edx
 			pop edi
@@ -502,9 +503,9 @@ _i51ML:
 		add esi,10h
 		invoke _CheckPage,@pNewStr,2,42
 		.if eax && !bIsSilent
-			mov eax,_nLine
-			mov nLine,eax
-			invoke DialogBoxParamW,hInstance,IDD_DLG1,hWinMain,_WndProc,0
+;			mov eax,_nLine
+;			mov nLine,eax
+;			invoke DialogBoxParamW,hInstance,IDD_DLG1,hWinMain,_WndProc,0
 		.endif
 		invoke _GetTextByIdx,[esi],ebx
 		mov edi,eax
