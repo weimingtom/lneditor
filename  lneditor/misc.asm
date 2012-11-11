@@ -526,6 +526,9 @@ _BeginLF:
 		.elseif _LargeMem==LM_ONE
 			shl eax,1
 			mov dword ptr @nFileSize,eax
+		.else
+			add eax,4
+			mov dword ptr @nFileSize,eax
 		.endif
 		invoke VirtualAlloc,0,dword ptr @nFileSize,MEM_COMMIT,PAGE_READWRITE
 		or eax,eax
