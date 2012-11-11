@@ -152,9 +152,11 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 		.endif
 		jmp _caseOut
 	_case2:	
-		lea eax,[esi+8]
+		lea eax,[esi+0ch]
+		jmp _lbl2
 	_case3:
 		lea eax,[esi+4]
+		_lbl2:
 		mov edx,@pJTbl
 		mov [edx],eax
 		add @pJTbl,4
@@ -211,6 +213,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				.endif
 				inc ecx
 			.endw
+			mov @pJTbl,edx
 			xor eax,eax
 			mov al,[esi+1]
 			add esi,eax
@@ -225,6 +228,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 				.endif
 				inc ecx
 			.endw
+			mov @pJTbl,edx
 			xor eax,eax
 			mov al,[esi+1]
 			add esi,eax
@@ -269,14 +273,16 @@ GetText endp
 IGSetLine proc uses ebx _lpStr,_nCS
 	LOCAL @pStr
 	invoke lstrlenW,_lpStr
-	inc eax
+	;inc eax
 	shl eax,1
 	mov ebx,eax
 	invoke HeapAlloc,hHeap,0,ebx
 	test eax,eax
 	jz _Err
 	mov @pStr,eax
-	invoke WideCharToMultiByte,_nCS,0,_lpStr,-1,@pStr,ebx,0,0
+	mov ecx,ebx
+	shr ecx,1
+	invoke WideCharToMultiByte,_nCS,0,_lpStr,ecx,@pStr,ebx,0,0
 	.if eax>255
 		invoke HeapFree,hHeap,0,@pStr
 		jmp _Err
@@ -312,7 +318,12 @@ ModifyLine proc uses ebx edi esi _lpFI,_nLine
 	assume esi:ptr _StreamEntry
 	
 	mov eax,[esi].nStringLen
-	.if eax>=@nNewLen
+	.if eax==@nNewLen
+;		mov edi,[esi].lpStart
+;		mov ecx,eax
+;		xor al,al
+;		rep stosb
+		
 		mov edi,[esi].lpStart
 		mov esi,@pNewStr
 		mov ecx,@nNewLen
