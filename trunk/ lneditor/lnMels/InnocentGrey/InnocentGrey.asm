@@ -73,7 +73,7 @@ _Decode endp
 ;
 GetText proc uses esi ebx edi _lpFI,_lpRI
 	LOCAL @pEnd
-	LOCAL @lpIndex,@nIndex
+	LOCAL @lpIndex,@nIndex,@nCount
 	LOCAL @lpContent
 	LOCAL @pJTbl
 	LOCAL @nLine,@nJEntry
@@ -116,7 +116,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	.while esi<@pEnd
 		xor eax,eax
 		mov al,[esi]
-		.if eax>0b2h
+		.if eax>0b7h
 			int 3
 			mov eax,E_WRONGFORMAT
 			jmp _Ex
@@ -132,7 +132,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 		jmp _caseOut
 	_case1:	;×Ö·û´®
 		mov al,[esi]
-		.if al==0
+		.if al==3fh || al==0
 			mov al,[esi+1]
 			lea edx,[esi+3]
 			mov [ebx].lpInformation,edx
@@ -221,6 +221,29 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 			xor ecx,ecx
 			mov edx,@pJTbl
 			.while ecx<20
+				lea eax,[esi+ecx*4+4]
+				.if dword ptr [eax]
+					mov [edx],eax
+					add edx,4
+				.endif
+				inc ecx
+			.endw
+			mov @pJTbl,edx
+			xor eax,eax
+			mov al,[esi+1]
+			add esi,eax
+		.else
+			xor ecx,ecx
+			xor eax,eax
+			mov al,[esi+1]
+			shr eax,2
+			.if eax==0
+				int 3
+			.endif
+			dec eax
+			mov @nCount,eax
+			mov edx,@pJTbl
+			.while ecx<@nCount
 				lea eax,[esi+ecx*4+4]
 				.if dword ptr [eax]
 					mov [edx],eax
