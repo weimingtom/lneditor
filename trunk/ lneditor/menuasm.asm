@@ -529,7 +529,7 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 			lea edi,@stFindData.cFileName
 			invoke CreateFileW,edi,GENERIC_READ,FILE_SHARE_READ,0,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,0
 			.if eax==-1
-				invoke _OutputMessage,WLT_BATCHIMPERR,ebx,edi,offset szWltEFileCreate
+				;invoke _OutputMessage,WLT_BATCHIMPERR,ebx,edi,offset szWltEFileCreate
 				jmp _Next2IATT
 			.endif
 			mov @hFileT,eax

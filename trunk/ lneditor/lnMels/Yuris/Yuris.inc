@@ -81,6 +81,8 @@ FUNC_SEL		EQU		1
 FUNC_MARKSET	EQU		2
 FUNC_CHARNAME	EQU		3
 FUNC_INPUTSTR	EQU		4
+FUNC_TIPS		EQU		5
+FUNC_TIPSTX		EQU		6
 
 .data?
 	hInstance		dd		?
@@ -95,6 +97,10 @@ align 4
 	dbFCharName	db		'"es.char.name"'
 align 4
 	dbFInputStr		db		'"es.input.str.set"'
+align 4
+	dbFTipsStr	db		'"es.tips.def.set"'
+align 4
+	dbFTipsTxStr	db	'"es.tips.tx.def.set"'
 	
 	
 	VerTable\

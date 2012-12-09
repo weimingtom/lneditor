@@ -184,6 +184,22 @@ YurisCmpFuncName proc uses ebx esi edi _lpRes,_nLen
 		mov ebx,FUNC_INPUTSTR
 		jmp _out
 	.endif
+	
+	mov esi,@pStr
+	lea edi,dbFTipsStr
+	repe cmpsb
+	.if ZERO?
+		mov ebx,FUNC_TIPS
+		jmp _out
+	.endif
+	
+	mov esi,@pStr
+	lea edi,dbFTipsTxStr
+	repe cmpsb
+	.if ZERO?
+		mov ebx,FUNC_TIPSTX
+		jmp _out
+	.endif
 	xor ebx,ebx
 _out:
 	invoke HeapFree,hHeap,0,@pStr
