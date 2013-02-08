@@ -116,7 +116,7 @@ GetText proc uses esi ebx edi _lpFI,_lpRI
 	.while esi<@pEnd
 		xor eax,eax
 		mov al,[esi]
-		.if eax>0b7h
+		.if eax>0bfh
 			int 3
 			mov eax,E_WRONGFORMAT
 			jmp _Ex

@@ -185,6 +185,7 @@ YurisCmpFuncName proc uses ebx esi edi _lpRes,_nLen
 		jmp _out
 	.endif
 	
+	mov ecx,ebx
 	mov esi,@pStr
 	lea edi,dbFTipsStr
 	repe cmpsb
@@ -193,6 +194,7 @@ YurisCmpFuncName proc uses ebx esi edi _lpRes,_nLen
 		jmp _out
 	.endif
 	
+	mov ecx,ebx
 	mov esi,@pStr
 	lea edi,dbFTipsTxStr
 	repe cmpsb
