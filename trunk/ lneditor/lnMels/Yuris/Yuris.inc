@@ -105,9 +105,11 @@ align 4
 	
 	VerTable\
 				YurisVerInfo		<124h,124h,0154h,19h>
-				YurisVerInfo		<12ch,199h,015ah,1dh>
+				YurisVerInfo		<12ch,19ch,015ah,1dh>
 				YurisVerInfo		<1f4h,1f4h,015ah,1dh>
-				YurisVerInfo		<1c2h,226h,015bh,1dh>
+				YurisVerInfo		<1c2h,1d8h,015bh,1dh>
+				YurisVerInfo		<1d9h,1d9h,015ah,1dh>
+				YurisVerInfo		<226h,226h,015ch,1eh>
                 YurisVerInfo		<227h,227h,015ah,1dh>
 	nVerInfos	dd		(offset nVerInfos-offset VerTable)/sizeof(YurisVerInfo)
 		
