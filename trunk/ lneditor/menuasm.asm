@@ -502,6 +502,8 @@ _ImportAllToTxt proc uses esi edi ebx _lpszScr,_lpszTxt,_nMelIdx,_nCharSet,_bFor
 					invoke _OutputMessage,WLT_BATCHIMPERR,ebx,edi,offset szWltEImp1
 					jmp _Next4IATT
 				.endif
+			.else
+				mov ebx,@pMelInfo
 			.endif
 			invoke lstrlenW,edi
 			add eax,5
