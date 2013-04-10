@@ -111,8 +111,20 @@ GetText proc uses edi ebx esi _lpFI,_lpRI
 			lodsd
 			add eax,@nHdrSize
 			add eax,[ebx].lpStream
-			.continue .if eax<@pCSEnd || byte ptr [eax]<81h 
-			mov _StreamEntry.lpStart[edi],eax
+			.continue .if eax<@pCSEnd
+			mov edx,eax
+			xor edi,edi
+			.while byte ptr [eax]!=0
+				.if byte ptr [eax]<80h
+					inc eax
+				.else
+					inc edi
+					.break
+				.endif
+			.endw
+			.continue .if !edi
+			mov edi,@pSI
+			mov _StreamEntry.lpStart[edi],edx
 			add @pSI,sizeof _StreamEntry
 			add @pRI,4
 			inc ecx
