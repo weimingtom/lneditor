@@ -91,7 +91,7 @@ IsmGetLine proc uses ebx esi edi _lpStr,_nCS,_nKey
 	.while ecx
 		lodsb
 		not al
-;		xor al,dl
+;		xor al,dl 这一步需要由外部程序做
 		stosb
 		dec ecx
 	.endw
