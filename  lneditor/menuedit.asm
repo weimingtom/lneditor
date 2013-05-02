@@ -14,9 +14,10 @@ _Redo endp
 
 ;
 _Modify proc
-	LOCAL @pStr,@nLen,@lpTemp,@nTmp
+	LOCAL @pStr,@nLen,@lpTemp,@nTmp,@bIsAllocated
 	invoke GetWindowTextLengthW,hEdit2
 	shl eax,1
+	mov @bIsAllocated,eax
 	.if !eax
 		mov @nLen,2
 		mov @pStr,offset szDLLDir+6	;'\0'
@@ -47,7 +48,9 @@ _Modify proc
 	je _ExML
 	invoke _ModifyStringInList,offset FileInfo2,eax,@pStr
 	mov ebx,eax
-	invoke HeapFree,hGlobalHeap,0,@pStr
+	.if !@bIsAllocated
+		invoke HeapFree,hGlobalHeap,0,@pStr
+	.endif
 	.if ebx
 		mov eax,IDS_STRTOOLONG
 		invoke _GetConstString
