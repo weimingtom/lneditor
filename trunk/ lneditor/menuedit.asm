@@ -48,7 +48,7 @@ _Modify proc
 	je _ExML
 	invoke _ModifyStringInList,offset FileInfo2,eax,@pStr
 	mov ebx,eax
-	.if !@bIsAllocated
+	.if @bIsAllocated
 		invoke HeapFree,hGlobalHeap,0,@pStr
 	.endif
 	.if ebx
